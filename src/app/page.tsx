@@ -42,7 +42,7 @@ export default async function HomePage() {
           {/* Extra bottom scrim on phones — hero copy sits at the bottom over food photos */}
           <div
             aria-hidden
-            className="absolute inset-0 bg-[linear-gradient(to_top,rgba(28,46,36,0.82)_0%,rgba(28,46,36,0.48)_34%,transparent_62%)] md:hidden"
+            className="absolute inset-0 bg-[linear-gradient(to_top,rgba(28,46,36,0.9)_0%,rgba(28,46,36,0.62)_38%,rgba(28,46,36,0.2)_58%,transparent_72%)] md:hidden"
           />
         </div>
 
