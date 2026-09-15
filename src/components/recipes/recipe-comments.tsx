@@ -108,11 +108,12 @@ export function RecipeCommentsSection({
             Sign in to join the conversation on this recipe.
           </p>
           <p className="mt-1 text-sm text-[var(--ink-muted)]">
-            Everyone can read comments; only signed-in cooks can post.
+            Everyone can read comments. Sign in to post — no password, just a
+            one-time email link.
           </p>
           <Link
             href={signInHref}
-            className="mt-4 inline-flex h-11 items-center rounded-lg bg-[var(--ink)] px-4 text-sm font-medium text-[#f7f4ec] transition-colors hover:bg-[var(--sage-deep)] md:h-9"
+            className="mt-4 inline-flex h-11 items-center rounded-lg bg-[var(--ink)] px-4 text-sm font-medium text-[#f7f4ec] transition-colors hover:bg-[var(--sage-deep)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[var(--sage-deep)] md:h-9"
           >
             Sign in to comment
           </Link>
@@ -124,21 +125,30 @@ export function RecipeCommentsSection({
           </p>
           <Link
             href={profileHref}
-            className="mt-4 inline-flex h-11 items-center rounded-lg bg-[var(--ink)] px-4 text-sm font-medium text-[#f7f4ec] transition-colors hover:bg-[var(--sage-deep)] md:h-9"
+            className="mt-4 inline-flex h-11 items-center rounded-lg bg-[var(--ink)] px-4 text-sm font-medium text-[#f7f4ec] transition-colors hover:bg-[var(--sage-deep)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[var(--sage-deep)] md:h-9"
           >
             Set display name
           </Link>
         </div>
       ) : (
         <form onSubmit={submitComment} className="mt-8 space-y-3">
-          <Textarea
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            placeholder="Ask a question or share a tip…"
-            maxLength={2000}
-            rows={3}
-            className="rounded-none border-[var(--line)] bg-[var(--paper)]/50"
-          />
+          <div className="space-y-2">
+            <label
+              htmlFor="recipe-comment"
+              className="block text-sm font-medium text-[var(--ink)]"
+            >
+              Your comment
+            </label>
+            <Textarea
+              id="recipe-comment"
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              placeholder="Ask a question or share a tip…"
+              maxLength={2000}
+              rows={3}
+              className="rounded-none border-[var(--line)] bg-[var(--paper)]/50"
+            />
+          </div>
           {error ? (
             <p className="text-sm text-red-800" role="alert">
               {error}

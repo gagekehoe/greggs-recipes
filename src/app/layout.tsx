@@ -1,4 +1,6 @@
 import type { Metadata } from "next";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Figtree, Fraunces } from "next/font/google";
 import { AuthSessionProvider } from "@/components/auth/auth-session-provider";
 import { SiteFooter, SiteHeader } from "@/components/layout/site-chrome";
@@ -70,9 +72,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       <body className="flex min-h-full flex-col font-sans">
         <AuthSessionProvider>
           <SiteHeader />
-          <main className="flex-1">{children}</main>
+          <main id="main-content" className="flex-1" tabIndex={-1}>
+            {children}
+          </main>
           <SiteFooter />
         </AuthSessionProvider>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

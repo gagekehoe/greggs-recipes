@@ -27,18 +27,21 @@ function StarRow({
   onChange,
   interactive,
   size = "md",
+  labelledBy,
 }: {
   value: number;
   onChange?: (n: number) => void;
   interactive?: boolean;
   size?: "sm" | "md";
+  labelledBy?: string;
 }) {
   const cls = size === "sm" ? "text-base" : "text-2xl";
   return (
     <div
       className={`flex gap-1 ${cls}`}
       role={interactive ? "radiogroup" : "img"}
-      aria-label={`${value} out of 5 stars`}
+      aria-label={labelledBy ? undefined : `${value} out of 5 stars`}
+      aria-labelledby={labelledBy}
     >
       {[1, 2, 3, 4, 5].map((n) => {
         const filled = n <= value;
@@ -60,7 +63,7 @@ function StarRow({
             role="radio"
             aria-checked={n === value}
             aria-label={`${n} star${n === 1 ? "" : "s"}`}
-            className={`leading-none transition-colors ${
+            className={`leading-none transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sage-deep)] ${
               filled ? "text-[var(--accent-deep)]" : "text-[var(--line)]"
             } hover:text-[var(--accent-deep)]`}
             onClick={() => onChange(n)}
@@ -213,11 +216,12 @@ export function RecipeReviewsSection({
             Sign in to leave a star rating, a short note, and optional photos.
           </p>
           <p className="mt-1 text-sm text-[var(--ink-muted)]">
-            Guests can read reviews; posting requires an account.
+            Guests can read reviews anytime. Sign in to post — first visit
+            creates your account.
           </p>
           <Link
             href={signInHref}
-            className="mt-4 inline-flex h-11 items-center rounded-lg bg-[var(--ink)] px-4 text-sm font-medium text-[#f7f4ec] transition-colors hover:bg-[var(--sage-deep)] md:h-9"
+            className="mt-4 inline-flex h-11 items-center rounded-lg bg-[var(--ink)] px-4 text-sm font-medium text-[#f7f4ec] transition-colors hover:bg-[var(--sage-deep)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[var(--sage-deep)] md:h-9"
           >
             Sign in to review
           </Link>
@@ -232,7 +236,7 @@ export function RecipeReviewsSection({
           </p>
           <Link
             href={profileHref}
-            className="mt-4 inline-flex h-11 items-center rounded-lg bg-[var(--ink)] px-4 text-sm font-medium text-[#f7f4ec] transition-colors hover:bg-[var(--sage-deep)] md:h-9"
+            className="mt-4 inline-flex h-11 items-center rounded-lg bg-[var(--ink)] px-4 text-sm font-medium text-[#f7f4ec] transition-colors hover:bg-[var(--sage-deep)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[var(--sage-deep)] md:h-9"
           >
             Set display name
           </Link>
@@ -240,26 +244,47 @@ export function RecipeReviewsSection({
       ) : (
         <form onSubmit={submitReview} className="mt-8 space-y-4">
           <div>
-            <p className="mb-2 text-sm font-medium text-[var(--ink)]">
+            <p
+              id="review-rating-label"
+              className="mb-2 text-sm font-medium text-[var(--ink)]"
+            >
               {mine ? "Update your review" : "Your review"}
             </p>
-            <StarRow value={rating} onChange={setRating} interactive />
+            <StarRow
+              value={rating}
+              onChange={setRating}
+              interactive
+              labelledBy="review-rating-label"
+            />
           </div>
-          <Textarea
-            value={body}
-            onChange={(e) => setBody(e.target.value)}
-            placeholder="Optional — how did it turn out?"
-            maxLength={1000}
-            rows={3}
-            className="rounded-none border-[var(--line)] bg-[var(--paper)]/50"
-          />
+          <div className="space-y-2">
+            <label
+              htmlFor="review-body"
+              className="block text-sm font-medium text-[var(--ink)]"
+            >
+              Notes (optional)
+            </label>
+            <Textarea
+              id="review-body"
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              placeholder="Optional — how did it turn out?"
+              maxLength={1000}
+              rows={3}
+              className="rounded-none border-[var(--line)] bg-[var(--paper)]/50"
+            />
+          </div>
           {roomForPhotos > 0 ? (
-            <div>
-              <label className="block text-sm text-[var(--ink-muted)]">
+            <div className="space-y-2">
+              <label
+                htmlFor="review-photos"
+                className="block text-sm font-medium text-[var(--ink-muted)]"
+              >
                 Photos (up to {REVIEW_IMAGE_LIMITS.maxFilesPerReview} total,
                 JPEG/PNG/WebP/GIF)
               </label>
               <input
+                id="review-photos"
                 type="file"
                 accept="image/jpeg,image/png,image/webp,image/gif"
                 multiple

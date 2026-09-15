@@ -25,8 +25,13 @@ export function AuthNav({
 
   if (status === "loading") {
     return (
-      <span className={`inline-flex min-h-11 items-center px-2.5 text-sm md:min-h-9 ${muted}`}>
-        …
+      <span
+        className={`inline-flex min-h-11 items-center px-2.5 text-sm md:min-h-9 ${muted}`}
+        role="status"
+        aria-live="polite"
+      >
+        <span className="sr-only">Checking sign-in status</span>
+        <span aria-hidden>…</span>
       </span>
     );
   }
