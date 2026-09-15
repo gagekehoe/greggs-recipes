@@ -1,13 +1,55 @@
-import Database from "better-sqlite3";
-import { drizzle } from "drizzle-orm/better-sqlite3";
-import fs from "fs";
-import path from "path";
-import * as schema from "./schema";
+import * as sqliteSchema from "./schema";
+import * as pgSchema from "./schema.pg";
 
-const DATA_DIR = path.join(process.cwd(), "data");
-const DB_PATH = path.join(DATA_DIR, "auth.sqlite");
+export type AppSchema = typeof sqliteSchema | typeof pgSchema;
 
-function openSqlite() {
+/**
+ * Dual-dialect Drizzle client. SQLite (local) and Neon HTTP (prod) share the same
+ * query shapes we use; a precise union is not callable under TypeScript.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type AppDb = any;
+
+const DATABASE_URL = process.env.DATABASE_URL?.trim() || "";
+const ON_VERCEL = Boolean(process.env.VERCEL || process.env.VERCEL_ENV);
+
+type DbBundle = {
+  db: AppDb;
+  schema: AppSchema;
+  dialect: "sqlite" | "postgres";
+};
+
+const globalForDb = globalThis as unknown as {
+  __greggsDbBundle?: DbBundle | null;
+  __greggsDbResolved?: boolean;
+};
+
+function createPostgres(): DbBundle {
+  // Lazy requires keep the Neon path free of better-sqlite3.
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { neon } = require("@neondatabase/serverless") as typeof import("@neondatabase/serverless");
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { drizzle } = require("drizzle-orm/neon-http") as typeof import("drizzle-orm/neon-http");
+  const sql = neon(DATABASE_URL);
+  return {
+    db: drizzle(sql, { schema: pgSchema }),
+    schema: pgSchema,
+    dialect: "postgres",
+  };
+}
+
+function createSqlite(): DbBundle {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const Database = require("better-sqlite3") as typeof import("better-sqlite3");
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { drizzle } = require("drizzle-orm/better-sqlite3") as typeof import("drizzle-orm/better-sqlite3");
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const fs = require("fs") as typeof import("fs");
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const path = require("path") as typeof import("path");
+
+  const DATA_DIR = path.join(process.cwd(), "data");
+  const DB_PATH = path.join(DATA_DIR, "auth.sqlite");
   fs.mkdirSync(DATA_DIR, { recursive: true });
   const sqlite = new Database(DB_PATH);
   sqlite.pragma("journal_mode = WAL");
@@ -79,17 +121,92 @@ function openSqlite() {
     CREATE INDEX IF NOT EXISTS recipe_comment_recipe_idx
       ON recipe_comment (recipeId);
   `);
-  return sqlite;
+
+  return {
+    db: drizzle(sqlite, { schema: sqliteSchema }),
+    schema: sqliteSchema,
+    dialect: "sqlite",
+  };
 }
 
-const globalForDb = globalThis as unknown as {
-  __greggsSqlite?: Database.Database;
-};
-
-const sqlite = globalForDb.__greggsSqlite ?? openSqlite();
-if (process.env.NODE_ENV !== "production") {
-  globalForDb.__greggsSqlite = sqlite;
+function resolveBundle(): DbBundle | null {
+  if (DATABASE_URL) {
+    return createPostgres();
+  }
+  if (ON_VERCEL) {
+    console.error(
+      "[db] DATABASE_URL is not set on Vercel. Public recipe browsing stays up; auth, reviews, and comments are disabled until Neon is configured. See docs/hosting.md."
+    );
+    return null;
+  }
+  return createSqlite();
 }
 
-export const db = drizzle(sqlite, { schema });
-export { schema };
+function getBundle(): DbBundle | null {
+  if (globalForDb.__greggsDbResolved) {
+    return globalForDb.__greggsDbBundle ?? null;
+  }
+  const bundle = resolveBundle();
+  globalForDb.__greggsDbBundle = bundle;
+  globalForDb.__greggsDbResolved = true;
+  return bundle;
+}
+
+/** True when Auth.js / reviews can use a real database. */
+export function isDatabaseConfigured(): boolean {
+  return getBundle() !== null;
+}
+
+export function getDbDialect(): "sqlite" | "postgres" | "none" {
+  return getBundle()?.dialect ?? "none";
+}
+
+/**
+ * Active Drizzle client. Throws when running on Vercel without DATABASE_URL.
+ * Prefer `isDatabaseConfigured()` for public read paths that should degrade.
+ */
+export function getDb(): AppDb {
+  const bundle = getBundle();
+  if (!bundle) {
+    throw new Error(
+      "Database is not configured. Set DATABASE_URL (Neon/Postgres) on Vercel. See docs/hosting.md."
+    );
+  }
+  return bundle.db;
+}
+
+const bundle = getBundle();
+
+/** Active Drizzle client, or a throwing proxy when DB is unavailable (Vercel without DATABASE_URL). */
+export const db: AppDb = bundle
+  ? bundle.db
+  : (new Proxy({} as AppDb, {
+      get(_target, prop) {
+        if (prop === "then") return undefined;
+        throw new Error(
+          "Database is not configured. Set DATABASE_URL (Neon/Postgres) on Vercel. See docs/hosting.md."
+        );
+      },
+    }) as AppDb);
+
+const activeSchema = bundle?.schema ?? sqliteSchema;
+
+export const users = activeSchema.users;
+export const accounts = activeSchema.accounts;
+export const sessions = activeSchema.sessions;
+export const verificationTokens = activeSchema.verificationTokens;
+export const recipeReviews = activeSchema.recipeReviews;
+export const recipeReviewImages = activeSchema.recipeReviewImages;
+export const recipeComments = activeSchema.recipeComments;
+
+/** SQLite schema module (tests / local helpers). Prefer named table exports above for app code. */
+export const schema = sqliteSchema;
+
+export { ROLES } from "./schema";
+export type {
+  Role,
+  DbUser,
+  DbRecipeReview,
+  DbRecipeReviewImage,
+  DbRecipeComment,
+} from "./schema";

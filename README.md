@@ -2,7 +2,7 @@
 
 A brand-first cooking site for home recipes — browse polished dishes publicly, then sign in with email to publish when you have cook or admin access.
 
-**Stack:** Next.js (App Router) · TypeScript · Tailwind CSS · shadcn/ui · Auth.js (email magic link) · SQLite (local auth) · optional [Sanity](https://www.sanity.io/) CMS
+**Stack:** Next.js (App Router) · TypeScript · Tailwind CSS · shadcn/ui · Auth.js (email magic link) · SQLite (local) / Neon Postgres (Vercel) · optional [Sanity](https://www.sanity.io/) CMS
 
 ## Run locally
 
@@ -47,8 +47,12 @@ Reviews & comments details: [docs/reviews-comments.md](./docs/reviews-comments.m
 ### Local mode (default — no CMS keys needed)
 
 - Recipes live in `data/recipes.json` (seeded dishes attributed to `system` / Gregg's Kitchen).
-- Auth users + sessions live in `data/auth.sqlite`.
+- Auth users + sessions live in `data/auth.sqlite` locally (or Neon when `DATABASE_URL` is set).
 - Cooks/admins publish via `/my-recipes`.
+
+### Production database (Vercel)
+
+Set `DATABASE_URL` to a Neon Postgres URL and run `npm run db:push` (or `drizzle/0000_neon_init.sql`). Details: [docs/hosting.md](./docs/hosting.md).
 
 ### Sanity mode (recommended for production content)
 
@@ -76,6 +80,8 @@ Recommended: **Vercel + custom domain**. Auth sessions should use a durable data
 | `npm test` | Unit/integration tests (Vitest, one-shot) |
 | `npm run test:watch` | Vitest in watch mode |
 | `npm run test:coverage` | Vitest with V8 coverage report |
+| `npm run db:push` | Push Postgres schema to Neon (`DATABASE_URL` required) |
+| `npm run db:generate` | Generate Drizzle migrations from `schema.pg.ts` |
 
 ### Unit & integration tests
 

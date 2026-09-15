@@ -3,8 +3,8 @@ import { redirect } from "next/navigation";
 import { PeopleManager } from "@/components/auth/people-manager";
 import { canManagePeople, isRole } from "@/lib/auth/roles";
 import { getSessionUser } from "@/lib/auth/session";
-import { db } from "@/lib/db";
-import { users, type Role } from "@/lib/db/schema";
+import { db, users } from "@/lib/db";
+import type { Role } from "@/lib/db/schema";
 
 export const metadata = {
   title: "People",
@@ -48,7 +48,7 @@ export default async function PeoplePage() {
     <div className="mx-auto max-w-3xl px-5 py-28 md:px-8 md:py-32">
       <PeopleManager
         currentUserId={user.id}
-        initialUsers={rows.map((row) => ({
+        initialUsers={rows.map((row: { id: string; name: string | null; email: string; role: string }) => ({
           id: row.id,
           name: row.name,
           email: row.email,

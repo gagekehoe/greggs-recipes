@@ -8,24 +8,29 @@ vi.mock("@/lib/auth/session", () => ({
   getSessionUser: (...a: unknown[]) => getSessionUser(...a),
 }));
 
-vi.mock("@/lib/db", () => ({
-  db: {
-    select: () => ({
-      from: () => ({
-        where: () => ({
-          limit: (...a: unknown[]) => selectLimit(...a),
+vi.mock("@/lib/db", async () => {
+  const schema = await import("@/lib/db/schema");
+  return {
+    isDatabaseConfigured: () => true,
+    users: schema.users,
+    db: {
+      select: () => ({
+        from: () => ({
+          where: () => ({
+            limit: (...a: unknown[]) => selectLimit(...a),
+          }),
         }),
       }),
-    }),
-    update: () => ({
-      set: () => ({
-        where: () => ({
-          returning: (...a: unknown[]) => updateReturning(...a),
+      update: () => ({
+        set: () => ({
+          where: () => ({
+            returning: (...a: unknown[]) => updateReturning(...a),
+          }),
         }),
       }),
-    }),
-  },
-}));
+    },
+  };
+});
 
 describe("/api/profile", () => {
   beforeEach(() => {

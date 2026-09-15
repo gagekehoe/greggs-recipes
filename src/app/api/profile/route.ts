@@ -7,8 +7,7 @@ import {
   validateDisplayNameInput,
 } from "@/lib/auth/profile";
 import { getSessionUser } from "@/lib/auth/session";
-import { db } from "@/lib/db";
-import { users } from "@/lib/db/schema";
+import { db, users } from "@/lib/db";
 
 const updateSchema = z.object({
   name: z.string().min(DISPLAY_NAME_MIN).max(DISPLAY_NAME_MAX),

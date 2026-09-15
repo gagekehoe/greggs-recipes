@@ -14,6 +14,15 @@ vi.mock("@/lib/db", async () => {
   return {
     db: testDb.db,
     schema: testDb.schema,
+    users: testDb.schema.users,
+    accounts: testDb.schema.accounts,
+    sessions: testDb.schema.sessions,
+    verificationTokens: testDb.schema.verificationTokens,
+    recipeReviews: testDb.schema.recipeReviews,
+    recipeReviewImages: testDb.schema.recipeReviewImages,
+    recipeComments: testDb.schema.recipeComments,
+    isDatabaseConfigured: () => true,
+    getDbDialect: () => "sqlite" as const,
     __testSqlite: testDb.sqlite,
   };
 });

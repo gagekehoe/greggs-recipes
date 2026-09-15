@@ -9,11 +9,14 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
-    "test:coverage": "vitest run --coverage"
+    "test:coverage": "vitest run --coverage",
+    "db:push": "drizzle-kit push",
+    "db:generate": "drizzle-kit generate"
   },
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.3",
     "@base-ui/react": "^1.8.0",
+    "@neondatabase/serverless": "^1.1.0",
     "@sanity/client": "^8.6.1",
     "@sanity/image-url": "^2.1.1",
     "better-sqlite3": "^13.0.3",

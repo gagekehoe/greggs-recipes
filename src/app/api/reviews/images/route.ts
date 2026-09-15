@@ -1,8 +1,7 @@
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/auth/session";
-import { db } from "@/lib/db";
-import { recipeReviewImages } from "@/lib/db/schema";
+import { db, recipeReviewImages } from "@/lib/db";
 import { canManageReviewImages } from "@/lib/reviews/permissions";
 import { REVIEW_IMAGE_LIMITS } from "@/lib/reviews/rating";
 import {
