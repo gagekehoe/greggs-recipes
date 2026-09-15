@@ -114,3 +114,29 @@ export const recipeComments = pgTable("recipe_comment", {
     .notNull()
     .$defaultFn(() => new Date()),
 });
+
+/** Durable recipe catalog (Neon in production). */
+export const recipes = pgTable("recipe", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  slug: text("slug").notNull().unique(),
+  title: text("title").notNull(),
+  summary: text("summary").notNull().default(""),
+  /** JSON-encoded string[] */
+  ingredients: text("ingredients").notNull().default("[]"),
+  /** JSON-encoded string[] */
+  steps: text("steps").notNull().default("[]"),
+  /** JSON-encoded string[] */
+  tags: text("tags").notNull().default("[]"),
+  prepMinutes: integer("prepMinutes").notNull().default(0),
+  cookMinutes: integer("cookMinutes").notNull().default(0),
+  servings: integer("servings").notNull().default(1),
+  imageUrl: text("imageUrl").notNull().default(""),
+  imageAlt: text("imageAlt").notNull().default(""),
+  authorId: text("authorId").notNull(),
+  authorName: text("authorName").notNull(),
+  updatedAt: timestamp("updatedAt", { mode: "date", withTimezone: true })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});

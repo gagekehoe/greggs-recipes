@@ -1,3 +1,5 @@
+export type RecipeSource = "db" | "local" | "sanity";
+
 export type Recipe = {
   id: string;
   slug: string;
@@ -11,7 +13,7 @@ export type Recipe = {
   servings: number;
   imageUrl: string;
   imageAlt: string;
-  source: "local" | "sanity";
+  source: RecipeSource;
   updatedAt: string;
   authorId: string;
   authorName: string;

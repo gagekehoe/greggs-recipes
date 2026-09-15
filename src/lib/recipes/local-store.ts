@@ -8,16 +8,16 @@ const DATA_PATH = path.join(process.cwd(), "data", "recipes.json");
 
 const SYSTEM_AUTHOR = {
   authorId: "system",
-  authorName: "Gregg's Kitchen",
+  authorName: "Gregg",
 };
 
 const READ_ONLY_STORE_MESSAGE =
-  "Local recipe JSON is read-only on serverless. Configure Sanity for publishing, or edit recipes locally.";
+  "Local recipe JSON is read-only on serverless. Set DATABASE_URL (Neon) for durable recipes, or edit recipes locally.";
 
 /**
- * Writable `data/recipes.json` is for local/dev only.
+ * Writable `data/recipes.json` is for local/dev fallback only.
  * On Vercel/Lambda the filesystem is read-only — never open or write that path.
- * Production durable writes go through Sanity (CMS); Neon is for auth/reviews.
+ * Production durable writes go through Neon (`recipe` table) when DATABASE_URL is set.
  */
 export function isLocalRecipeStoreWritable(): boolean {
   return !(

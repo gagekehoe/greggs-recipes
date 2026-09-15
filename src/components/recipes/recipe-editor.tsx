@@ -11,7 +11,7 @@ import { hasRecipeImage } from "@/lib/recipes/image";
 import type { Recipe } from "@/lib/recipes/types";
 
 type Props = {
-  contentMode: "sanity" | "local";
+  contentMode: "db" | "sanity" | "local";
   recipes: Recipe[];
   canManageAll: boolean;
 };
@@ -165,7 +165,11 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
             : "Add and manage recipes you published. Viewers can browse; only cooks and admins can write."}{" "}
           Saving to{" "}
           <span className="font-medium text-[var(--ink)]">
-            {contentMode === "sanity" ? "Sanity CMS" : "local store"}
+            {contentMode === "db"
+              ? "the kitchen database"
+              : contentMode === "sanity"
+                ? "Sanity CMS"
+                : "local store"}
           </span>
           .
         </p>

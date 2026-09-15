@@ -69,10 +69,15 @@ export default async function HomePage() {
               A handful of dishes worth repeating — ingredients, steps, and
               timing included.
             </p>
-            <p className="mt-2 text-xs uppercase tracking-[0.14em] text-[var(--ink-soft)]">
-              Content source: {mode}
-              {error ? " · using local fallback" : ""}
-            </p>
+            {mode !== "db" || error ? (
+              <p className="mt-2 text-xs uppercase tracking-[0.14em] text-[var(--ink-soft)]">
+                {error
+                  ? "Showing kitchen fallback while the live catalog reconnects"
+                  : mode === "sanity"
+                    ? "Content source: Sanity"
+                    : "Content source: local"}
+              </p>
+            ) : null}
           </div>
 
           {error ? (
@@ -80,7 +85,7 @@ export default async function HomePage() {
               role="alert"
               className="mb-8 border border-amber-700/30 bg-amber-50 px-4 py-3 text-sm text-amber-950"
             >
-              Couldn&apos;t reach the live recipe source ({error}). Showing
+              Couldn&apos;t reach the live recipe catalog ({error}). Showing
               Gregg&apos;s kitchen recipes instead.
             </div>
           ) : null}
