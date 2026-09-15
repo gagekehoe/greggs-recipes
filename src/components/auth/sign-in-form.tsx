@@ -64,8 +64,7 @@ export function SignInForm({ sent, error }: Props) {
           Sign in
         </h1>
         <p className="mt-3 text-[var(--ink-muted)] leading-relaxed">
-          Email a one-time link — no password. New accounts start as viewers;
-          cooks and admins can publish recipes.
+          Email a one-time link — no password.
         </p>
       </div>
 
