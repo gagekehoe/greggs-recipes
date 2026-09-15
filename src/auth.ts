@@ -49,7 +49,7 @@ async function sendMagicLink({
         html: `
           <p>This is your sign-in link for <strong>Gregg's Recipes</strong>
           (<a href="https://greggsrecipes.com">greggsrecipes.com</a>) —
-          a personal home-cooking recipe site.</p>
+          a shared recipe site for cooks.</p>
           <p><a href="${magicLink}">Continue signing in to Gregg's Recipes</a></p>
           <p style="color:#555;font-size:14px;">Or paste this URL into your browser:<br/>${magicLink}</p>
           <p>No password. Nothing to download. The link expires soon.

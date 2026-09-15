@@ -25,7 +25,7 @@ export function SignInVerifyConfirm({ href, email }: Props) {
               as <span className="text-[var(--ink)]">{email}</span>
             </>
           ) : null}
-          . This is a personal home-cooking recipe site — no password, no
+          . This is a shared recipe site for cooks — no password, no
           downloads.
         </p>
       </div>

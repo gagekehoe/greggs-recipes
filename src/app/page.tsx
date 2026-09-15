@@ -48,11 +48,11 @@ export default async function HomePage() {
             </p>
             <h1 className="mt-5 max-w-xl text-xl font-medium leading-snug text-[#e8ebe3] md:text-2xl">
               Cook what&apos;s written down — weeknight plates and Sunday roasts
-              from one kitchen.
+              worth making again.
             </h1>
             <p className="mt-4 max-w-md text-sm leading-relaxed text-[#c5d0c2] md:text-base">
-              Browse the collection anytime. Cooks and admins can sign in to add
-              dishes — no redeploy required.
+              Browse the collection anytime. Sign in to join the cooks — cooks
+              and admins can add dishes without a redeploy.
             </p>
             <HeroCtas user={user} />
           </div>

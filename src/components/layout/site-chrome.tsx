@@ -27,7 +27,7 @@ export function SiteFooter() {
     <footer className="mt-auto border-t border-[var(--line)] bg-[var(--paper)]/70">
       <div className="mx-auto flex max-w-6xl flex-col gap-2 px-5 py-10 text-sm text-[var(--ink-muted)] md:flex-row md:items-center md:justify-between md:px-8">
         <p className="font-display text-lg text-[var(--ink)]">Gregg&apos;s Recipes</p>
-        <p>Home cooking, written down so you can make it again.</p>
+        <p>Recipes worth sharing — written down so you can cook them again.</p>
       </div>
     </footer>
   );
