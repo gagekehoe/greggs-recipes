@@ -1,16 +1,11 @@
-import { HeroCtas } from "@/components/layout/hero-ctas";
 import { RecipeGrid } from "@/components/recipes/recipe-card";
 import { RecipePhoto } from "@/components/recipes/recipe-photo";
-import { getSessionUser } from "@/lib/auth/session";
 import { listRecipes } from "@/lib/recipes";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [{ recipes, mode, error }, user] = await Promise.all([
-    listRecipes(),
-    getSessionUser(),
-  ]);
+  const { recipes, mode, error } = await listRecipes();
   const featured = recipes[0];
 
   return (
@@ -59,7 +54,6 @@ export default async function HomePage() {
               Browse anytime — no account needed. Cooks add recipes to
               Gregg&apos;s shared collection — no redeploy needed.
             </p>
-            <HeroCtas user={user} />
           </div>
         </div>
       </section>
