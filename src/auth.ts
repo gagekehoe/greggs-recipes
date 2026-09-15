@@ -13,6 +13,7 @@ import {
 import type { Role } from "@/lib/db/schema";
 import { getAdminEmail, isAdminEmail } from "@/lib/auth/roles";
 import { toFriendlyMagicLinkUrl } from "@/lib/auth/friendly-magic-link";
+import { safeAuthRedirect } from "@/lib/auth/safe-auth-redirect";
 
 async function ensureAdminRole(userId: string, email: string | null | undefined) {
   if (!isAdminEmail(email)) return;
@@ -46,11 +47,15 @@ async function sendMagicLink({
         to: identifier,
         subject: "Sign in to Gregg's Recipes",
         html: `
-          <p>Sign in to Gregg's Recipes:</p>
-          <p><a href="${magicLink}">${magicLink}</a></p>
-          <p>This link expires soon. If you didn't request it, you can ignore this email.</p>
+          <p>This is your sign-in link for <strong>Gregg's Recipes</strong>
+          (<a href="https://greggsrecipes.com">greggsrecipes.com</a>) —
+          a personal home-cooking recipe site.</p>
+          <p><a href="${magicLink}">Continue signing in to Gregg's Recipes</a></p>
+          <p style="color:#555;font-size:14px;">Or paste this URL into your browser:<br/>${magicLink}</p>
+          <p>No password. Nothing to download. The link expires soon.
+          If you didn't request this, you can ignore this email.</p>
         `,
-        text: `Sign in to Gregg's Recipes:\n${magicLink}\n`,
+        text: `Sign in to Gregg's Recipes (greggsrecipes.com)\n\nContinue: ${magicLink}\n\nNo password. Nothing to download. If you didn't request this, ignore this email.\n`,
       }),
     });
     if (!res.ok) {
@@ -114,6 +119,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     error: "/signin",
   },
   callbacks: {
+    // Required for Safe Browsing / GSC "deceptive pages": never open-redirect
+    // off-site via callbackUrl after magic-link or OAuth-style flows.
+    async redirect({ url, baseUrl }) {
+      return safeAuthRedirect(url, baseUrl);
+    },
     async session({ session, user, token }) {
       if (session.user) {
         const id = user?.id || (token?.sub as string | undefined);
