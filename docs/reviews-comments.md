@@ -29,20 +29,19 @@ APIs return **401** when create/edit/upload is attempted without a session. Gues
   - `recipe_review` (unique `recipeId` + `userId`)
   - `recipe_review_image`
   - `recipe_comment`
-- Review photos (local/dev): `public/uploads/reviews/` (gitignored contents)
+- Review photos:
+  - **Local/dev** (no `BLOB_READ_WRITE_TOKEN`): `public/uploads/reviews/` (gitignored contents)
+  - **Production**: [Vercel Blob](https://vercel.com/docs/storage/vercel-blob) when `BLOB_READ_WRITE_TOKEN` is set (same store as recipe hero photos)
 
 ### Production note
 
-Ephemeral serverless disks (e.g. Vercel) will not keep uploaded files. For production, point uploads at object storage (S3, R2, Vercel Blob) and set something like:
+Set `BLOB_READ_WRITE_TOKEN` on Vercel so recipe and review uploads survive serverless deploys. Without it, local disk writes under `public/uploads/` are **ephemeral** on Vercel.
 
 ```bash
-# Future — not required for local demos
-# REVIEW_UPLOAD_DRIVER=local|s3
-# REVIEW_UPLOAD_BUCKET=
-# REVIEW_UPLOAD_PUBLIC_BASE_URL=
+BLOB_READ_WRITE_TOKEN=vercel_blob_rw_...
 ```
 
-Until then, treat review images as **local/demo only**, same caveat as SQLite auth in `docs/hosting.md`.
+See [hosting.md](./hosting.md) for the full env table.
 
 ## How to try it
 

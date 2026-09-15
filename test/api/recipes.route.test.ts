@@ -98,6 +98,22 @@ describe("/api/recipes", () => {
       })
     );
     expect(created.status).toBe(201);
+
+    createRecipe.mockResolvedValue({
+      recipe: { id: "local-10", ...validRecipe, imageUrl: "/uploads/recipes/a.jpg" },
+      mode: "local",
+    });
+    const withRelative = await POST(
+      new Request("http://x/api/recipes", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          ...validRecipe,
+          imageUrl: "/uploads/recipes/a.jpg",
+        }),
+      })
+    );
+    expect(withRelative.status).toBe(201);
   });
 
   it("PATCH/DELETE enforce ownership", async () => {

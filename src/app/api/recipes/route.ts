@@ -13,6 +13,19 @@ import {
   updateRecipe,
 } from "@/lib/recipes";
 
+/** Absolute http(s) URL, site-relative path (/recipes/…, /uploads/…), or empty. */
+const imageUrlSchema = z
+  .string()
+  .max(2000)
+  .refine(
+    (v) =>
+      v === "" ||
+      /^https?:\/\//i.test(v) ||
+      /^\/[A-Za-z0-9._~\-\/]+$/.test(v),
+    { message: "Invalid image URL" }
+  )
+  .optional();
+
 const recipeSchema = z.object({
   title: z.string().min(2).max(120),
   summary: z.string().min(10).max(500),
@@ -22,7 +35,7 @@ const recipeSchema = z.object({
   prepMinutes: z.number().int().min(0).max(600),
   cookMinutes: z.number().int().min(0).max(600),
   servings: z.number().int().min(1).max(50),
-  imageUrl: z.string().url().optional().or(z.literal("")),
+  imageUrl: imageUrlSchema,
   imageAlt: z.string().max(200).optional(),
 });
 
