@@ -369,9 +369,19 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
           </div>
         </div>
 
-        {error ? <p className="text-sm text-red-700 md:col-span-2">{error}</p> : null}
+        {error ? (
+          <p className="text-sm text-red-700 md:col-span-2" role="alert">
+            {error}
+          </p>
+        ) : null}
         {status ? (
-          <p className="text-sm text-[var(--accent-deep)] md:col-span-2">{status}</p>
+          <p
+            className="text-sm text-[var(--accent-deep)] md:col-span-2"
+            role="status"
+            aria-live="polite"
+          >
+            {status}
+          </p>
         ) : null}
 
         <div className="md:col-span-2">
@@ -386,7 +396,10 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
           {canManageAll ? "All recipes" : "Yours"}
         </h2>
         {recipes.length === 0 ? (
-          <p className="text-[var(--ink-muted)]">No recipes to manage yet.</p>
+          <p className="text-[var(--ink-muted)]">
+            You haven&apos;t published anything yet. Use the form above to add
+            the first dish to Gregg&apos;s shared collection.
+          </p>
         ) : (
           <ul className="divide-y divide-[var(--line)]">
             {recipes.map((recipe) => {
@@ -407,7 +420,7 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
                     <div className="flex gap-2">
                       <Link
                         href={`/recipes/${recipe.slug}`}
-                        className="inline-flex h-7 items-center rounded-lg border border-[var(--line)] px-2.5 text-[0.8rem] font-medium text-[var(--ink)] transition-colors hover:bg-[var(--mist)]"
+                        className="inline-flex h-11 items-center rounded-lg border border-[var(--line)] px-3 text-[0.8rem] font-medium text-[var(--ink)] transition-colors hover:bg-[var(--mist)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[var(--sage-deep)] md:h-7 md:px-2.5"
                       >
                         View
                       </Link>

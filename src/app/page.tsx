@@ -51,13 +51,14 @@ export default async function HomePage() {
             <p className="font-display text-4xl text-[#f3f0e8] drop-shadow-sm sm:text-5xl md:text-7xl lg:text-8xl">
               Gregg&apos;s Recipes
             </p>
-            <h1 className="mt-5 max-w-xl text-xl font-medium leading-snug text-[#e8ebe3] md:text-2xl">
+            <h1 className="mt-5 max-w-xl text-xl font-medium leading-snug text-[#f3f0e8] md:text-2xl">
               Cook what&apos;s written down — weeknight plates and Sunday roasts
               worth making again.
             </h1>
-            <p className="mt-4 max-w-md text-sm leading-relaxed text-[#c5d0c2] md:text-base">
-              Browse the collection anytime. Sign in to join the cooks — cooks
-              and admins can add dishes without a redeploy.
+            <p className="mt-4 max-w-lg text-sm leading-relaxed text-[#e8ebe3] md:text-base">
+              Browse anytime. Sign in to cook along, leave reviews and comments.
+              Cooks add recipes to Gregg&apos;s shared collection — no redeploy
+              needed.
             </p>
             <HeroCtas user={user} />
           </div>
@@ -71,8 +72,9 @@ export default async function HomePage() {
               On the table
             </h2>
             <p className="mt-3 text-[var(--ink-muted)]">
-              A handful of dishes worth repeating — ingredients, steps, and
-              timing included.
+              {recipes.length === 0
+                ? "Dishes will show up here as cooks publish — open to everyone who wants to cook from Gregg’s kitchen."
+                : "Dishes worth repeating — ingredients, steps, and timing included."}
             </p>
             {mode !== "db" || error ? (
               <p className="mt-2 text-xs uppercase tracking-[0.14em] text-[var(--ink-soft)]">

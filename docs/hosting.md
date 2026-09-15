@@ -128,13 +128,24 @@ Do **not** make apex primary. Metadata / sitemap / `AUTH_URL` all use www.
 2. Confirm Browse Recipes shows the Cajun tuna bowl from Neon.
 3. Add more dishes via `/my-recipes` (cook/admin) — writes go to Neon, no redeploy.
 
-## 6. Git workflow
+## 6. Analytics (Vercel)
+
+The app ships `@vercel/analytics` and `@vercel/speed-insights` in the root layout. After merge/deploy:
+
+1. Open the project in the [Vercel dashboard](https://vercel.com/dashboard).
+2. Go to **Analytics** → enable Web Analytics for Production (one-time toggle if prompted).
+3. Optionally open **Speed Insights** and enable it the same way.
+4. Visit `https://www.greggsrecipes.com` once; traffic appears in the dashboard within a few minutes.
+
+No extra env vars are required for Analytics or Speed Insights on Vercel.
+
+## 7. Git workflow
 
 - All changes go through pull requests.
 - Never push commits directly to `main`.
 - Work on a feature branch → push to GitHub → open a draft PR into `main` → merge only when asked.
 
-## 7. Local check before deploy
+## 8. Local check before deploy
 
 ```bash
 npm install

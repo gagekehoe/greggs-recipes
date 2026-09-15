@@ -111,6 +111,36 @@
   html {
     @apply font-sans;
   }
+  /* Clear keyboard focus for plain links (buttons/inputs already use ring) */
+  a:focus-visible {
+    outline: 2px solid var(--sage-deep);
+    outline-offset: 3px;
+  }
+  main:focus {
+    outline: none;
+  }
+}
+
+.skip-link {
+  position: absolute;
+  left: 1rem;
+  top: 0;
+  z-index: 50;
+  transform: translateY(-120%);
+  border-radius: 0.5rem;
+  background: var(--ink);
+  color: #f7f4ec;
+  padding: 0.55rem 0.9rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: transform 0.15s ease;
+}
+
+.skip-link:focus {
+  transform: translateY(0.75rem);
+  outline: 2px solid #f3f0e8;
+  outline-offset: 3px;
 }
 
 @layer utilities {

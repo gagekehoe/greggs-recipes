@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { EmptyRecipes } from "@/components/recipes/empty-recipes";
 import { RecipePhoto } from "@/components/recipes/recipe-photo";
 import { getSessionUser } from "@/lib/auth/session";
 import { totalMinutes, type Recipe } from "@/lib/recipes";
@@ -21,7 +22,7 @@ export function RecipeCard({
       className="group recipe-reveal"
       style={{ animationDelay: `${Math.min(index, 8) * 70}ms` }}
     >
-      <Link href={`/recipes/${recipe.slug}`} className="block">
+      <Link href={`/recipes/${recipe.slug}`} className="block focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[var(--sage-deep)]">
         <div className="relative aspect-[4/3] overflow-hidden bg-[var(--sage-deep)]">
           <RecipePhoto
             title={recipe.title}
@@ -66,28 +67,7 @@ export function RecipeCard({
 export async function RecipeGrid({ recipes }: { recipes: Recipe[] }) {
   if (recipes.length === 0) {
     const user = await getSessionUser();
-    const canWrite = user?.role === "admin" || user?.role === "cook";
-    const emptyHref = !user ? "/signin" : canWrite ? "/my-recipes" : "/profile";
-    const emptyLabel = !user ? "Sign in" : canWrite ? "My recipes" : "Profile";
-
-    return (
-      <div className="rounded-none border border-dashed border-[var(--line)] bg-[var(--paper)]/60 px-6 py-16 text-center">
-        <p className="font-display text-2xl text-[var(--ink)]">No recipes yet</p>
-        <p className="mx-auto mt-3 max-w-md text-[var(--ink-muted)]">
-          {user
-            ? canWrite
-              ? "The pantry is empty. Publish the first dish from My recipes — no redeploy needed."
-              : "The pantry is empty. Cooks and admins can publish the first dish."
-            : "The pantry is empty. Sign in as a cook or admin to publish the first dish — no redeploy needed."}
-        </p>
-        <Link
-          href={emptyHref}
-          className="mt-6 inline-flex text-sm font-medium text-[var(--accent-deep)] underline-offset-4 hover:underline"
-        >
-          {emptyLabel}
-        </Link>
-      </div>
-    );
+    return <EmptyRecipes user={user} />;
   }
 
   const ratings = await getRatingSummaries(recipes.map((r) => r.id));
