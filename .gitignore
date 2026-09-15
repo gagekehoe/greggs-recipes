@@ -37,6 +37,10 @@ yarn-error.log*
 # vercel
 .vercel
 
+# local auth db
+/data/auth.sqlite
+/data/auth.sqlite-*
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

@@ -54,14 +54,14 @@ export function RecipeGrid({ recipes }: { recipes: Recipe[] }) {
       <div className="rounded-none border border-dashed border-[var(--line)] bg-[var(--paper)]/60 px-6 py-16 text-center">
         <p className="font-display text-2xl text-[var(--ink)]">No recipes yet</p>
         <p className="mx-auto mt-3 max-w-md text-[var(--ink-muted)]">
-          The pantry is empty. Add your first dish from the kitchen desk — no
-          redeploy needed.
+          The pantry is empty. Sign in as a cook or admin to publish the first
+          dish — no redeploy needed.
         </p>
         <Link
-          href="/admin"
+          href="/signin"
           className="mt-6 inline-flex text-sm font-medium text-[var(--accent-deep)] underline-offset-4 hover:underline"
         >
-          Open kitchen desk
+          Sign in
         </Link>
       </div>
     );

@@ -5,6 +5,11 @@ import type { Recipe, RecipeInput } from "./types";
 
 const DATA_PATH = path.join(process.cwd(), "data", "recipes.json");
 
+const SYSTEM_AUTHOR = {
+  authorId: "system",
+  authorName: "Gregg's Kitchen",
+};
+
 function slugify(title: string): string {
   return title
     .toLowerCase()
@@ -13,17 +18,58 @@ function slugify(title: string): string {
     .replace(/(^-|-$)/g, "");
 }
 
+function normalizeRecipe(raw: Partial<Recipe> & Pick<Recipe, "id" | "slug" | "title">): Recipe {
+  return {
+    id: raw.id,
+    slug: raw.slug,
+    title: raw.title,
+    summary: raw.summary || "",
+    ingredients: raw.ingredients || [],
+    steps: raw.steps || [],
+    tags: raw.tags || [],
+    prepMinutes: raw.prepMinutes ?? 0,
+    cookMinutes: raw.cookMinutes ?? 0,
+    servings: raw.servings ?? 1,
+    imageUrl:
+      raw.imageUrl ||
+      "https://images.unsplash.com/photo-1495521821757-a1efb672935e?auto=format&fit=crop&w=1600&q=80",
+    imageAlt: raw.imageAlt || `${raw.title} plated`,
+    source: raw.source || "local",
+    updatedAt: raw.updatedAt || new Date().toISOString(),
+    authorId: raw.authorId || SYSTEM_AUTHOR.authorId,
+    authorName: raw.authorName || SYSTEM_AUTHOR.authorName,
+  };
+}
+
 async function ensureStore(): Promise<Recipe[]> {
   try {
     const raw = await fs.readFile(DATA_PATH, "utf8");
-    const parsed = JSON.parse(raw) as Recipe[];
-    if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    const parsed = JSON.parse(raw) as Partial<Recipe>[];
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      // Drop old Kitchen Desk smoke-test recipes; keep real content.
+      const cleaned = parsed
+        .filter((r) => {
+          const slug = r.slug || "";
+          return (
+            !slug.startsWith("kitchen-desk") &&
+            !slug.startsWith("test-mac") &&
+            r.title !== "Kitchen Desk Fix Check" &&
+            r.title !== "Test Mac Soup"
+          );
+        })
+        .map((r) => normalizeRecipe(r as Recipe));
+      if (cleaned.length > 0) {
+        await writeStore(cleaned);
+        return cleaned;
+      }
+    }
   } catch {
     // file missing or invalid — seed it
   }
   await fs.mkdir(path.dirname(DATA_PATH), { recursive: true });
-  await fs.writeFile(DATA_PATH, JSON.stringify(SEED_RECIPES, null, 2), "utf8");
-  return structuredClone(SEED_RECIPES);
+  const seeded = SEED_RECIPES.map((r) => normalizeRecipe(r));
+  await fs.writeFile(DATA_PATH, JSON.stringify(seeded, null, 2), "utf8");
+  return structuredClone(seeded);
 }
 
 async function writeStore(recipes: Recipe[]): Promise<void> {
@@ -42,6 +88,11 @@ export async function listLocalRecipes(): Promise<Recipe[]> {
 export async function getLocalRecipe(slug: string): Promise<Recipe | null> {
   const recipes = await ensureStore();
   return recipes.find((r) => r.slug === slug) ?? null;
+}
+
+export async function getLocalRecipeById(id: string): Promise<Recipe | null> {
+  const recipes = await ensureStore();
+  return recipes.find((r) => r.id === id) ?? null;
 }
 
 export async function createLocalRecipe(input: RecipeInput): Promise<Recipe> {
@@ -69,11 +120,46 @@ export async function createLocalRecipe(input: RecipeInput): Promise<Recipe> {
     imageAlt: input.imageAlt?.trim() || `${input.title.trim()} plated`,
     source: "local",
     updatedAt: new Date().toISOString(),
+    authorId: input.authorId,
+    authorName: input.authorName,
   };
 
   recipes.unshift(recipe);
   await writeStore(recipes);
   return recipe;
+}
+
+export async function updateLocalRecipe(
+  id: string,
+  input: Omit<RecipeInput, "authorId" | "authorName">
+): Promise<Recipe | null> {
+  const recipes = await ensureStore();
+  const index = recipes.findIndex((r) => r.id === id);
+  if (index < 0) return null;
+
+  const current = recipes[index];
+  const updated: Recipe = {
+    ...current,
+    title: input.title.trim(),
+    summary: input.summary.trim(),
+    ingredients: input.ingredients.map((i) => i.trim()).filter(Boolean),
+    steps: input.steps.map((s) => s.trim()).filter(Boolean),
+    tags: input.tags.map((t) => t.trim().toLowerCase()).filter(Boolean),
+    prepMinutes: input.prepMinutes,
+    cookMinutes: input.cookMinutes,
+    servings: input.servings,
+    imageUrl:
+      input.imageUrl?.trim() ||
+      current.imageUrl ||
+      "https://images.unsplash.com/photo-1495521821757-a1efb672935e?auto=format&fit=crop&w=1600&q=80",
+    imageAlt:
+      input.imageAlt?.trim() || current.imageAlt || `${input.title.trim()} plated`,
+    updatedAt: new Date().toISOString(),
+  };
+
+  recipes[index] = updated;
+  await writeStore(recipes);
+  return updated;
 }
 
 export async function deleteLocalRecipe(id: string): Promise<boolean> {

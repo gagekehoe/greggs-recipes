@@ -31,6 +31,8 @@ export const SEED_RECIPES: Recipe[] = [
     imageUrl:
       "https://images.unsplash.com/photo-1598103442097-8b74394b95c6?auto=format&fit=crop&w=1600&q=80",
     imageAlt: "Golden roast chicken on a platter with herbs",
+    authorId: "system",
+    authorName: "Gregg's Kitchen",
     source: "local",
     updatedAt: "2026-03-01T12:00:00.000Z",
   },
@@ -62,6 +64,8 @@ export const SEED_RECIPES: Recipe[] = [
     imageUrl:
       "https://images.unsplash.com/photo-1612874742237-6526221588e3?auto=format&fit=crop&w=1600&q=80",
     imageAlt: "Bowl of creamy spaghetti carbonara with black pepper",
+    authorId: "system",
+    authorName: "Gregg's Kitchen",
     source: "local",
     updatedAt: "2026-03-04T12:00:00.000Z",
   },
@@ -98,6 +102,8 @@ export const SEED_RECIPES: Recipe[] = [
     imageUrl:
       "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=1600&q=80",
     imageAlt: "Slice of olive oil cake with citrus",
+    authorId: "system",
+    authorName: "Gregg's Kitchen",
     source: "local",
     updatedAt: "2026-03-08T12:00:00.000Z",
   },
@@ -135,6 +141,8 @@ export const SEED_RECIPES: Recipe[] = [
     imageUrl:
       "https://images.unsplash.com/photo-1567576060324-f0a7dba1354a?auto=format&fit=crop&w=1600&q=80",
     imageAlt: "Bowl of smoky black bean chili with toppings",
+    authorId: "system",
+    authorName: "Gregg's Kitchen",
     source: "local",
     updatedAt: "2026-03-10T12:00:00.000Z",
   },
@@ -167,6 +175,8 @@ export const SEED_RECIPES: Recipe[] = [
     imageUrl:
       "https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=1600&q=80",
     imageAlt: "Pan-seared salmon fillet with greens",
+    authorId: "system",
+    authorName: "Gregg's Kitchen",
     source: "local",
     updatedAt: "2026-03-12T12:00:00.000Z",
   },

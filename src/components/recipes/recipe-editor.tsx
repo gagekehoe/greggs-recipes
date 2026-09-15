@@ -1,24 +1,26 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import type { Recipe } from "@/lib/recipes/types";
 
 type Props = {
   contentMode: "sanity" | "local";
+  recipes: Recipe[];
+  canManageAll: boolean;
 };
 
-export function AdminPanel({ contentMode }: Props) {
+export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
   const router = useRouter();
-  const [password, setPassword] = useState("");
-  const [authenticated, setAuthenticated] = useState(false);
-  const [checking, setChecking] = useState(true);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
 
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
@@ -29,46 +31,6 @@ export function AdminPanel({ contentMode }: Props) {
   const [cookMinutes, setCookMinutes] = useState(30);
   const [servings, setServings] = useState(4);
   const [imageUrl, setImageUrl] = useState("");
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const res = await fetch("/api/admin/session");
-        const data = await res.json();
-        if (!cancelled) setAuthenticated(Boolean(data.authenticated));
-      } catch {
-        if (!cancelled) setAuthenticated(false);
-      } finally {
-        if (!cancelled) setChecking(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  async function login(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    const res = await fetch("/api/admin/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ password }),
-    });
-    if (!res.ok) {
-      const data = await res.json().catch(() => ({}));
-      setError(data.error || "Login failed");
-      return;
-    }
-    setAuthenticated(true);
-    setPassword("");
-  }
-
-  async function logout() {
-    await fetch("/api/admin/logout", { method: "POST" });
-    setAuthenticated(false);
-  }
 
   async function saveRecipe(e: React.FormEvent) {
     e.preventDefault();
@@ -120,63 +82,44 @@ export function AdminPanel({ contentMode }: Props) {
     }
   }
 
-  if (checking) {
-    return (
-      <div className="animate-pulse space-y-4">
-        <div className="h-8 w-48 bg-[var(--sage)]/30" />
-        <div className="h-40 bg-[var(--sage)]/20" />
-      </div>
-    );
-  }
-
-  if (!authenticated) {
-    return (
-      <form onSubmit={login} className="mx-auto max-w-md space-y-5">
-        <div>
-          <h1 className="font-display text-4xl text-[var(--ink)]">Kitchen desk</h1>
-          <p className="mt-2 text-[var(--ink-muted)]">
-            Enter the admin password to add recipes without touching code.
-          </p>
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
-          <Input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
-            required
-          />
-        </div>
-        {error ? <p className="text-sm text-red-700">{error}</p> : null}
-        <Button type="submit" className="w-full">
-          Unlock
-        </Button>
-        <p className="text-xs text-[var(--ink-soft)]">
-          Local default password: <code>greggskitchen</code> (override with{" "}
-          <code>ADMIN_PASSWORD</code>).
-        </p>
-      </form>
-    );
+  async function deleteRecipe(id: string, recipeTitle: string) {
+    if (!confirm(`Delete “${recipeTitle}”?`)) return;
+    setDeletingId(id);
+    setError(null);
+    try {
+      const res = await fetch(`/api/recipes?id=${encodeURIComponent(id)}`, {
+        method: "DELETE",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error || "Could not delete");
+        return;
+      }
+      setStatus(`Deleted “${recipeTitle}”.`);
+      router.refresh();
+    } catch {
+      setError("Network error while deleting.");
+    } finally {
+      setDeletingId(null);
+    }
   }
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-wrap items-end justify-between gap-4">
-        <div>
-          <h1 className="font-display text-4xl text-[var(--ink)]">Add a recipe</h1>
-          <p className="mt-2 text-[var(--ink-muted)]">
-            Saving to{" "}
-            <span className="font-medium text-[var(--ink)]">
-              {contentMode === "sanity" ? "Sanity CMS" : "local JSON store"}
-            </span>
-            . Changes appear on the site immediately — no redeploy.
-          </p>
-        </div>
-        <Button variant="outline" onClick={logout}>
-          Sign out
-        </Button>
+    <div className="space-y-12">
+      <div>
+        <h1 className="font-display text-4xl text-[var(--ink)] md:text-5xl">
+          My recipes
+        </h1>
+        <p className="mt-3 max-w-2xl text-[var(--ink-muted)]">
+          {canManageAll
+            ? "You’re an admin — add dishes and manage any recipe on the site."
+            : "Add and manage recipes you published. Viewers can browse; only cooks and admins can write."}{" "}
+          Saving to{" "}
+          <span className="font-medium text-[var(--ink)]">
+            {contentMode === "sanity" ? "Sanity CMS" : "local store"}
+          </span>
+          .
+        </p>
       </div>
 
       <form onSubmit={saveRecipe} className="grid gap-6 md:grid-cols-2">
@@ -289,6 +232,47 @@ export function AdminPanel({ contentMode }: Props) {
           </Button>
         </div>
       </form>
+
+      <section className="space-y-4 border-t border-[var(--line)] pt-10">
+        <h2 className="font-display text-3xl text-[var(--ink)]">
+          {canManageAll ? "All recipes" : "Yours"}
+        </h2>
+        {recipes.length === 0 ? (
+          <p className="text-[var(--ink-muted)]">No recipes to manage yet.</p>
+        ) : (
+          <ul className="divide-y divide-[var(--line)]">
+            {recipes.map((recipe) => (
+              <li
+                key={recipe.id}
+                className="flex flex-wrap items-center justify-between gap-3 py-4"
+              >
+                <div>
+                  <p className="font-medium text-[var(--ink)]">{recipe.title}</p>
+                  <p className="text-xs text-[var(--ink-soft)]">
+                    {recipe.authorName} · {recipe.source}
+                  </p>
+                </div>
+                <div className="flex gap-2">
+                  <Link
+                    href={`/recipes/${recipe.slug}`}
+                    className="inline-flex h-7 items-center rounded-lg border border-[var(--line)] px-2.5 text-[0.8rem] font-medium text-[var(--ink)] transition-colors hover:bg-[var(--mist)]"
+                  >
+                    View
+                  </Link>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={deletingId === recipe.id}
+                    onClick={() => deleteRecipe(recipe.id, recipe.title)}
+                  >
+                    {deletingId === recipe.id ? "Deleting…" : "Delete"}
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </section>
     </div>
   );
 }

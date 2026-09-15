@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { AuthNav } from "@/components/auth/auth-nav";
 
 export function SiteHeader() {
   return (
@@ -14,12 +15,7 @@ export function SiteHeader() {
           <Link href="/#recipes" className="transition-colors hover:text-[var(--ink)]">
             Recipes
           </Link>
-          <Link
-            href="/admin"
-            className="transition-colors hover:text-[var(--ink)]"
-          >
-            Kitchen desk
-          </Link>
+          <AuthNav />
         </nav>
       </div>
     </header>

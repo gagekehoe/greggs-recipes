@@ -38,8 +38,8 @@ export default async function HomePage() {
               from one kitchen.
             </h1>
             <p className="mt-4 max-w-md text-sm leading-relaxed text-[#c5d0c2] md:text-base">
-              Browse the collection, then add your own from the kitchen desk.
-              No redeploy required.
+              Browse the collection anytime. Cooks and admins can sign in to add
+              dishes — no redeploy required.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link
@@ -49,10 +49,10 @@ export default async function HomePage() {
                 Browse recipes
               </Link>
               <Link
-                href="/admin"
+                href="/signin"
                 className="inline-flex h-9 items-center rounded-lg border border-[#f3f0e8]/40 px-4 text-sm font-medium text-[#f3f0e8] transition-colors hover:bg-[#f3f0e8]/10 hover:text-white"
               >
-                Kitchen desk
+                Sign in
               </Link>
             </div>
           </div>
