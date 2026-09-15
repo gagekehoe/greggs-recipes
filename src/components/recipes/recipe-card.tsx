@@ -2,8 +2,18 @@ import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { totalMinutes, type Recipe } from "@/lib/recipes";
+import type { RatingSummary } from "@/lib/reviews/rating";
+import { getRatingSummaries } from "@/lib/reviews/store";
 
-export function RecipeCard({ recipe, index = 0 }: { recipe: Recipe; index?: number }) {
+export function RecipeCard({
+  recipe,
+  index = 0,
+  rating,
+}: {
+  recipe: Recipe;
+  index?: number;
+  rating?: RatingSummary;
+}) {
   const minutes = totalMinutes(recipe);
   return (
     <article
@@ -41,6 +51,9 @@ export function RecipeCard({ recipe, index = 0 }: { recipe: Recipe; index?: numb
           </p>
           <p className="mt-3 text-xs uppercase tracking-[0.14em] text-[var(--ink-soft)]">
             {minutes} min · serves {recipe.servings}
+            {rating && rating.count > 0
+              ? ` · ${rating.average}★ (${rating.count})`
+              : ""}
           </p>
         </div>
       </Link>
@@ -48,7 +61,7 @@ export function RecipeCard({ recipe, index = 0 }: { recipe: Recipe; index?: numb
   );
 }
 
-export function RecipeGrid({ recipes }: { recipes: Recipe[] }) {
+export async function RecipeGrid({ recipes }: { recipes: Recipe[] }) {
   if (recipes.length === 0) {
     return (
       <div className="rounded-none border border-dashed border-[var(--line)] bg-[var(--paper)]/60 px-6 py-16 text-center">
@@ -67,10 +80,17 @@ export function RecipeGrid({ recipes }: { recipes: Recipe[] }) {
     );
   }
 
+  const ratings = await getRatingSummaries(recipes.map((r) => r.id));
+
   return (
     <div className="grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
       {recipes.map((recipe, index) => (
-        <RecipeCard key={recipe.id} recipe={recipe} index={index} />
+        <RecipeCard
+          key={recipe.id}
+          recipe={recipe}
+          index={index}
+          rating={ratings[recipe.id]}
+        />
       ))}
     </div>
   );

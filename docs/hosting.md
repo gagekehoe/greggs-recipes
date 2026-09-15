@@ -38,6 +38,8 @@ How to put the site on a dedicated URL with Vercel and (optionally) a custom dom
 
 Without Sanity env vars, the site still boots using seeded local recipes. On Vercel, recipe JSON writes may not persist — connect Sanity for durable publishing.
 
+Review photos are written under `public/uploads/reviews/` locally. That path is not durable on serverless — plan object storage before relying on review images in production (see [reviews-comments.md](./reviews-comments.md)).
+
 ## 3. Connect a custom domain
 
 1. In Vercel: **Project → Settings → Domains → Add**.

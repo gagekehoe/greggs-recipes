@@ -1,5 +1,7 @@
 "use client";
 
+import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
@@ -11,7 +13,16 @@ type Props = {
   error?: string | null;
 };
 
+function welcomeCallback(rawNext: string | null): string {
+  const next =
+    rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//")
+      ? rawNext
+      : "/";
+  return `/welcome?next=${encodeURIComponent(next)}`;
+}
+
 export function SignInForm({ sent, error }: Props) {
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [pending, setPending] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
@@ -21,9 +32,10 @@ export function SignInForm({ sent, error }: Props) {
     setPending(true);
     setLocalError(null);
     try {
+      const callbackUrl = welcomeCallback(searchParams.get("callbackUrl"));
       const result = await signIn("nodemailer", {
         email: email.trim(),
-        callbackUrl: "/my-recipes",
+        callbackUrl,
         redirect: false,
       });
       if (result?.error) {
@@ -50,6 +62,10 @@ export function SignInForm({ sent, error }: Props) {
           <code className="text-[var(--ink)]">npm run dev</code> — the link is
           printed there.
         </p>
+        <p className="text-sm text-[var(--ink-soft)]">
+          New here? The same link creates your account. You&apos;ll choose a
+          display name on first sign-in.
+        </p>
         <Button variant="outline" onClick={() => (window.location.href = "/signin")}>
           Use a different email
         </Button>
@@ -64,7 +80,7 @@ export function SignInForm({ sent, error }: Props) {
           Sign in
         </h1>
         <p className="mt-3 text-[var(--ink-muted)] leading-relaxed">
-          Email a one-time link — no password.
+          Email a one-time link — no password. First visit creates your account.
         </p>
       </div>
 

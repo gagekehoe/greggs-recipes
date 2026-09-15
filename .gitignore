@@ -41,6 +41,10 @@ yarn-error.log*
 /data/auth.sqlite
 /data/auth.sqlite-*
 
+# local review photo uploads (keep folder via .gitkeep)
+/public/uploads/reviews/*
+!/public/uploads/reviews/.gitkeep
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts

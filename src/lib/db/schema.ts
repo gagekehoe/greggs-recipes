@@ -1,5 +1,11 @@
 import type { AdapterAccountType } from "@auth/core/adapters";
-import { integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import {
+  integer,
+  primaryKey,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 
 export const ROLES = ["admin", "cook", "viewer"] as const;
 export type Role = (typeof ROLES)[number];
@@ -58,3 +64,60 @@ export const verificationTokens = sqliteTable(
 );
 
 export type DbUser = typeof users.$inferSelect;
+
+/** One review per user per recipe (stars + optional text + images). */
+export const recipeReviews = sqliteTable(
+  "recipe_review",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    recipeId: text("recipeId").notNull(),
+    userId: text("userId")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    rating: integer("rating").notNull(),
+    body: text("body"),
+    createdAt: integer("createdAt", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+    updatedAt: integer("updatedAt", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("recipe_review_recipe_user_uidx").on(table.recipeId, table.userId),
+  ]
+);
+
+export const recipeReviewImages = sqliteTable("recipe_review_image", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  reviewId: text("reviewId")
+    .notNull()
+    .references(() => recipeReviews.id, { onDelete: "cascade" }),
+  url: text("url").notNull(),
+  sortOrder: integer("sortOrder").notNull().default(0),
+  createdAt: integer("createdAt", { mode: "timestamp_ms" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
+export const recipeComments = sqliteTable("recipe_comment", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  recipeId: text("recipeId").notNull(),
+  userId: text("userId")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  body: text("body").notNull(),
+  createdAt: integer("createdAt", { mode: "timestamp_ms" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
+export type DbRecipeReview = typeof recipeReviews.$inferSelect;
+export type DbRecipeReviewImage = typeof recipeReviewImages.$inferSelect;
+export type DbRecipeComment = typeof recipeComments.$inferSelect;
