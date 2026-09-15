@@ -46,7 +46,14 @@ describe("GET/POST/DELETE /api/reviews", () => {
 
     getSessionUser.mockResolvedValue({ id: "u1", role: "viewer" });
     listReviewsForRecipe.mockResolvedValue([
-      { id: "r1", userId: "u1", rating: 5 },
+      {
+        id: "r1",
+        userId: "u1",
+        rating: 5,
+        authorName: "Maya",
+        body: null,
+        images: [],
+      },
     ]);
     getRatingSummary.mockResolvedValue({ average: 5, count: 1 });
     const ok = await GET(
@@ -56,6 +63,11 @@ describe("GET/POST/DELETE /api/reviews", () => {
     const body = await ok!.json();
     expect(body.mine?.userId).toBe("u1");
     expect(body.signedIn).toBe(true);
+    expect(JSON.stringify(body)).not.toMatch(/authorEmail/);
+    for (const review of body.reviews) {
+      expect(review).not.toHaveProperty("authorEmail");
+    }
+    expect(body.mine).not.toHaveProperty("authorEmail");
   });
 
   it("POST rejects guests and users without display names", async () => {

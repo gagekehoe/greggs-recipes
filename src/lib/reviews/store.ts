@@ -17,6 +17,7 @@ export type ReviewImage = {
   sortOrder: number;
 };
 
+/** Public review DTO — never includes account email (magic-link identifier). */
 export type ReviewWithAuthor = {
   id: string;
   recipeId: string;
@@ -26,10 +27,10 @@ export type ReviewWithAuthor = {
   createdAt: Date;
   updatedAt: Date;
   authorName: string | null;
-  authorEmail: string | null;
   images: ReviewImage[];
 };
 
+/** Public comment DTO — never includes account email (magic-link identifier). */
 export type CommentWithAuthor = {
   id: string;
   recipeId: string;
@@ -37,7 +38,6 @@ export type CommentWithAuthor = {
   body: string;
   createdAt: Date;
   authorName: string | null;
-  authorEmail: string | null;
 };
 
 export async function getRatingSummary(
@@ -106,7 +106,6 @@ export async function listReviewsForRecipe(
         createdAt: recipeReviews.createdAt,
         updatedAt: recipeReviews.updatedAt,
         authorName: users.name,
-        authorEmail: users.email,
       })
       .from(recipeReviews)
       .leftJoin(users, eq(recipeReviews.userId, users.id))
@@ -139,7 +138,6 @@ export async function listReviewsForRecipe(
         createdAt: Date;
         updatedAt: Date;
         authorName: string | null;
-        authorEmail: string | null;
       }) => ({
       id: row.id,
       recipeId: row.recipeId,
@@ -148,8 +146,7 @@ export async function listReviewsForRecipe(
       body: row.body,
       createdAt: row.createdAt,
       updatedAt: row.updatedAt,
-      authorName: publicAuthorLabel(row.authorName, row.authorEmail),
-      authorEmail: row.authorEmail,
+      authorName: publicAuthorLabel(row.authorName),
       images: imagesByReview.get(row.id) ?? [],
     })
     );
@@ -306,7 +303,6 @@ export async function listCommentsForRecipe(
         body: recipeComments.body,
         createdAt: recipeComments.createdAt,
         authorName: users.name,
-        authorEmail: users.email,
       })
       .from(recipeComments)
       .leftJoin(users, eq(recipeComments.userId, users.id))
@@ -321,15 +317,13 @@ export async function listCommentsForRecipe(
         body: string;
         createdAt: Date;
         authorName: string | null;
-        authorEmail: string | null;
       }) => ({
       id: row.id,
       recipeId: row.recipeId,
       userId: row.userId,
       body: row.body,
       createdAt: row.createdAt,
-      authorName: publicAuthorLabel(row.authorName, row.authorEmail),
-      authorEmail: row.authorEmail,
+      authorName: publicAuthorLabel(row.authorName),
     })
     );
   } catch (error) {
