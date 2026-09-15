@@ -46,7 +46,7 @@ Reviews & comments details: [docs/reviews-comments.md](./docs/reviews-comments.m
 
 ### Local mode (default — no CMS keys needed)
 
-- Recipes live in `data/recipes.json` (seeded dishes attributed to `system` / Gregg's Kitchen).
+- Recipes live in `data/recipes.json` locally (seeded dishes attributed to `system` / Gregg's Kitchen). On Vercel the app never opens that file — it serves in-memory seeds (or Sanity when configured).
 - Auth users + sessions live in `data/auth.sqlite` locally (or Neon when `DATABASE_URL` is set).
 - Cooks/admins publish via `/my-recipes`.
 
@@ -61,7 +61,7 @@ Set `DATABASE_URL` to a Neon Postgres URL and run `npm run db:push` (or `drizzle
 3. Deploy the schema in `sanity/schemaTypes/recipe.ts` (includes `authorId` / `authorName`).
 4. Redeploy the Next app. Writes go to Sanity when `SANITY_API_WRITE_TOKEN` is set.
 
-If Sanity is configured but empty or unreachable, the app falls back to the local seed so the site never goes blank.
+If Sanity is configured but empty or unreachable, the app falls back to the seed catalog so the site never goes blank — including on Vercel’s read-only filesystem.
 
 ## Hosting overview
 

@@ -11,6 +11,22 @@ const SYSTEM_AUTHOR = {
   authorName: "Gregg's Kitchen",
 };
 
+const READ_ONLY_STORE_MESSAGE =
+  "Local recipe JSON is read-only on serverless. Configure Sanity for publishing, or edit recipes locally.";
+
+/**
+ * Writable `data/recipes.json` is for local/dev only.
+ * On Vercel/Lambda the filesystem is read-only — never open or write that path.
+ * Production durable writes go through Sanity (CMS); Neon is for auth/reviews.
+ */
+export function isLocalRecipeStoreWritable(): boolean {
+  return !(
+    process.env.VERCEL ||
+    process.env.VERCEL_ENV ||
+    process.env.AWS_LAMBDA_FUNCTION_NAME
+  );
+}
+
 function normalizeRecipe(raw: Partial<Recipe> & Pick<Recipe, "id" | "slug" | "title">): Recipe {
   return {
     id: raw.id,
@@ -32,48 +48,69 @@ function normalizeRecipe(raw: Partial<Recipe> & Pick<Recipe, "id" | "slug" | "ti
   };
 }
 
+/** In-memory seed catalog — safe on serverless (no filesystem). */
+export function getSeedRecipes(): Recipe[] {
+  return SEED_RECIPES.map((r) => normalizeRecipe(r));
+}
+
+function sortByUpdatedAt(recipes: Recipe[]): Recipe[] {
+  return recipes.sort(
+    (a, b) =>
+      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+  );
+}
+
+function isSmokeTestRecipe(r: Partial<Recipe>): boolean {
+  const slug = r.slug || "";
+  return (
+    slug.startsWith("kitchen-desk") ||
+    slug.startsWith("test-mac") ||
+    r.title === "Kitchen Desk Fix Check" ||
+    r.title === "Test Mac Soup"
+  );
+}
+
 async function ensureStore(): Promise<Recipe[]> {
+  // Serverless: never touch recipes.json (EROFS). Use compiled-in seeds.
+  if (!isLocalRecipeStoreWritable()) {
+    return getSeedRecipes();
+  }
+
   try {
     const raw = await fs.readFile(DATA_PATH, "utf8");
     const parsed = JSON.parse(raw) as Partial<Recipe>[];
     if (Array.isArray(parsed) && parsed.length > 0) {
-      // Drop old Kitchen Desk smoke-test recipes; keep real content.
       const cleaned = parsed
-        .filter((r) => {
-          const slug = r.slug || "";
-          return (
-            !slug.startsWith("kitchen-desk") &&
-            !slug.startsWith("test-mac") &&
-            r.title !== "Kitchen Desk Fix Check" &&
-            r.title !== "Test Mac Soup"
-          );
-        })
+        .filter((r) => !isSmokeTestRecipe(r))
         .map((r) => normalizeRecipe(r as Recipe));
       if (cleaned.length > 0) {
-        await writeStore(cleaned);
+        // Persist cleanup only when junk was removed; avoid needless writes.
+        if (cleaned.length !== parsed.length) {
+          await writeStore(cleaned);
+        }
         return cleaned;
       }
     }
   } catch {
     // file missing or invalid — seed it
   }
-  await fs.mkdir(path.dirname(DATA_PATH), { recursive: true });
-  const seeded = SEED_RECIPES.map((r) => normalizeRecipe(r));
-  await fs.writeFile(DATA_PATH, JSON.stringify(seeded, null, 2), "utf8");
+
+  const seeded = getSeedRecipes();
+  await writeStore(seeded);
   return structuredClone(seeded);
 }
 
 async function writeStore(recipes: Recipe[]): Promise<void> {
+  if (!isLocalRecipeStoreWritable()) {
+    throw new Error(READ_ONLY_STORE_MESSAGE);
+  }
   await fs.mkdir(path.dirname(DATA_PATH), { recursive: true });
   await fs.writeFile(DATA_PATH, JSON.stringify(recipes, null, 2), "utf8");
 }
 
 export async function listLocalRecipes(): Promise<Recipe[]> {
   const recipes = await ensureStore();
-  return recipes.sort(
-    (a, b) =>
-      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-  );
+  return sortByUpdatedAt(recipes);
 }
 
 export async function getLocalRecipe(slug: string): Promise<Recipe | null> {

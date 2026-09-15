@@ -69,7 +69,7 @@ EMAIL_FROM=Gregg's Recipes <onboarding@resend.dev>
 - **Local:** Auth.js uses SQLite at `data/auth.sqlite` (gitignored) when `DATABASE_URL` is unset.
 - **Vercel:** Set `DATABASE_URL` to Neon. The app uses `drizzle-orm/neon-http` (no `better-sqlite3` on serverless).
 
-Without Sanity env vars, the site still boots using seeded local recipes. On Vercel, recipe JSON writes may not persist — connect Sanity for durable publishing.
+Without Sanity env vars, the site boots from in-memory seed recipes on Vercel (never opens or writes `data/recipes.json` — that path is local/dev only and would hit EROFS on the serverless filesystem). Connect Sanity for durable publishing. Neon (`DATABASE_URL`) remains for Auth.js, reviews, and comments — not the recipe catalog.
 
 Review photos are written under `public/uploads/reviews/` locally. That path is not durable on serverless — plan object storage before relying on review images in production (see [reviews-comments.md](./reviews-comments.md)).
 
