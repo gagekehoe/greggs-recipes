@@ -210,7 +210,7 @@ export const SEED_RECIPES: Recipe[] = [
     imageUrl: "/recipes/cajun-tuna-bowl.jpg",
     imageAlt: "Extra-saucy Cajun tuna bowl over dressed greens with cheese",
     authorId: "admin",
-    authorName: "Gage",
+    authorName: "Gregg",
     source: "local",
     updatedAt: "2026-09-14T20:00:00.000Z",
   },
