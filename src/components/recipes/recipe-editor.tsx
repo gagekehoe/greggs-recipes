@@ -262,7 +262,15 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="summary">Summary</Label>
+            <div className="flex items-baseline justify-between gap-3">
+              <Label htmlFor="summary">Summary</Label>
+              <p
+                className="text-xs tabular-nums text-[var(--ink-soft)]"
+                aria-live="polite"
+              >
+                {summary.length}/{RECIPE_FIELD_LIMITS.summaryMax}
+              </p>
+            </div>
             <Textarea
               id="summary"
               value={summary}
@@ -272,9 +280,6 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
               maxLength={RECIPE_FIELD_LIMITS.summaryMax}
               placeholder="What makes this dish worth cooking?"
             />
-            <p className="text-xs text-[var(--ink-soft)]">
-              {summary.length}/{RECIPE_FIELD_LIMITS.summaryMax} characters
-            </p>
           </div>
         </div>
 
