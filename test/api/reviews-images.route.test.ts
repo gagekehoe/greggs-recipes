@@ -22,17 +22,22 @@ vi.mock("@/lib/reviews/store", () => ({
 vi.mock("@/lib/reviews/uploads", () => ({
   saveReviewImageFile: (...a: unknown[]) => saveReviewImageFile(...a),
 }));
-vi.mock("@/lib/db", () => ({
-  db: {
-    select: () => ({
-      from: () => ({
-        where: () => ({
-          limit: (...a: unknown[]) => selectLimit(...a),
+vi.mock("@/lib/db", async () => {
+  const schema = await import("@/lib/db/schema");
+  return {
+    isDatabaseConfigured: () => true,
+    recipeReviewImages: schema.recipeReviewImages,
+    db: {
+      select: () => ({
+        from: () => ({
+          where: () => ({
+            limit: (...a: unknown[]) => selectLimit(...a),
+          }),
         }),
       }),
-    }),
-  },
-}));
+    },
+  };
+});
 
 describe("/api/reviews/images", () => {
   beforeEach(() => {

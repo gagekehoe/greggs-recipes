@@ -1,12 +1,13 @@
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { publicAuthorLabel } from "@/lib/auth/profile";
-import { db } from "@/lib/db";
 import {
+  db,
+  isDatabaseConfigured,
   recipeComments,
   recipeReviewImages,
   recipeReviews,
   users,
-} from "@/lib/db/schema";
+} from "@/lib/db";
 import { summarizeRatings, type RatingSummary } from "@/lib/reviews/rating";
 import { deleteReviewImageFile } from "@/lib/reviews/uploads";
 
@@ -42,11 +43,17 @@ export type CommentWithAuthor = {
 export async function getRatingSummary(
   recipeId: string
 ): Promise<RatingSummary> {
-  const rows = await db
-    .select({ rating: recipeReviews.rating })
-    .from(recipeReviews)
-    .where(eq(recipeReviews.recipeId, recipeId));
-  return summarizeRatings(rows.map((r) => r.rating));
+  if (!isDatabaseConfigured()) return { average: 0, count: 0 };
+  try {
+    const rows = await db
+      .select({ rating: recipeReviews.rating })
+      .from(recipeReviews)
+      .where(eq(recipeReviews.recipeId, recipeId));
+    return summarizeRatings(rows.map((r: { rating: number }) => r.rating));
+  } catch (error) {
+    console.error("[reviews] getRatingSummary failed:", error);
+    return { average: 0, count: 0 };
+  }
 }
 
 export async function getRatingSummaries(
@@ -57,75 +64,99 @@ export async function getRatingSummaries(
     result[id] = { average: 0, count: 0 };
   }
   if (recipeIds.length === 0) return result;
+  if (!isDatabaseConfigured()) return result;
 
-  const rows = await db
-    .select({
-      recipeId: recipeReviews.recipeId,
-      rating: recipeReviews.rating,
-    })
-    .from(recipeReviews)
-    .where(inArray(recipeReviews.recipeId, recipeIds));
+  try {
+    const rows = await db
+      .select({
+        recipeId: recipeReviews.recipeId,
+        rating: recipeReviews.rating,
+      })
+      .from(recipeReviews)
+      .where(inArray(recipeReviews.recipeId, recipeIds));
 
-  const byRecipe = new Map<string, number[]>();
-  for (const row of rows) {
-    const list = byRecipe.get(row.recipeId) ?? [];
-    list.push(row.rating);
-    byRecipe.set(row.recipeId, list);
+    const byRecipe = new Map<string, number[]>();
+    for (const row of rows) {
+      const list = byRecipe.get(row.recipeId) ?? [];
+      list.push(row.rating);
+      byRecipe.set(row.recipeId, list);
+    }
+    for (const [id, ratings] of byRecipe) {
+      result[id] = summarizeRatings(ratings);
+    }
+    return result;
+  } catch (error) {
+    console.error("[reviews] getRatingSummaries failed:", error);
+    return result;
   }
-  for (const [id, ratings] of byRecipe) {
-    result[id] = summarizeRatings(ratings);
-  }
-  return result;
 }
 
 export async function listReviewsForRecipe(
   recipeId: string
 ): Promise<ReviewWithAuthor[]> {
-  const rows = await db
-    .select({
-      id: recipeReviews.id,
-      recipeId: recipeReviews.recipeId,
-      userId: recipeReviews.userId,
-      rating: recipeReviews.rating,
-      body: recipeReviews.body,
-      createdAt: recipeReviews.createdAt,
-      updatedAt: recipeReviews.updatedAt,
-      authorName: users.name,
-      authorEmail: users.email,
+  if (!isDatabaseConfigured()) return [];
+  try {
+    const rows = await db
+      .select({
+        id: recipeReviews.id,
+        recipeId: recipeReviews.recipeId,
+        userId: recipeReviews.userId,
+        rating: recipeReviews.rating,
+        body: recipeReviews.body,
+        createdAt: recipeReviews.createdAt,
+        updatedAt: recipeReviews.updatedAt,
+        authorName: users.name,
+        authorEmail: users.email,
+      })
+      .from(recipeReviews)
+      .leftJoin(users, eq(recipeReviews.userId, users.id))
+      .where(eq(recipeReviews.recipeId, recipeId))
+      .orderBy(desc(recipeReviews.updatedAt));
+
+    if (rows.length === 0) return [];
+
+    const reviewIds = rows.map((r: { id: string }) => r.id);
+    const images = await db
+      .select()
+      .from(recipeReviewImages)
+      .where(inArray(recipeReviewImages.reviewId, reviewIds))
+      .orderBy(asc(recipeReviewImages.sortOrder));
+
+    const imagesByReview = new Map<string, ReviewImage[]>();
+    for (const img of images) {
+      const list = imagesByReview.get(img.reviewId) ?? [];
+      list.push({ id: img.id, url: img.url, sortOrder: img.sortOrder });
+      imagesByReview.set(img.reviewId, list);
+    }
+
+    return rows.map(
+      (row: {
+        id: string;
+        recipeId: string;
+        userId: string;
+        rating: number;
+        body: string | null;
+        createdAt: Date;
+        updatedAt: Date;
+        authorName: string | null;
+        authorEmail: string | null;
+      }) => ({
+      id: row.id,
+      recipeId: row.recipeId,
+      userId: row.userId,
+      rating: row.rating,
+      body: row.body,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
+      authorName: publicAuthorLabel(row.authorName, row.authorEmail),
+      authorEmail: row.authorEmail,
+      images: imagesByReview.get(row.id) ?? [],
     })
-    .from(recipeReviews)
-    .leftJoin(users, eq(recipeReviews.userId, users.id))
-    .where(eq(recipeReviews.recipeId, recipeId))
-    .orderBy(desc(recipeReviews.updatedAt));
-
-  if (rows.length === 0) return [];
-
-  const reviewIds = rows.map((r) => r.id);
-  const images = await db
-    .select()
-    .from(recipeReviewImages)
-    .where(inArray(recipeReviewImages.reviewId, reviewIds))
-    .orderBy(asc(recipeReviewImages.sortOrder));
-
-  const imagesByReview = new Map<string, ReviewImage[]>();
-  for (const img of images) {
-    const list = imagesByReview.get(img.reviewId) ?? [];
-    list.push({ id: img.id, url: img.url, sortOrder: img.sortOrder });
-    imagesByReview.set(img.reviewId, list);
+    );
+  } catch (error) {
+    console.error("[reviews] listReviewsForRecipe failed:", error);
+    return [];
   }
-
-  return rows.map((row) => ({
-    id: row.id,
-    recipeId: row.recipeId,
-    userId: row.userId,
-    rating: row.rating,
-    body: row.body,
-    createdAt: row.createdAt,
-    updatedAt: row.updatedAt,
-    authorName: publicAuthorLabel(row.authorName, row.authorEmail),
-    authorEmail: row.authorEmail,
-    images: imagesByReview.get(row.id) ?? [],
-  }));
 }
 
 export async function getUserReviewForRecipe(
@@ -142,6 +173,9 @@ export async function upsertReview(input: {
   rating: number;
   body: string | null;
 }): Promise<ReviewWithAuthor> {
+  if (!isDatabaseConfigured()) {
+    throw new Error("Database is not configured");
+  }
   const now = new Date();
   const existing = await db
     .select()
@@ -262,30 +296,46 @@ export async function deleteReviewImage(
 export async function listCommentsForRecipe(
   recipeId: string
 ): Promise<CommentWithAuthor[]> {
-  const rows = await db
-    .select({
-      id: recipeComments.id,
-      recipeId: recipeComments.recipeId,
-      userId: recipeComments.userId,
-      body: recipeComments.body,
-      createdAt: recipeComments.createdAt,
-      authorName: users.name,
-      authorEmail: users.email,
-    })
-    .from(recipeComments)
-    .leftJoin(users, eq(recipeComments.userId, users.id))
-    .where(eq(recipeComments.recipeId, recipeId))
-    .orderBy(asc(recipeComments.createdAt));
+  if (!isDatabaseConfigured()) return [];
+  try {
+    const rows = await db
+      .select({
+        id: recipeComments.id,
+        recipeId: recipeComments.recipeId,
+        userId: recipeComments.userId,
+        body: recipeComments.body,
+        createdAt: recipeComments.createdAt,
+        authorName: users.name,
+        authorEmail: users.email,
+      })
+      .from(recipeComments)
+      .leftJoin(users, eq(recipeComments.userId, users.id))
+      .where(eq(recipeComments.recipeId, recipeId))
+      .orderBy(asc(recipeComments.createdAt));
 
-  return rows.map((row) => ({
-    id: row.id,
-    recipeId: row.recipeId,
-    userId: row.userId,
-    body: row.body,
-    createdAt: row.createdAt,
-    authorName: publicAuthorLabel(row.authorName, row.authorEmail),
-    authorEmail: row.authorEmail,
-  }));
+    return rows.map(
+      (row: {
+        id: string;
+        recipeId: string;
+        userId: string;
+        body: string;
+        createdAt: Date;
+        authorName: string | null;
+        authorEmail: string | null;
+      }) => ({
+      id: row.id,
+      recipeId: row.recipeId,
+      userId: row.userId,
+      body: row.body,
+      createdAt: row.createdAt,
+      authorName: publicAuthorLabel(row.authorName, row.authorEmail),
+      authorEmail: row.authorEmail,
+    })
+    );
+  } catch (error) {
+    console.error("[reviews] listCommentsForRecipe failed:", error);
+    return [];
+  }
 }
 
 export async function createComment(input: {
@@ -293,6 +343,9 @@ export async function createComment(input: {
   userId: string;
   body: string;
 }): Promise<CommentWithAuthor> {
+  if (!isDatabaseConfigured()) {
+    throw new Error("Database is not configured");
+  }
   const id = crypto.randomUUID();
   const now = new Date();
   await db.insert(recipeComments).values({

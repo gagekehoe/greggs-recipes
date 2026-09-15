@@ -23,7 +23,9 @@ APIs return **401** when create/edit/upload is attempted without a session. Gues
 
 ## Storage
 
-- Tables live in the same SQLite file as Auth.js: `data/auth.sqlite`
+- Tables live in the same database as Auth.js:
+  - **Local:** SQLite `data/auth.sqlite` when `DATABASE_URL` is unset
+  - **Production:** Neon/Postgres when `DATABASE_URL` is set (see [hosting.md](./hosting.md))
   - `recipe_review` (unique `recipeId` + `userId`)
   - `recipe_review_image`
   - `recipe_comment`

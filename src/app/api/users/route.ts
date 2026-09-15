@@ -3,8 +3,8 @@ import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { canManagePeople, isRole } from "@/lib/auth/roles";
 import { getSessionUser } from "@/lib/auth/session";
-import { db } from "@/lib/db";
-import { users, type Role } from "@/lib/db/schema";
+import { db, users } from "@/lib/db";
+import type { Role } from "@/lib/db/schema";
 
 const updateSchema = z.object({
   userId: z.string().min(1),
@@ -29,7 +29,7 @@ export async function GET() {
     .orderBy(users.email);
 
   return NextResponse.json({
-    users: rows.map((row) => ({
+    users: rows.map((row: { id: string; name: string | null; email: string; role: string; image: string | null }) => ({
       ...row,
       role: (isRole(row.role) ? row.role : "viewer") as Role,
     })),

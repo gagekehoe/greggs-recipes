@@ -2,18 +2,20 @@ import NextAuth from "next-auth";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
 import Nodemailer from "next-auth/providers/nodemailer";
 import { eq } from "drizzle-orm";
-import { db } from "@/lib/db";
 import {
   accounts,
+  db,
+  isDatabaseConfigured,
   sessions,
   users,
   verificationTokens,
-  type Role,
-} from "@/lib/db/schema";
+} from "@/lib/db";
+import type { Role } from "@/lib/db/schema";
 import { getAdminEmail, isAdminEmail } from "@/lib/auth/roles";
 
 async function ensureAdminRole(userId: string, email: string | null | undefined) {
   if (!isAdminEmail(email)) return;
+  if (!isDatabaseConfigured()) return;
   await db.update(users).set({ role: "admin" }).where(eq(users.id, userId));
 }
 
@@ -62,19 +64,43 @@ async function sendMagicLink({
   console.log("========================================\n");
 }
 
+const databaseReady = isDatabaseConfigured();
+
+if (!databaseReady) {
+  console.error(
+    "[auth] Database unavailable — sign-in is disabled. Browse recipes still works. Set DATABASE_URL on Vercel (Neon). See docs/hosting.md."
+  );
+}
+
 export const { handlers, auth, signIn, signOut } = NextAuth({
-  adapter: DrizzleAdapter(db, {
-    usersTable: users,
-    accountsTable: accounts,
-    sessionsTable: sessions,
-    verificationTokensTable: verificationTokens,
-  }),
+  adapter: databaseReady
+    ? DrizzleAdapter(db, {
+        // Active dialect tables (SQLite locally, Postgres when DATABASE_URL is set).
+        usersTable: users as never,
+        accountsTable: accounts as never,
+        sessionsTable: sessions as never,
+        verificationTokensTable: verificationTokens as never,
+      })
+    : undefined,
+  session: {
+    // Database sessions when Drizzle/Neon (or local SQLite) is available.
+    // JWT avoids crashing /api/auth/session on Vercel before DATABASE_URL is set.
+    strategy: databaseReady ? "database" : "jwt",
+  },
   providers: [
     Nodemailer({
       // Unused when sendVerificationRequest is custom; required by the provider type.
       server: process.env.EMAIL_SERVER || "smtp://127.0.0.1:1025",
       from: process.env.EMAIL_FROM || "Gregg's Recipes <noreply@greggsrecipes.local>",
       sendVerificationRequest: async ({ identifier, url, provider }) => {
+        if (!isDatabaseConfigured()) {
+          console.error(
+            `[auth] Refusing magic link for ${identifier}: DATABASE_URL is not configured.`
+          );
+          throw new Error(
+            "Sign-in is temporarily unavailable. The site database is not configured."
+          );
+        }
         await sendMagicLink({ identifier, url, provider });
       },
     }),
@@ -85,18 +111,22 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     error: "/signin",
   },
   callbacks: {
-    async session({ session, user }) {
+    async session({ session, user, token }) {
       if (session.user) {
-        session.user.id = user.id;
-        const role = ((user as { role?: Role }).role || "viewer") as Role;
-        session.user.role = isAdminEmail(user.email) ? "admin" : role;
+        const id = user?.id || (token?.sub as string | undefined);
+        if (id) session.user.id = id;
+        const role = ((user as { role?: Role } | undefined)?.role ||
+          (token?.role as Role | undefined) ||
+          "viewer") as Role;
+        const email = user?.email ?? session.user.email;
+        session.user.role = isAdminEmail(email) ? "admin" : role;
       }
       return session;
     },
   },
   events: {
     async createUser({ user }) {
-      if (!user.id) return;
+      if (!user.id || !isDatabaseConfigured()) return;
       const role: Role = isAdminEmail(user.email) ? "admin" : "viewer";
       await db.update(users).set({ role }).where(eq(users.id, user.id));
     },

@@ -8,6 +8,14 @@ vi.mock("@/auth", () => ({
 }));
 
 vi.mock("@/lib/db", () => ({
+  isDatabaseConfigured: () => true,
+  users: {
+    id: "id",
+    name: "name",
+    email: "email",
+    role: "role",
+    image: "image",
+  },
   db: {
     select: () => ({
       from: () => ({
