@@ -1,6 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 import { RecipeGrid } from "@/components/recipes/recipe-card";
+import { RecipePhoto } from "@/components/recipes/recipe-photo";
 import { listRecipes } from "@/lib/recipes";
 
 export const dynamic = "force-dynamic";
@@ -13,17 +13,26 @@ export default async function HomePage() {
     <>
       <section className="relative min-h-[100svh] overflow-hidden">
         <div className="absolute inset-0">
-          <Image
-            src={
-              featured?.imageUrl ||
-              "https://images.unsplash.com/photo-1495521821757-a1efb672935e?auto=format&fit=crop&w=2000&q=80"
-            }
-            alt={featured?.imageAlt || "Fresh ingredients on a kitchen counter"}
-            fill
-            priority
-            className="hero-image-motion object-cover"
-            sizes="100vw"
-          />
+          {featured ? (
+            <RecipePhoto
+              title={featured.title}
+              imageUrl={featured.imageUrl}
+              imageAlt={featured.imageAlt}
+              variant="hero"
+              priority
+              sizes="100vw"
+              className="absolute inset-0"
+              imageClassName="hero-image-motion"
+            />
+          ) : (
+            <div
+              className="recipe-photo-fallback recipe-photo-fallback--tone-a absolute inset-0"
+              aria-hidden
+            >
+              <div className="recipe-photo-fallback__pattern" />
+              <div className="recipe-photo-fallback__glow" />
+            </div>
+          )}
           <div className="absolute inset-0 bg-[linear-gradient(105deg,rgba(28,46,36,0.82)_0%,rgba(28,46,36,0.55)_42%,rgba(28,46,36,0.22)_100%)]" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(184,137,45,0.18),transparent_45%)]" />
         </div>

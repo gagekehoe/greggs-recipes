@@ -67,7 +67,8 @@ export async function POST(request: Request) {
     const data = parsed.data;
     const { recipe, mode } = await createRecipe({
       ...data,
-      imageUrl: data.imageUrl || undefined,
+      imageUrl:
+        typeof data.imageUrl === "string" ? data.imageUrl.trim() : undefined,
       tags: data.tags,
       authorId: user.id,
       authorName: user.name || user.email || "Cook",
@@ -113,7 +114,8 @@ export async function PATCH(request: Request) {
     const data = parsed.data;
     const result = await updateRecipe(id, {
       ...data,
-      imageUrl: data.imageUrl || undefined,
+      imageUrl:
+        typeof data.imageUrl === "string" ? data.imageUrl.trim() : undefined,
       tags: data.tags,
     });
     if (!result) {

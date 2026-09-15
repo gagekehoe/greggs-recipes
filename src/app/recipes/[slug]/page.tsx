@@ -1,8 +1,8 @@
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { RecipeCommentsSection } from "@/components/recipes/recipe-comments";
+import { RecipePhoto } from "@/components/recipes/recipe-photo";
 import { RecipeReviewsSection } from "@/components/recipes/recipe-reviews";
 import { isDisplayNameSet } from "@/lib/auth/profile";
 import { getSessionUser } from "@/lib/auth/session";
@@ -67,15 +67,16 @@ export default async function RecipePage({ params }: Props) {
   return (
     <article>
       <div className="relative h-[48vh] min-h-[320px] w-full overflow-hidden md:h-[58vh]">
-        <Image
-          src={recipe.imageUrl}
-          alt={recipe.imageAlt}
-          fill
+        <RecipePhoto
+          title={recipe.title}
+          imageUrl={recipe.imageUrl}
+          imageAlt={recipe.imageAlt}
+          variant="detail"
           priority
-          className="object-cover"
           sizes="100vw"
+          className="absolute inset-0"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-[var(--ink)]/75 via-[var(--ink)]/25 to-[var(--ink)]/20" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[var(--ink)]/75 via-[var(--ink)]/25 to-[var(--ink)]/20" />
         <div className="absolute inset-x-0 bottom-0 px-5 pb-10 md:px-8 md:pb-14">
           <div className="mx-auto max-w-4xl">
             <div className="flex flex-wrap gap-2">

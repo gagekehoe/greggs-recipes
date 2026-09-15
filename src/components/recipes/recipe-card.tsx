@@ -1,6 +1,6 @@
-import Image from "next/image";
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
+import { RecipePhoto } from "@/components/recipes/recipe-photo";
 import { totalMinutes, type Recipe } from "@/lib/recipes";
 import type { RatingSummary } from "@/lib/reviews/rating";
 import { getRatingSummaries } from "@/lib/reviews/store";
@@ -22,14 +22,15 @@ export function RecipeCard({
     >
       <Link href={`/recipes/${recipe.slug}`} className="block">
         <div className="relative aspect-[4/3] overflow-hidden bg-[var(--sage-deep)]">
-          <Image
-            src={recipe.imageUrl}
-            alt={recipe.imageAlt}
-            fill
+          <RecipePhoto
+            title={recipe.title}
+            imageUrl={recipe.imageUrl}
+            imageAlt={recipe.imageAlt}
+            variant="card"
             sizes="(max-width: 768px) 100vw, 33vw"
-            className="object-cover transition-transform duration-700 ease-out group-hover:scale-[1.04]"
+            imageClassName="transition-transform duration-700 ease-out group-hover:scale-[1.04]"
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-[var(--ink)]/55 via-transparent to-transparent opacity-80" />
+          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[var(--ink)]/55 via-transparent to-transparent opacity-80" />
           <div className="absolute bottom-3 left-3 right-3 flex flex-wrap gap-2">
             {recipe.tags.slice(0, 2).map((tag) => (
               <Badge

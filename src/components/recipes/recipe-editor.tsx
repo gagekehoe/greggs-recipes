@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { hasRecipeImage } from "@/lib/recipes/image";
 import type { Recipe } from "@/lib/recipes/types";
 
 type Props = {
@@ -21,6 +22,8 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [photoDrafts, setPhotoDrafts] = useState<Record<string, string>>({});
+  const [savingPhotoId, setSavingPhotoId] = useState<string | null>(null);
 
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
@@ -79,6 +82,52 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
       setError("Network error while saving.");
     } finally {
       setSaving(false);
+    }
+  }
+
+  async function saveRecipePhoto(recipe: Recipe) {
+    const nextUrl = (photoDrafts[recipe.id] ?? recipe.imageUrl ?? "").trim();
+    setSavingPhotoId(recipe.id);
+    setError(null);
+    setStatus(null);
+    try {
+      const res = await fetch("/api/recipes", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: recipe.id,
+          title: recipe.title,
+          summary: recipe.summary,
+          ingredients: recipe.ingredients,
+          steps: recipe.steps,
+          tags: recipe.tags,
+          prepMinutes: recipe.prepMinutes,
+          cookMinutes: recipe.cookMinutes,
+          servings: recipe.servings,
+          imageUrl: nextUrl,
+          imageAlt: nextUrl ? `${recipe.title} plated` : "",
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error || "Could not update photo");
+        return;
+      }
+      setStatus(
+        nextUrl
+          ? `Updated photo for “${recipe.title}”.`
+          : `Cleared photo for “${recipe.title}” — placeholder will show.`
+      );
+      setPhotoDrafts((prev) => {
+        const next = { ...prev };
+        delete next[recipe.id];
+        return next;
+      });
+      router.refresh();
+    } catch {
+      setError("Network error while updating photo.");
+    } finally {
+      setSavingPhotoId(null);
     }
   }
 
@@ -178,14 +227,18 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="imageUrl">Image URL (optional)</Label>
+          <Label htmlFor="imageUrl">Recipe photo URL (optional)</Label>
           <Input
             id="imageUrl"
             type="url"
             value={imageUrl}
             onChange={(e) => setImageUrl(e.target.value)}
-            placeholder="https://..."
+            placeholder="https://…"
           />
+          <p className="text-xs text-[var(--ink-soft)]">
+            Leave blank for a sage kitchen placeholder with the dish initials.
+            Review photos are separate and stay on the recipe page.
+          </p>
         </div>
 
         <div className="grid grid-cols-3 gap-3 md:col-span-2">
@@ -241,35 +294,73 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
           <p className="text-[var(--ink-muted)]">No recipes to manage yet.</p>
         ) : (
           <ul className="divide-y divide-[var(--line)]">
-            {recipes.map((recipe) => (
-              <li
-                key={recipe.id}
-                className="flex flex-wrap items-center justify-between gap-3 py-4"
-              >
-                <div>
-                  <p className="font-medium text-[var(--ink)]">{recipe.title}</p>
-                  <p className="text-xs text-[var(--ink-soft)]">
-                    {recipe.authorName} · {recipe.source}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <Link
-                    href={`/recipes/${recipe.slug}`}
-                    className="inline-flex h-7 items-center rounded-lg border border-[var(--line)] px-2.5 text-[0.8rem] font-medium text-[var(--ink)] transition-colors hover:bg-[var(--mist)]"
-                  >
-                    View
-                  </Link>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    disabled={deletingId === recipe.id}
-                    onClick={() => deleteRecipe(recipe.id, recipe.title)}
-                  >
-                    {deletingId === recipe.id ? "Deleting…" : "Delete"}
-                  </Button>
-                </div>
-              </li>
-            ))}
+            {recipes.map((recipe) => {
+              const draft = photoDrafts[recipe.id] ?? recipe.imageUrl ?? "";
+              const hasPhoto = hasRecipeImage(recipe.imageUrl);
+              return (
+                <li key={recipe.id} className="space-y-3 py-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <p className="font-medium text-[var(--ink)]">
+                        {recipe.title}
+                      </p>
+                      <p className="text-xs text-[var(--ink-soft)]">
+                        {recipe.authorName} · {recipe.source}
+                        {hasPhoto ? " · photo set" : " · using placeholder"}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      <Link
+                        href={`/recipes/${recipe.slug}`}
+                        className="inline-flex h-7 items-center rounded-lg border border-[var(--line)] px-2.5 text-[0.8rem] font-medium text-[var(--ink)] transition-colors hover:bg-[var(--mist)]"
+                      >
+                        View
+                      </Link>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={deletingId === recipe.id}
+                        onClick={() => deleteRecipe(recipe.id, recipe.title)}
+                      >
+                        {deletingId === recipe.id ? "Deleting…" : "Delete"}
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                    <div className="min-w-0 flex-1 space-y-1">
+                      <Label
+                        htmlFor={`photo-${recipe.id}`}
+                        className="text-xs text-[var(--ink-soft)]"
+                      >
+                        Recipe photo URL
+                      </Label>
+                      <Input
+                        id={`photo-${recipe.id}`}
+                        type="url"
+                        value={draft}
+                        onChange={(e) =>
+                          setPhotoDrafts((prev) => ({
+                            ...prev,
+                            [recipe.id]: e.target.value,
+                          }))
+                        }
+                        placeholder="https://… (optional)"
+                      />
+                    </div>
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      disabled={savingPhotoId === recipe.id}
+                      onClick={() => saveRecipePhoto(recipe)}
+                      className="shrink-0"
+                    >
+                      {savingPhotoId === recipe.id ? "Saving…" : "Save photo"}
+                    </Button>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>

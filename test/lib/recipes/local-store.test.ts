@@ -48,6 +48,7 @@ describe("local recipe store", () => {
     expect(created.ingredients).toEqual(["stock", "onion"]);
     expect(created.tags).toEqual(["soup"]);
     expect(created.authorId).toBe("user-1");
+    expect(created.imageUrl).toBe("");
 
     const bySlug = await store.getLocalRecipe("test-soup");
     expect(bySlug?.id).toBe(created.id);

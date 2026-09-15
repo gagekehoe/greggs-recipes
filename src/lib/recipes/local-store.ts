@@ -23,10 +23,8 @@ function normalizeRecipe(raw: Partial<Recipe> & Pick<Recipe, "id" | "slug" | "ti
     prepMinutes: raw.prepMinutes ?? 0,
     cookMinutes: raw.cookMinutes ?? 0,
     servings: raw.servings ?? 1,
-    imageUrl:
-      raw.imageUrl ||
-      "https://images.unsplash.com/photo-1495521821757-a1efb672935e?auto=format&fit=crop&w=1600&q=80",
-    imageAlt: raw.imageAlt || `${raw.title} plated`,
+    imageUrl: raw.imageUrl?.trim() || "",
+    imageAlt: raw.imageAlt || (raw.imageUrl?.trim() ? `${raw.title} plated` : ""),
     source: raw.source || "local",
     updatedAt: raw.updatedAt || new Date().toISOString(),
     authorId: raw.authorId || SYSTEM_AUTHOR.authorId,
@@ -107,10 +105,10 @@ export async function createLocalRecipe(input: RecipeInput): Promise<Recipe> {
     prepMinutes: input.prepMinutes,
     cookMinutes: input.cookMinutes,
     servings: input.servings,
-    imageUrl:
-      input.imageUrl?.trim() ||
-      "https://images.unsplash.com/photo-1495521821757-a1efb672935e?auto=format&fit=crop&w=1600&q=80",
-    imageAlt: input.imageAlt?.trim() || `${input.title.trim()} plated`,
+    imageUrl: input.imageUrl?.trim() || "",
+    imageAlt:
+      input.imageAlt?.trim() ||
+      (input.imageUrl?.trim() ? `${input.title.trim()} plated` : ""),
     source: "local",
     updatedAt: new Date().toISOString(),
     authorId: input.authorId,
@@ -142,11 +140,15 @@ export async function updateLocalRecipe(
     cookMinutes: input.cookMinutes,
     servings: input.servings,
     imageUrl:
-      input.imageUrl?.trim() ||
-      current.imageUrl ||
-      "https://images.unsplash.com/photo-1495521821757-a1efb672935e?auto=format&fit=crop&w=1600&q=80",
+      input.imageUrl !== undefined
+        ? input.imageUrl.trim()
+        : current.imageUrl,
     imageAlt:
-      input.imageAlt?.trim() || current.imageAlt || `${input.title.trim()} plated`,
+      input.imageAlt?.trim() ||
+      current.imageAlt ||
+      (input.imageUrl?.trim() || current.imageUrl
+        ? `${input.title.trim()} plated`
+        : ""),
     updatedAt: new Date().toISOString(),
   };
 
