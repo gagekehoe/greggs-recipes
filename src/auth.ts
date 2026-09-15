@@ -12,6 +12,7 @@ import {
 } from "@/lib/db";
 import type { Role } from "@/lib/db/schema";
 import { getAdminEmail, isAdminEmail } from "@/lib/auth/roles";
+import { toFriendlyMagicLinkUrl } from "@/lib/auth/friendly-magic-link";
 
 async function ensureAdminRole(userId: string, email: string | null | undefined) {
   if (!isAdminEmail(email)) return;
@@ -27,6 +28,8 @@ async function sendMagicLink({
   url: string;
   provider: { from?: string };
 }) {
+  // Prefer /signin/verify in email so Safe Browsing doesn't see the Auth.js API path.
+  const magicLink = toFriendlyMagicLinkUrl(url);
   const from =
     process.env.EMAIL_FROM || "Gregg's Recipes <onboarding@resend.dev>";
   const resendKey = process.env.AUTH_RESEND_KEY || process.env.RESEND_API_KEY;
@@ -44,10 +47,10 @@ async function sendMagicLink({
         subject: "Sign in to Gregg's Recipes",
         html: `
           <p>Sign in to Gregg's Recipes:</p>
-          <p><a href="${url}">${url}</a></p>
+          <p><a href="${magicLink}">${magicLink}</a></p>
           <p>This link expires soon. If you didn't request it, you can ignore this email.</p>
         `,
-        text: `Sign in to Gregg's Recipes:\n${url}\n`,
+        text: `Sign in to Gregg's Recipes:\n${magicLink}\n`,
       }),
     });
     if (!res.ok) {
@@ -60,7 +63,7 @@ async function sendMagicLink({
   // Local / no provider: print the magic link so demos still work.
   console.log("\n========================================");
   console.log(`[auth] Magic link for ${identifier}`);
-  console.log(url);
+  console.log(magicLink);
   console.log("========================================\n");
 }
 
