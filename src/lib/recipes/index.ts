@@ -7,9 +7,11 @@ import {
   updateLocalRecipe,
 } from "./local-store";
 import { getSanityClient, isSanityConfigured } from "./sanity";
+import { slugify } from "./slug";
 import type { Recipe, RecipeInput } from "./types";
 
 export type { Recipe, RecipeInput } from "./types";
+export { slugify } from "./slug";
 
 type SanityRecipeDoc = {
   _id: string;
@@ -89,14 +91,6 @@ function mapSanityRecipe(doc: SanityRecipeDoc): Recipe {
     authorId: doc.authorId || "system",
     authorName: doc.authorName || "Gregg's Kitchen",
   };
-}
-
-function slugify(title: string): string {
-  return title
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
 }
 
 export type ContentMode = "sanity" | "local";
