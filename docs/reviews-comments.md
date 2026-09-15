@@ -53,7 +53,10 @@ Until then, treat review images as **local/demo only**, same caveat as SQLite au
 
 ```bash
 npm test
+npm run test:coverage
 ```
+
+Coverage focuses on `src/lib`, API routes (authz + validation), and the review/comment/profile/sign-in client components. shadcn primitives and Auth.js wiring are excluded from the gate.
 
 ## Out of scope (next workstream)
 

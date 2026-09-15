@@ -40,7 +40,7 @@ Leave `AUTH_RESEND_KEY` unset. Request a magic link on `/signin`, then copy the 
 | `cook` | Add / edit / delete **own** recipes; reviews & comments |
 | `admin` | Manage **any** recipe + `/people` roles; moderate reviews/comments |
 
-Reviews & comments details: [docs/reviews-comments.md](./docs/reviews-comments.md).
+Reviews & comments details: [docs/reviews-comments.md](./docs/reviews-comments.md). Testing notes: [docs/testing.md](./docs/testing.md).
 
 ## How content works
 
@@ -73,13 +73,19 @@ Recommended: **Vercel + custom domain**. Auth sessions should use a durable data
 | `npm run build` | Production build |
 | `npm run start` | Serve production build on **43127** |
 | `npm run lint` | ESLint |
-| `npm test` | Unit tests (Vitest, one-shot) |
-| `npm run test:watch` | Unit tests in watch mode |
+| `npm test` | Unit/integration tests (Vitest, one-shot) |
+| `npm run test:watch` | Vitest in watch mode |
+| `npm run test:coverage` | Vitest with V8 coverage report |
 
-### Unit tests
+### Unit & integration tests
 
-Fast Vitest coverage for pure helpers (roles, slugify, recipe timing, review rating/permissions). Specs live under `test/` (not next to `src/`). Path aliases (`@/`) are wired in `vitest.config.ts`.
+Vitest specs live under `test/` (not next to `src/`). Path aliases (`@/`) are wired in `vitest.config.ts`.
+
+Coverage includes `src/lib/**`, API route handlers, and key client components (review/comment forms, sign-in, profile). Generated shadcn UI primitives and Auth.js bootstrap are excluded from the coverage gate.
 
 ```bash
 npm test
+npm run test:coverage
 ```
+
+HTML report: `coverage/index.html`.

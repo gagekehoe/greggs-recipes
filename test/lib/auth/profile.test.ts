@@ -5,6 +5,7 @@ import {
   normalizeDisplayName,
   publicAuthorLabel,
   validateDisplayNameInput,
+  DISPLAY_NAME_MAX,
 } from "@/lib/auth/profile";
 
 describe("normalizeDisplayName", () => {
@@ -17,6 +18,14 @@ describe("normalizeDisplayName", () => {
     expect(normalizeDisplayName(" ")).toBeNull();
     expect(normalizeDisplayName("A")).toBeNull();
     expect(normalizeDisplayName(null)).toBeNull();
+    expect(normalizeDisplayName(12)).toBeNull();
+  });
+
+  it("rejects names over the max length", () => {
+    expect(normalizeDisplayName("x".repeat(DISPLAY_NAME_MAX + 1))).toBeNull();
+    expect(normalizeDisplayName("x".repeat(DISPLAY_NAME_MAX))).toBe(
+      "x".repeat(DISPLAY_NAME_MAX)
+    );
   });
 });
 
@@ -40,6 +49,7 @@ describe("publicAuthorLabel", () => {
 
   it("falls back to email local-part when name is unset", () => {
     expect(publicAuthorLabel(null, "cook@example.com")).toBe("cook");
+    expect(publicAuthorLabel("", "  ")).toBe("Cook");
   });
 
   it("uses Cook when nothing is available", () => {
@@ -60,5 +70,13 @@ describe("validateDisplayNameInput", () => {
       ok: false,
       error: "Display name is required.",
     });
+    expect(validateDisplayNameInput(null)).toEqual({
+      ok: false,
+      error: "Display name is required.",
+    });
+  });
+
+  it("returns length guidance for short names", () => {
+    expect(validateDisplayNameInput("A")).toMatchObject({ ok: false });
   });
 });
