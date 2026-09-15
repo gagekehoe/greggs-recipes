@@ -2,6 +2,12 @@ import type { Metadata } from "next";
 import { Figtree, Fraunces } from "next/font/google";
 import { AuthSessionProvider } from "@/components/auth/auth-session-provider";
 import { SiteFooter, SiteHeader } from "@/components/layout/site-chrome";
+import {
+  DEFAULT_OG_IMAGE_PATH,
+  SITE_DESCRIPTION,
+  SITE_NAME,
+  SITE_URL,
+} from "@/lib/seo/site";
 import "./globals.css";
 
 const figtree = Figtree({
@@ -15,12 +21,44 @@ const fraunces = Fraunces({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: {
-    default: "Gregg's Recipes",
-    template: "%s · Gregg's Recipes",
+    default: SITE_NAME,
+    template: `%s · ${SITE_NAME}`,
   },
-  description:
-    "Gregg's Recipes is a shared place to cook from — realistic dishes you can make tonight. Sign in to join and publish when you're a cook or admin.",
+  description: SITE_DESCRIPTION,
+  applicationName: SITE_NAME,
+  authors: [{ name: "Gregg" }],
+  creator: "Gregg",
+  alternates: {
+    canonical: "/",
+  },
+  openGraph: {
+    type: "website",
+    locale: "en_US",
+    url: SITE_URL,
+    siteName: SITE_NAME,
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+    images: [
+      {
+        url: DEFAULT_OG_IMAGE_PATH,
+        width: 1200,
+        height: 630,
+        alt: "Gregg's Recipes — cook what's written down",
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_NAME,
+    description: SITE_DESCRIPTION,
+    images: [DEFAULT_OG_IMAGE_PATH],
+  },
+  robots: {
+    index: true,
+    follow: true,
+  },
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

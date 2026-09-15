@@ -64,10 +64,10 @@ describe("safeAuthRedirect", () => {
 });
 
 describe("authPublicOrigin", () => {
-  it("defaults to the production domain when AUTH_URL is unset", () => {
+  it("defaults to the production www host when AUTH_URL is unset", () => {
     const prev = process.env.AUTH_URL;
     delete process.env.AUTH_URL;
-    expect(authPublicOrigin()).toBe("https://greggsrecipes.com");
+    expect(authPublicOrigin()).toBe("https://www.greggsrecipes.com");
     if (prev !== undefined) process.env.AUTH_URL = prev;
   });
 });
