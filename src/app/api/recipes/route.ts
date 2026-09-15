@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { z } from "zod";
 import {
   canEditRecipe,
   canWriteRecipes,
@@ -12,32 +11,10 @@ import {
   removeRecipe,
   updateRecipe,
 } from "@/lib/recipes";
-
-/** Absolute http(s) URL, site-relative path (/recipes/…, /uploads/…), or empty. */
-const imageUrlSchema = z
-  .string()
-  .max(2000)
-  .refine(
-    (v) =>
-      v === "" ||
-      /^https?:\/\//i.test(v) ||
-      /^\/[A-Za-z0-9._~\-\/]+$/.test(v),
-    { message: "Invalid image URL" }
-  )
-  .optional();
-
-const recipeSchema = z.object({
-  title: z.string().min(2).max(120),
-  summary: z.string().min(10).max(500),
-  ingredients: z.array(z.string().min(1)).min(1),
-  steps: z.array(z.string().min(1)).min(1),
-  tags: z.array(z.string()).default([]),
-  prepMinutes: z.number().int().min(0).max(600),
-  cookMinutes: z.number().int().min(0).max(600),
-  servings: z.number().int().min(1).max(50),
-  imageUrl: imageUrlSchema,
-  imageAlt: z.string().max(200).optional(),
-});
+import {
+  formatRecipeValidationError,
+  recipeInputSchema,
+} from "@/lib/recipes/recipe-input-schema";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -69,10 +46,14 @@ export async function POST(request: Request) {
 
   try {
     const json = await request.json();
-    const parsed = recipeSchema.safeParse(json);
+    const parsed = recipeInputSchema.safeParse(json);
     if (!parsed.success) {
+      const details = parsed.error.flatten();
       return NextResponse.json(
-        { error: "Invalid recipe", details: parsed.error.flatten() },
+        {
+          error: formatRecipeValidationError(details),
+          details,
+        },
         { status: 400 }
       );
     }
@@ -116,10 +97,14 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const parsed = recipeSchema.safeParse(json);
+    const parsed = recipeInputSchema.safeParse(json);
     if (!parsed.success) {
+      const details = parsed.error.flatten();
       return NextResponse.json(
-        { error: "Invalid recipe", details: parsed.error.flatten() },
+        {
+          error: formatRecipeValidationError(details),
+          details,
+        },
         { status: 400 }
       );
     }

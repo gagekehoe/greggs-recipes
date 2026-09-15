@@ -7,8 +7,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { recipeApiErrorMessage } from "@/lib/recipes/api-error";
 import { hasRecipeImage } from "@/lib/recipes/image";
+import { RECIPE_FIELD_LIMITS } from "@/lib/recipes/recipe-input-schema";
 import type { Recipe } from "@/lib/recipes/types";
+import { IMAGE_UPLOAD_LIMITS } from "@/lib/uploads/limits";
 
 type Props = {
   contentMode: "db" | "sanity" | "local";
@@ -17,11 +20,29 @@ type Props = {
 };
 
 const PHOTO_ACCEPT = "image/jpeg,image/png,image/webp,image/gif";
+const PHOTO_MAX_MB = IMAGE_UPLOAD_LIMITS.maxBytesPerFile / (1024 * 1024);
 
 const fileInputClassName =
   "block w-full text-sm text-[var(--ink-muted)] file:mr-3 file:rounded-lg file:border-0 file:bg-[var(--mist)] file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-[var(--ink)]";
 
+function assertPhotoReady(file: File) {
+  if (file.size > IMAGE_UPLOAD_LIMITS.maxBytesPerFile) {
+    throw new Error(
+      `Photo is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Use a JPEG/PNG/WebP under ${PHOTO_MAX_MB}MB, or compress it before uploading.`
+    );
+  }
+  if (
+    file.type &&
+    !(IMAGE_UPLOAD_LIMITS.allowedMimeTypes as readonly string[]).includes(
+      file.type
+    )
+  ) {
+    throw new Error("Unsupported image type. Use JPEG, PNG, WebP, or GIF.");
+  }
+}
+
 async function uploadRecipePhoto(file: File): Promise<string> {
+  assertPhotoReady(file);
   const form = new FormData();
   form.set("file", file);
   const res = await fetch("/api/recipes/images", {
@@ -98,7 +119,7 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || "Could not save recipe");
+        setError(recipeApiErrorMessage(data, "Could not save recipe"));
         return;
       }
       setStatus(`Published “${data.recipe.title}” (${data.mode}).`);
@@ -143,7 +164,7 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.error || "Could not update photo");
+        setError(recipeApiErrorMessage(data, "Could not update photo"));
         return;
       }
       setStatus(
@@ -241,13 +262,22 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="summary">Summary</Label>
+            <div className="flex items-baseline justify-between gap-3">
+              <Label htmlFor="summary">Summary</Label>
+              <p
+                className="text-xs tabular-nums text-[var(--ink-soft)]"
+                aria-live="polite"
+              >
+                {summary.length}/{RECIPE_FIELD_LIMITS.summaryMax}
+              </p>
+            </div>
             <Textarea
               id="summary"
               value={summary}
               onChange={(e) => setSummary(e.target.value)}
               required
               rows={3}
+              maxLength={RECIPE_FIELD_LIMITS.summaryMax}
               placeholder="What makes this dish worth cooking?"
             />
           </div>
@@ -294,7 +324,8 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
             onChange={(e) => setCreatePhotoFile(e.target.files?.[0] ?? null)}
           />
           <p className="text-xs text-[var(--ink-soft)]">
-            JPEG, PNG, WebP, or GIF up to 4MB. Leave blank for a sage kitchen
+            JPEG, PNG, WebP, or GIF up to {PHOTO_MAX_MB}MB. Phone photos over the
+            limit need a quick compress first. Leave blank for a sage kitchen
             placeholder with the dish initials. Review photos are separate and
             stay on the recipe page.
           </p>

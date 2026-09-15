@@ -85,6 +85,10 @@ describe("/api/recipes", () => {
       })
     );
     expect(invalid.status).toBe(400);
+    const invalidBody = await invalid.json();
+    expect(invalidBody.error).not.toBe("Invalid recipe");
+    expect(invalidBody.error).toMatch(/Title|Summary|Ingredients|Steps/i);
+    expect(invalidBody.details?.fieldErrors).toBeTruthy();
 
     createRecipe.mockResolvedValue({
       recipe: { id: "local-9", ...validRecipe },
@@ -98,6 +102,41 @@ describe("/api/recipes", () => {
       })
     );
     expect(created.status).toBe(201);
+
+    const longSummary =
+      "This grilled chicken thigh recipe brings together a perfectly balanced sweet and savory rub—blending brown sugar, garlic, onion, paprika, and cracked black pepper-that caramelizes over the flame into a deeply flavorful, subtly charred crust. Using naturally tender boneless, skinless thighs makes the dish remarkably juicy and forgiving, while the option to marinate in as little as 10 minutes (or up to overnight) keeps preparation flexible. With a total grill time under 20 minutes, it delivers rich, high-impact barbecue flavor with minimum hassle, making it an ideal choice for both quick weeknight dinners and relaxed weekend gatherings.";
+    createRecipe.mockResolvedValue({
+      recipe: {
+        id: "local-11",
+        ...validRecipe,
+        title: "Grilled Chicken Thighs",
+        summary: longSummary,
+        imageUrl:
+          "https://abc.public.blob.vercel-storage.com/recipes/uuid.jpg",
+      },
+      mode: "local",
+    });
+    const longOk = await POST(
+      new Request("http://x/api/recipes", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          ...validRecipe,
+          title: "Grilled Chicken Thighs",
+          summary: longSummary,
+          ingredients: ["1 ½ teaspoons onion powder", "2 tablespoon oil"],
+          steps: ["Grill until 180°F."],
+          tags: ["grill", "chicken"],
+          prepMinutes: 30,
+          cookMinutes: 20,
+          servings: 6,
+          imageUrl:
+            "https://abc.public.blob.vercel-storage.com/recipes/uuid.jpg",
+          imageAlt: "Grilled Chicken Thighs plated",
+        }),
+      })
+    );
+    expect(longOk.status).toBe(201);
 
     createRecipe.mockResolvedValue({
       recipe: { id: "local-10", ...validRecipe, imageUrl: "/uploads/recipes/a.jpg" },
