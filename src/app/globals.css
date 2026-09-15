@@ -1,0 +1,152 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-sans);
+  --font-display: var(--font-display);
+  --font-mono: var(--font-geist-mono);
+  --font-heading: var(--font-display);
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  /* Herb garden morning — sage wash, forest ink, mustard accent */
+  --ink: #1c2e24;
+  --ink-muted: #4a5c52;
+  --ink-soft: #6b7c72;
+  --paper: #f3f0e8;
+  --sage: #9fb39a;
+  --sage-deep: #3d5648;
+  --mist: #dfe8dc;
+  --line: #c5d0c2;
+  --accent: #b8892d;
+  --accent-deep: #8a6420;
+
+  --background: var(--paper);
+  --foreground: var(--ink);
+  --card: #faf8f2;
+  --card-foreground: var(--ink);
+  --popover: #faf8f2;
+  --popover-foreground: var(--ink);
+  --primary: var(--ink);
+  --primary-foreground: #f7f4ec;
+  --secondary: var(--mist);
+  --secondary-foreground: var(--ink);
+  --muted: #e8ebe3;
+  --muted-foreground: var(--ink-muted);
+  --accent: var(--mist);
+  --accent-foreground: var(--ink);
+  --destructive: oklch(0.55 0.2 25);
+  --border: var(--line);
+  --input: var(--line);
+  --ring: var(--sage-deep);
+  --chart-1: var(--sage-deep);
+  --chart-2: var(--accent-deep);
+  --chart-3: var(--sage);
+  --chart-4: #6d7f68;
+  --chart-5: #2f4238;
+  --radius: 0.4rem;
+  --sidebar: #faf8f2;
+  --sidebar-foreground: var(--ink);
+  --sidebar-primary: var(--ink);
+  --sidebar-primary-foreground: #f7f4ec;
+  --sidebar-accent: var(--mist);
+  --sidebar-accent-foreground: var(--ink);
+  --sidebar-border: var(--line);
+  --sidebar-ring: var(--sage-deep);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    background-image:
+      radial-gradient(ellipse 120% 80% at 10% -10%, rgba(159, 179, 154, 0.35), transparent 55%),
+      radial-gradient(ellipse 90% 60% at 100% 0%, rgba(184, 137, 45, 0.12), transparent 50%),
+      linear-gradient(180deg, #eef2ea 0%, var(--paper) 38%, #ebe6da 100%);
+    background-attachment: fixed;
+  }
+  html {
+    @apply font-sans;
+  }
+}
+
+@layer utilities {
+  .font-display {
+    font-family: var(--font-display), ui-serif, Georgia, serif;
+  }
+}
+
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes soft-zoom {
+  from {
+    transform: scale(1.06);
+  }
+  to {
+    transform: scale(1);
+  }
+}
+
+.hero-copy {
+  animation: rise-in 0.9s ease-out both;
+}
+
+.hero-image-motion {
+  animation: soft-zoom 8s ease-out both;
+}
+
+.recipe-reveal {
+  animation: rise-in 0.7s ease-out both;
+}
