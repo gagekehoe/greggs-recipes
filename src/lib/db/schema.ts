@@ -118,6 +118,33 @@ export const recipeComments = sqliteTable("recipe_comment", {
     .$defaultFn(() => new Date()),
 });
 
+/** Durable recipe catalog (SQLite locally / Neon in production). */
+export const recipes = sqliteTable("recipe", {
+  id: text("id")
+    .primaryKey()
+    .$defaultFn(() => crypto.randomUUID()),
+  slug: text("slug").notNull().unique(),
+  title: text("title").notNull(),
+  summary: text("summary").notNull().default(""),
+  /** JSON-encoded string[] */
+  ingredients: text("ingredients").notNull().default("[]"),
+  /** JSON-encoded string[] */
+  steps: text("steps").notNull().default("[]"),
+  /** JSON-encoded string[] */
+  tags: text("tags").notNull().default("[]"),
+  prepMinutes: integer("prepMinutes").notNull().default(0),
+  cookMinutes: integer("cookMinutes").notNull().default(0),
+  servings: integer("servings").notNull().default(1),
+  imageUrl: text("imageUrl").notNull().default(""),
+  imageAlt: text("imageAlt").notNull().default(""),
+  authorId: text("authorId").notNull(),
+  authorName: text("authorName").notNull(),
+  updatedAt: integer("updatedAt", { mode: "timestamp_ms" })
+    .notNull()
+    .$defaultFn(() => new Date()),
+});
+
 export type DbRecipeReview = typeof recipeReviews.$inferSelect;
 export type DbRecipeReviewImage = typeof recipeReviewImages.$inferSelect;
 export type DbRecipeComment = typeof recipeComments.$inferSelect;
+export type DbRecipe = typeof recipes.$inferSelect;

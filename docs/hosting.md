@@ -6,12 +6,12 @@ How to put the site on a dedicated URL with Vercel and (optionally) a custom dom
 
 - This repo on GitHub: `https://github.com/gagekehoe/greggs-recipes`
 - A [Vercel](https://vercel.com) account (Hobby/free is enough)
-- A free [Neon](https://neon.tech) Postgres project (**required for production auth / reviews**)
-- Optional for production content: a free [Sanity](https://www.sanity.io/) project
+- A free [Neon](https://neon.tech) Postgres project (**required for production auth / reviews / recipes**)
+- Optional / legacy CMS: a free [Sanity](https://www.sanity.io/) project (Neon is preferred for the recipe catalog)
 - Optional: a domain you control
 - Email delivery for magic links in production: [Resend](https://resend.com) (or SMTP)
 
-## 2. Neon database (production Auth.js + reviews)
+## 2. Neon database (production Auth.js + reviews + recipes)
 
 Local dev keeps using SQLite (`data/auth.sqlite`) when `DATABASE_URL` is unset. Vercel must use Neon.
 
@@ -23,12 +23,13 @@ Local dev keeps using SQLite (`data/auth.sqlite`) when `DATABASE_URL` is unset. 
      export DATABASE_URL="postgresql://..."
      npm run db:push
      ```
-   - **Or** paste / run `drizzle/0000_neon_init.sql` in the Neon SQL Editor.
+   - **Or** paste / run `drizzle/0000_neon_init.sql` in the Neon SQL Editor (full init).
+   - **Existing Neon DB** (auth already applied): run `drizzle/0001_recipe_catalog.sql` to add the `recipe` table + Cajun tuna bowl seed.
 4. Set `DATABASE_URL` on Vercel (see env table below) and redeploy.
 
 Schema source for Postgres: `src/lib/db/schema.pg.ts` (Drizzle). Local SQLite schema remains in `src/lib/db/schema.ts`.
 
-If `DATABASE_URL` is missing on Vercel, **public recipe pages still load** (JSON/Sanity). Sign-in, reviews, and comments stay degraded until Neon is wired.
+If `DATABASE_URL` is missing on Vercel, **public recipe pages still load** from the in-memory seed (Cajun tuna bowl). Sign-in, reviews, comments, and durable recipe writes stay degraded until Neon is wired.
 
 ## 3. Deploy to Vercel
 
@@ -38,7 +39,7 @@ If `DATABASE_URL` is missing on Vercel, **public recipe pages still load** (JSON
 
 | Variable | Required | Notes |
 |----------|----------|--------|
-| `DATABASE_URL` | **Yes (prod auth)** | Neon Postgres URL (`postgresql://…?sslmode=require`) |
+| `DATABASE_URL` | **Yes (prod)** | Neon Postgres URL (`postgresql://…?sslmode=require`) — auth, reviews, **and recipe catalog** |
 | `AUTH_SECRET` | Yes | Long random string (`openssl rand -base64 32`) |
 | `AUTH_URL` | Yes (prod) | Canonical site URL: `https://greggsrecipes.com` |
 | `ADMIN_EMAIL` | Yes | Bootstrap admin — `gagekehoe17@gmail.com` |
@@ -86,7 +87,7 @@ Switch `AUTH_URL` / `EMAIL_FROM` to `greggsrecipes.com` as soon as the custom do
 - **Local:** Auth.js uses SQLite at `data/auth.sqlite` (gitignored) when `DATABASE_URL` is unset.
 - **Vercel:** Set `DATABASE_URL` to Neon. The app uses `drizzle-orm/neon-http` (no `better-sqlite3` on serverless).
 
-Without Sanity env vars, the site boots from in-memory seed recipes on Vercel (never opens or writes `data/recipes.json` — that path is local/dev only and would hit EROFS on the serverless filesystem). Connect Sanity for durable publishing. Neon (`DATABASE_URL`) remains for Auth.js, reviews, and comments — not the recipe catalog.
+Without Sanity env vars, recipes still persist in Neon when `DATABASE_URL` is set (the intended production path). Local JSON under `data/recipes.json` is never opened on Vercel (EROFS). Neon powers Auth.js, reviews, comments, **and** the recipe catalog. Sanity remains optional/legacy — see [production-recipes.md](./production-recipes.md).
 
 Review photos are written under `public/uploads/reviews/` locally. That path is not durable on serverless — plan object storage before relying on review images in production (see [reviews-comments.md](./reviews-comments.md)).
 
@@ -104,9 +105,9 @@ Review photos are written under `public/uploads/reviews/` locally. That path is 
 
 **Recommended production path**
 
-1. Create a Sanity project and deploy the `recipe` schema from `sanity/schemaTypes/recipe.ts`.
-2. Set the Sanity env vars on Vercel and redeploy.
-3. Add recipes via `/my-recipes` (cook/admin) when write token is set, or in Sanity Studio.
+1. Ensure `DATABASE_URL` is set and the `recipe` table exists (`npm run db:push` or `drizzle/0001_recipe_catalog.sql`).
+2. Confirm Browse Recipes shows the Cajun tuna bowl from Neon.
+3. Add more dishes via `/my-recipes` (cook/admin) — writes go to Neon, no redeploy.
 
 ## 6. Git workflow
 

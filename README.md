@@ -44,24 +44,19 @@ Reviews & comments details: [docs/reviews-comments.md](./docs/reviews-comments.m
 
 ## How content works
 
-### Local mode (default — no CMS keys needed)
+### Production path (Neon / SQLite)
 
-- Recipes live in `data/recipes.json` locally (seeded dishes attributed to `system` / Gregg's Kitchen). On Vercel the app never opens that file — it serves in-memory seeds (or Sanity when configured).
-- Auth users + sessions live in `data/auth.sqlite` locally (or Neon when `DATABASE_URL` is set).
-- Cooks/admins publish via `/my-recipes`.
+When a database is configured (`DATABASE_URL` on Vercel, or local SQLite), recipes live in the `recipe` table. Browse Recipes and `/api/recipes` read from the DB. Cooks/admins publish via `/my-recipes` without a redeploy.
 
-### Production database (Vercel)
+A fresh database is seeded with **Extra-Saucy Late-Night Cajun Tuna Bowl** (photo + author Gregg). See [docs/production-recipes.md](./docs/production-recipes.md).
 
-Set `DATABASE_URL` to a Neon Postgres URL and run `npm run db:push` (or `drizzle/0000_neon_init.sql`). Details: [docs/hosting.md](./docs/hosting.md).
+### Local JSON fallback
 
-### Sanity mode (recommended for production content)
+If the database is unavailable (e.g. Vercel without `DATABASE_URL`), the app serves the in-memory / JSON seed catalog — currently just the Cajun tuna bowl. Writable `data/recipes.json` is local/dev only (read-only on serverless).
 
-1. Create a free project at [sanity.io](https://www.sanity.io/).
-2. Set Sanity env vars (see `.env.example`).
-3. Deploy the schema in `sanity/schemaTypes/recipe.ts` (includes `authorId` / `authorName`).
-4. Redeploy the Next app. Writes go to Sanity when `SANITY_API_WRITE_TOKEN` is set.
+### Sanity (optional / legacy)
 
-If Sanity is configured but empty or unreachable, the app falls back to the seed catalog so the site never goes blank — including on Vercel’s read-only filesystem.
+Sanity remains wired for optional CMS use, but **Neon is the intended production catalog**. When both are configured, the app prefers the database.
 
 ## Hosting overview
 

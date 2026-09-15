@@ -1,3 +1,12 @@
+import { isDatabaseConfigured } from "@/lib/db";
+import {
+  createDbRecipe,
+  deleteDbRecipe,
+  getDbRecipe,
+  getDbRecipeById,
+  listDbRecipes,
+  updateDbRecipe,
+} from "./db-store";
 import {
   createLocalRecipe,
   deleteLocalRecipe,
@@ -130,14 +139,21 @@ function mapSanityRecipe(doc: SanityRecipeDoc): Recipe {
     source: "sanity",
     updatedAt: doc._updatedAt || new Date().toISOString(),
     authorId: doc.authorId || "system",
-    authorName: doc.authorName || "Gregg's Kitchen",
+    authorName: doc.authorName || "Gregg",
   };
 }
 
-export type ContentMode = "sanity" | "local";
+/**
+ * Production prefers Neon/SQLite (`db`) when a database is configured.
+ * Sanity remains an optional legacy CMS path. Local JSON/seeds are the
+ * last-resort fallback (and the only option on Vercel without DATABASE_URL).
+ */
+export type ContentMode = "db" | "sanity" | "local";
 
 export function getContentMode(): ContentMode {
-  return isSanityConfigured() ? "sanity" : "local";
+  if (isDatabaseConfigured()) return "db";
+  if (isSanityConfigured()) return "sanity";
+  return "local";
 }
 
 export async function listRecipes(): Promise<{
@@ -146,6 +162,18 @@ export async function listRecipes(): Promise<{
   error?: string;
 }> {
   const mode = getContentMode();
+
+  if (mode === "db") {
+    try {
+      const recipes = await listDbRecipes();
+      return { recipes, mode };
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to load recipes from database";
+      const local = await localRecipesOrSeed();
+      return { recipes: local, mode: "local", error: message };
+    }
+  }
 
   if (mode === "sanity") {
     try {
@@ -171,7 +199,6 @@ export async function listRecipes(): Promise<{
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "Failed to load local recipes";
-    // Last resort — seeds are in-memory and must always be available.
     return { recipes: getSeedRecipes(), mode, error: message };
   }
 }
@@ -182,6 +209,18 @@ export async function getRecipe(slug: string): Promise<{
   error?: string;
 }> {
   const mode = getContentMode();
+
+  if (mode === "db") {
+    try {
+      const recipe = await getDbRecipe(slug);
+      return { recipe, mode };
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Failed to load recipe from database";
+      const local = await localRecipeOrSeedBySlug(slug);
+      return { recipe: local, mode: "local", error: message };
+    }
+  }
 
   if (mode === "sanity") {
     try {
@@ -217,9 +256,19 @@ export async function getRecipe(slug: string): Promise<{
 }
 
 export async function getRecipeById(id: string): Promise<Recipe | null> {
+  if (isDatabaseConfigured()) {
+    try {
+      const fromDb = await getDbRecipeById(id);
+      if (fromDb) return fromDb;
+    } catch {
+      // fall through
+    }
+  }
+
   if (id.startsWith("local-") || id.startsWith("seed-")) {
     return localRecipeOrSeedById(id);
   }
+
   const client = getSanityClient();
   if (client) {
     try {
@@ -244,6 +293,11 @@ export async function createRecipe(input: RecipeInput): Promise<{
   mode: ContentMode;
 }> {
   const mode = getContentMode();
+
+  if (mode === "db") {
+    const recipe = await createDbRecipe(input);
+    return { recipe, mode };
+  }
 
   if (mode === "sanity") {
     const client = getSanityClient(true);
@@ -302,6 +356,12 @@ export async function updateRecipe(
 ): Promise<{ recipe: Recipe; mode: ContentMode } | null> {
   const mode = getContentMode();
 
+  if (mode === "db") {
+    const recipe = await updateDbRecipe(id, input);
+    if (!recipe) return null;
+    return { recipe, mode };
+  }
+
   if (
     !id.startsWith("local-") &&
     !id.startsWith("seed-") &&
@@ -342,6 +402,15 @@ export async function updateRecipe(
 }
 
 export async function removeRecipe(id: string): Promise<boolean> {
+  if (isDatabaseConfigured()) {
+    try {
+      const deleted = await deleteDbRecipe(id);
+      if (deleted) return true;
+    } catch {
+      // fall through to other stores
+    }
+  }
+
   if (id.startsWith("drafts.") || (!id.startsWith("local-") && !id.startsWith("seed-"))) {
     const client = getSanityClient(true);
     if (client && process.env.SANITY_API_WRITE_TOKEN) {

@@ -9,6 +9,27 @@ const updateLocalRecipe = vi.fn();
 const deleteLocalRecipe = vi.fn();
 const isSanityConfigured = vi.fn();
 const getSanityClient = vi.fn();
+const isDatabaseConfigured = vi.fn();
+const listDbRecipes = vi.fn();
+const getDbRecipe = vi.fn();
+const getDbRecipeById = vi.fn();
+const createDbRecipe = vi.fn();
+const updateDbRecipe = vi.fn();
+const deleteDbRecipe = vi.fn();
+
+vi.mock("@/lib/db", () => ({
+  isDatabaseConfigured: (...args: unknown[]) => isDatabaseConfigured(...args),
+}));
+
+vi.mock("@/lib/recipes/db-store", () => ({
+  listDbRecipes: (...args: unknown[]) => listDbRecipes(...args),
+  getDbRecipe: (...args: unknown[]) => getDbRecipe(...args),
+  getDbRecipeById: (...args: unknown[]) => getDbRecipeById(...args),
+  createDbRecipe: (...args: unknown[]) => createDbRecipe(...args),
+  updateDbRecipe: (...args: unknown[]) => updateDbRecipe(...args),
+  deleteDbRecipe: (...args: unknown[]) => deleteDbRecipe(...args),
+  ensureDbRecipeSeed: vi.fn(),
+}));
 
 vi.mock("@/lib/recipes/local-store", () => ({
   listLocalRecipes: (...args: unknown[]) => listLocalRecipes(...args),
@@ -19,22 +40,22 @@ vi.mock("@/lib/recipes/local-store", () => ({
   deleteLocalRecipe: (...args: unknown[]) => deleteLocalRecipe(...args),
   getSeedRecipes: () => [
     {
-      id: "seed-herb-roast-chicken",
-      slug: "herb-roast-chicken",
-      title: "Herb Roast Chicken",
-      summary: "Sunday bird",
-      ingredients: ["chicken"],
-      steps: ["roast"],
-      tags: ["dinner"],
-      prepMinutes: 20,
-      cookMinutes: 70,
-      servings: 4,
-      imageUrl: "",
-      imageAlt: "",
+      id: "seed-extra-saucy-late-night-cajun-tuna-bowl",
+      slug: "extra-saucy-late-night-cajun-tuna-bowl",
+      title: "Extra-Saucy Late-Night Cajun Tuna Bowl",
+      summary: "Late-night bowl",
+      ingredients: ["tuna"],
+      steps: ["mix"],
+      tags: ["bowl"],
+      prepMinutes: 10,
+      cookMinutes: 0,
+      servings: 1,
+      imageUrl: "/recipes/cajun-tuna-bowl.jpg",
+      imageAlt: "bowl",
       source: "local",
-      updatedAt: "2026-03-01T12:00:00.000Z",
-      authorId: "system",
-      authorName: "Gregg's Kitchen",
+      updatedAt: "2026-09-14T20:00:00.000Z",
+      authorId: "admin",
+      authorName: "Gregg",
     },
   ],
   isLocalRecipeStoreWritable: () => true,
@@ -78,10 +99,30 @@ describe("recipes facade", () => {
     deleteLocalRecipe.mockReset();
     isSanityConfigured.mockReset();
     getSanityClient.mockReset();
+    isDatabaseConfigured.mockReset();
+    listDbRecipes.mockReset();
+    getDbRecipe.mockReset();
+    getDbRecipeById.mockReset();
+    createDbRecipe.mockReset();
+    updateDbRecipe.mockReset();
+    deleteDbRecipe.mockReset();
     delete process.env.SANITY_API_WRITE_TOKEN;
+    isDatabaseConfigured.mockReturnValue(false);
   });
 
-  it("lists local recipes when Sanity is off", async () => {
+  it("lists db recipes when the database is configured", async () => {
+    isDatabaseConfigured.mockReturnValue(true);
+    isSanityConfigured.mockReturnValue(false);
+    listDbRecipes.mockResolvedValue([recipe({ source: "db", id: "db-1" })]);
+    const { listRecipes, getContentMode } = await import("@/lib/recipes");
+    expect(getContentMode()).toBe("db");
+    await expect(listRecipes()).resolves.toEqual({
+      recipes: [recipe({ source: "db", id: "db-1" })],
+      mode: "db",
+    });
+  });
+
+  it("lists local recipes when DB and Sanity are off", async () => {
     isSanityConfigured.mockReturnValue(false);
     listLocalRecipes.mockResolvedValue([recipe()]);
     const { listRecipes, getContentMode, totalMinutes } = await import(
@@ -112,7 +153,7 @@ describe("recipes facade", () => {
     });
   });
 
-  it("maps Sanity docs when present", async () => {
+  it("maps Sanity docs when present and DB is off", async () => {
     isSanityConfigured.mockReturnValue(true);
     const fetch = vi.fn().mockResolvedValue([
       {
@@ -143,6 +184,16 @@ describe("recipes facade", () => {
     });
   });
 
+  it("prefers the database over Sanity when both are available", async () => {
+    isDatabaseConfigured.mockReturnValue(true);
+    isSanityConfigured.mockReturnValue(true);
+    listDbRecipes.mockResolvedValue([recipe({ source: "db" })]);
+    const { getContentMode, listRecipes } = await import("@/lib/recipes");
+    expect(getContentMode()).toBe("db");
+    expect(await listRecipes()).toMatchObject({ mode: "db" });
+    expect(getSanityClient).not.toHaveBeenCalled();
+  });
+
   it("gets recipes by slug in local mode and falls back to seeds on errors", async () => {
     isSanityConfigured.mockReturnValue(false);
     getLocalRecipe.mockResolvedValue(recipe());
@@ -153,10 +204,10 @@ describe("recipes facade", () => {
     });
 
     getLocalRecipe.mockRejectedValue(new Error("disk"));
-    const failed = await getRecipe("herb-roast-chicken");
+    const failed = await getRecipe("extra-saucy-late-night-cajun-tuna-bowl");
     expect(failed.mode).toBe("local");
     expect(failed.error).toBeUndefined();
-    expect(failed.recipe?.slug).toBe("herb-roast-chicken");
+    expect(failed.recipe?.slug).toBe("extra-saucy-late-night-cajun-tuna-bowl");
   });
 
   it("never returns an empty list when local store fails", async () => {
@@ -165,9 +216,31 @@ describe("recipes facade", () => {
     const { listRecipes } = await import("@/lib/recipes");
     const result = await listRecipes();
     expect(result.recipes.length).toBeGreaterThan(0);
-    expect(result.recipes.some((r) => r.slug === "herb-roast-chicken")).toBe(
-      true
-    );
+    expect(
+      result.recipes.some(
+        (r) => r.slug === "extra-saucy-late-night-cajun-tuna-bowl"
+      )
+    ).toBe(true);
+  });
+
+  it("creates in the database when configured", async () => {
+    isDatabaseConfigured.mockReturnValue(true);
+    createDbRecipe.mockResolvedValue(recipe({ source: "db", title: "New" }));
+    const { createRecipe } = await import("@/lib/recipes");
+    const result = await createRecipe({
+      title: "New",
+      summary: "Brand new dish for the table tonight.",
+      ingredients: ["a"],
+      steps: ["b"],
+      tags: [],
+      prepMinutes: 1,
+      cookMinutes: 1,
+      servings: 1,
+      authorId: "u1",
+      authorName: "Cook",
+    });
+    expect(result.mode).toBe("db");
+    expect(createDbRecipe).toHaveBeenCalled();
   });
 
   it("creates locally when Sanity write token is missing", async () => {

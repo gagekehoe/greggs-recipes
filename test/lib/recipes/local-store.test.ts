@@ -25,13 +25,11 @@ describe("local recipe store", () => {
   it("seeds from SEED_RECIPES when recipes.json is missing", async () => {
     const { listLocalRecipes } = await import("@/lib/recipes/local-store");
     const recipes = await listLocalRecipes();
-    expect(recipes.length).toBeGreaterThan(0);
-    expect(recipes.some((r) => r.slug === "herb-roast-chicken")).toBe(true);
-    expect(
-      recipes.some((r) => r.slug === "extra-saucy-late-night-cajun-tuna-bowl")
-    ).toBe(true);
+    expect(recipes).toHaveLength(1);
+    expect(recipes[0]?.slug).toBe("extra-saucy-late-night-cajun-tuna-bowl");
+    expect(recipes[0]?.authorName).toBe("Gregg");
     const raw = await readFile(path.join(tmpDir, "data", "recipes.json"), "utf8");
-    expect(JSON.parse(raw).length).toBe(recipes.length);
+    expect(JSON.parse(raw).length).toBe(1);
   });
 
   it("uses in-memory seeds on Vercel without opening recipes.json", async () => {
