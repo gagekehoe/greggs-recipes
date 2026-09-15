@@ -74,7 +74,7 @@ Recommended: **Vercel + custom domain**. Auth sessions should use a durable data
 
 ### Unit tests
 
-Fast Vitest coverage for pure helpers (roles, slugify, recipe timing). Path aliases (`@/`) are wired in `vitest.config.ts`.
+Fast Vitest coverage for pure helpers (roles, slugify, recipe timing). Specs live under `test/` (not next to `src/`). Path aliases (`@/`) are wired in `vitest.config.ts`.
 
 ```bash
 npm test
