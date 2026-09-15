@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     template: "%s · Gregg's Recipes",
   },
   description:
-    "Home cooking from Gregg's kitchen — realistic recipes you can cook tonight. Sign in to publish when you're a cook or admin.",
+    "Gregg's Recipes is a shared place to cook from — realistic dishes you can make tonight. Sign in to join and publish when you're a cook or admin.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

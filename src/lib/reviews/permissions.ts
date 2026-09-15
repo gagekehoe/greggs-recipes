@@ -5,7 +5,7 @@ export function canLeaveReview(role: Role | undefined | null): boolean {
   return role === "admin" || role === "cook" || role === "viewer";
 }
 
-/** Same gate as reviews — signed-in household members can comment. */
+/** Same gate as reviews — signed-in members can comment. */
 export function canPostComment(role: Role | undefined | null): boolean {
   return canLeaveReview(role);
 }

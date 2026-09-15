@@ -1,6 +1,6 @@
 # Gregg's Recipes
 
-A brand-first cooking site for home recipes — browse polished dishes publicly, then sign in with email to publish when you have cook or admin access.
+A shared recipe site for cooks — browse dishes publicly, then sign in with email to join, cook from the collection, and publish when you have cook or admin access.
 
 **Stack:** Next.js (App Router) · TypeScript · Tailwind CSS · shadcn/ui · Auth.js (email magic link) · SQLite (local) / Neon Postgres (Vercel) · optional [Sanity](https://www.sanity.io/) CMS
 

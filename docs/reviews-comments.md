@@ -1,6 +1,6 @@
 # Reviews & comments
 
-Signed-in household members (viewer, cook, admin) can leave **one star review per recipe** (optional text + up to 4 photos) and post **comments**. Guests can read everything and see a clear sign-in CTA — **no anonymous posting**.
+Signed-in members (viewer, cook, admin) can leave **one star review per recipe** (optional text + up to 4 photos) and post **comments**. Guests can read everything and see a clear sign-in CTA — **no anonymous posting**.
 
 ## Account / display name
 
