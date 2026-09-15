@@ -2,7 +2,15 @@ import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
+import { RecipeCommentsSection } from "@/components/recipes/recipe-comments";
+import { RecipeReviewsSection } from "@/components/recipes/recipe-reviews";
+import { getSessionUser } from "@/lib/auth/session";
 import { getRecipe, totalMinutes } from "@/lib/recipes";
+import {
+  getRatingSummary,
+  listCommentsForRecipe,
+  listReviewsForRecipe,
+} from "@/lib/reviews/store";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +53,13 @@ export default async function RecipePage({ params }: Props) {
   }
 
   const minutes = totalMinutes(recipe);
+  const user = await getSessionUser();
+  const [reviews, summary, comments] = await Promise.all([
+    listReviewsForRecipe(recipe.id),
+    getRatingSummary(recipe.id),
+    listCommentsForRecipe(recipe.id),
+  ]);
+  const signInHref = `/signin?callbackUrl=${encodeURIComponent(`/recipes/${recipe.slug}`)}`;
 
   return (
     <article>
@@ -79,6 +94,9 @@ export default async function RecipePage({ params }: Props) {
             <p className="mt-4 text-xs uppercase tracking-[0.14em] text-[#c5d0c2]">
               {recipe.prepMinutes} prep · {recipe.cookMinutes} cook · {minutes}{" "}
               total · serves {recipe.servings}
+              {summary.count > 0
+                ? ` · ${summary.average}★ (${summary.count})`
+                : ""}
             </p>
           </div>
         </div>
@@ -115,10 +133,27 @@ export default async function RecipePage({ params }: Props) {
         </section>
       </div>
 
-      <div className="mx-auto max-w-4xl px-5 pb-20 md:px-8">
+      <div className="mx-auto max-w-4xl space-y-4 px-5 pb-20 md:px-8">
+        <RecipeReviewsSection
+          recipeId={recipe.id}
+          initialReviews={reviews}
+          initialSummary={summary}
+          signedIn={Boolean(user)}
+          currentUserId={user?.id ?? null}
+          isAdmin={user?.role === "admin"}
+          signInHref={signInHref}
+        />
+        <RecipeCommentsSection
+          recipeId={recipe.id}
+          initialComments={comments}
+          signedIn={Boolean(user)}
+          currentUserId={user?.id ?? null}
+          isAdmin={user?.role === "admin"}
+          signInHref={signInHref}
+        />
         <Link
           href="/#recipes"
-          className="text-sm font-medium text-[var(--accent-deep)] underline-offset-4 hover:underline"
+          className="mt-10 inline-block text-sm font-medium text-[var(--accent-deep)] underline-offset-4 hover:underline"
         >
           ← All recipes
         </Link>

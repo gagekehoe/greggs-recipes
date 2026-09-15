@@ -48,6 +48,36 @@ function openSqlite() {
       expires INTEGER NOT NULL,
       PRIMARY KEY (identifier, token)
     );
+    CREATE TABLE IF NOT EXISTS recipe_review (
+      id TEXT PRIMARY KEY NOT NULL,
+      recipeId TEXT NOT NULL,
+      userId TEXT NOT NULL,
+      rating INTEGER NOT NULL,
+      body TEXT,
+      createdAt INTEGER NOT NULL,
+      updatedAt INTEGER NOT NULL,
+      FOREIGN KEY (userId) REFERENCES user(id) ON DELETE CASCADE
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS recipe_review_recipe_user_uidx
+      ON recipe_review (recipeId, userId);
+    CREATE TABLE IF NOT EXISTS recipe_review_image (
+      id TEXT PRIMARY KEY NOT NULL,
+      reviewId TEXT NOT NULL,
+      url TEXT NOT NULL,
+      sortOrder INTEGER NOT NULL DEFAULT 0,
+      createdAt INTEGER NOT NULL,
+      FOREIGN KEY (reviewId) REFERENCES recipe_review(id) ON DELETE CASCADE
+    );
+    CREATE TABLE IF NOT EXISTS recipe_comment (
+      id TEXT PRIMARY KEY NOT NULL,
+      recipeId TEXT NOT NULL,
+      userId TEXT NOT NULL,
+      body TEXT NOT NULL,
+      createdAt INTEGER NOT NULL,
+      FOREIGN KEY (userId) REFERENCES user(id) ON DELETE CASCADE
+    );
+    CREATE INDEX IF NOT EXISTS recipe_comment_recipe_idx
+      ON recipe_comment (recipeId);
   `);
   return sqlite;
 }

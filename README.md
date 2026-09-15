@@ -17,7 +17,7 @@ Open [http://127.0.0.1:43127](http://127.0.0.1:43127).
 | Path | What it is |
 |------|------------|
 | `/` | Home + recipe index (public) |
-| `/recipes/[slug]` | Recipe detail (public) |
+| `/recipes/[slug]` | Recipe detail — reviews, photos, comments (public read; sign-in to post) |
 | `/signin` | Email magic-link sign-in |
 | `/my-recipes` | Create/manage recipes (cook + admin) |
 | `/people` | Promote/demote roles (admin only) |
@@ -34,9 +34,11 @@ Leave `AUTH_RESEND_KEY` unset. Request a magic link on `/signin`, then copy the 
 
 | Role | Can do |
 |------|--------|
-| `viewer` | Default for new signups — browse only |
-| `cook` | Add / edit / delete **own** recipes |
-| `admin` | Manage **any** recipe + `/people` roles |
+| `viewer` | Default for new signups — browse; leave reviews & comments |
+| `cook` | Add / edit / delete **own** recipes; reviews & comments |
+| `admin` | Manage **any** recipe + `/people` roles; moderate reviews/comments |
+
+Reviews & comments details: [docs/reviews-comments.md](./docs/reviews-comments.md).
 
 ## How content works
 
@@ -74,7 +76,7 @@ Recommended: **Vercel + custom domain**. Auth sessions should use a durable data
 
 ### Unit tests
 
-Fast Vitest coverage for pure helpers (roles, slugify, recipe timing). Specs live under `test/` (not next to `src/`). Path aliases (`@/`) are wired in `vitest.config.ts`.
+Fast Vitest coverage for pure helpers (roles, slugify, recipe timing, review rating/permissions). Specs live under `test/` (not next to `src/`). Path aliases (`@/`) are wired in `vitest.config.ts`.
 
 ```bash
 npm test
