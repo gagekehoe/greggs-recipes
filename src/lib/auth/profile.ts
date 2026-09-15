@@ -25,18 +25,14 @@ export function needsProfileSetup(name: string | null | undefined): boolean {
 
 /**
  * Safe public label for reviews/comments.
- * Prefers display name; never invents a fake name from thin air when unset.
+ * Prefers display name; never invents a name from email (avoids leaking account identity).
  */
 export function publicAuthorLabel(
   name: string | null | undefined,
-  email?: string | null | undefined
+  _email?: string | null | undefined
 ): string {
   const display = normalizeDisplayName(name);
   if (display) return display;
-  if (email?.trim()) {
-    const local = email.trim().split("@")[0];
-    if (local) return local;
-  }
   return "Cook";
 }
 

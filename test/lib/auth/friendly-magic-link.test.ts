@@ -7,7 +7,7 @@ import {
 describe("toFriendlyMagicLinkUrl", () => {
   it("rewrites Auth.js nodemailer callbacks to /signin/verify", () => {
     const authUrl =
-      "https://greggsrecipes.com/api/auth/callback/nodemailer?callbackUrl=https%3A%2F%2Fgreggsrecipes.com%2Fsignin%2Fdone%3Fnext%3D%252Frecipes%252Fsoup&token=abc123&email=gage%40example.com";
+      "https://greggsrecipes.com/api/auth/callback/nodemailer?callbackUrl=https%3A%2F%2Fgreggsrecipes.com%2Fsignin%2Fdone%3Fnext%3D%252Frecipes%252Fsoup&token=abc123&email=cook%40example.com";
 
     const friendly = toFriendlyMagicLinkUrl(authUrl);
     const parsed = new URL(friendly);
@@ -53,7 +53,7 @@ describe("authCallbackFromVerifyParams", () => {
         callbackUrl: "https://greggsrecipes.com/signin/done?next=%2F",
       })
     ).toBe(
-      "/api/auth/callback/nodemailer?token=abc123&email=gage%40example.com&callbackUrl=https%3A%2F%2Fgreggsrecipes.com%2Fsignin%2Fdone%3Fnext%3D%252F"
+      "/api/auth/callback/nodemailer?token=abc123&email=cook%40example.com&callbackUrl=https%3A%2F%2Fgreggsrecipes.com%2Fsignin%2Fdone%3Fnext%3D%252F"
     );
   });
 

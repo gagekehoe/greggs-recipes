@@ -47,9 +47,10 @@ describe("publicAuthorLabel", () => {
     expect(publicAuthorLabel("Gregg", "gregg@example.com")).toBe("Gregg");
   });
 
-  it("falls back to email local-part when name is unset", () => {
-    expect(publicAuthorLabel(null, "cook@example.com")).toBe("cook");
+  it("falls back to Cook when display name is unset (never email local-part)", () => {
+    expect(publicAuthorLabel(null, "cook@example.com")).toBe("Cook");
     expect(publicAuthorLabel("", "  ")).toBe("Cook");
+    expect(publicAuthorLabel(null, "gagekehoe17@gmail.com")).toBe("Cook");
   });
 
   it("uses Cook when nothing is available", () => {

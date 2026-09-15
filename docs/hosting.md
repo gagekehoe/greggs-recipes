@@ -90,7 +90,7 @@ Review photos are written under `public/uploads/reviews/` locally. That path is 
 2. Set the Sanity env vars on Vercel and redeploy.
 3. Add recipes via `/my-recipes` (cook/admin) when write token is set, or in Sanity Studio.
 
-## 6. Git workflow (Gage’s rule)
+## 6. Git workflow
 
 - All changes go through pull requests.
 - Never push commits directly to `main`.

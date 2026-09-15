@@ -87,8 +87,8 @@ describe("admin email helpers", () => {
   });
 
   it("normalizes ADMIN_EMAIL casing and whitespace", () => {
-    process.env.ADMIN_EMAIL = "  Gage@Example.COM ";
-    expect(getAdminEmail()).toBe("gage@example.com");
+    process.env.ADMIN_EMAIL = "  Admin@Example.COM ";
+    expect(getAdminEmail()).toBe("admin@example.com");
   });
 
   it("matches admin emails case-insensitively", () => {
