@@ -1,12 +1,16 @@
-import Link from "next/link";
+import { HeroCtas } from "@/components/layout/hero-ctas";
 import { RecipeGrid } from "@/components/recipes/recipe-card";
 import { RecipePhoto } from "@/components/recipes/recipe-photo";
+import { getSessionUser } from "@/lib/auth/session";
 import { listRecipes } from "@/lib/recipes";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const { recipes, mode, error } = await listRecipes();
+  const [{ recipes, mode, error }, user] = await Promise.all([
+    listRecipes(),
+    getSessionUser(),
+  ]);
   const featured = recipes[0];
 
   return (
@@ -50,20 +54,7 @@ export default async function HomePage() {
               Browse the collection anytime. Cooks and admins can sign in to add
               dishes — no redeploy required.
             </p>
-            <div className="mt-8 flex flex-wrap gap-3">
-              <Link
-                href="/#recipes"
-                className="inline-flex h-9 items-center rounded-lg bg-[#f3f0e8] px-4 text-sm font-medium text-[var(--ink)] transition-colors hover:bg-white"
-              >
-                Browse recipes
-              </Link>
-              <Link
-                href="/signin"
-                className="inline-flex h-9 items-center rounded-lg border border-[#f3f0e8]/40 px-4 text-sm font-medium text-[#f3f0e8] transition-colors hover:bg-[#f3f0e8]/10 hover:text-white"
-              >
-                Sign in
-              </Link>
-            </div>
+            <HeroCtas user={user} />
           </div>
         </div>
       </section>
