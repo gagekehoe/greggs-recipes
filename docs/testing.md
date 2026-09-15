@@ -13,6 +13,7 @@ npm run test:coverage
 |------|----------|
 | `src/lib/**` pure helpers | Direct unit tests |
 | Reviews store / local recipe store / uploads | Temp dirs + in-memory SQLite |
+| Recipe photo fallback helpers | Unit tests for real URL vs placeholder |
 | Recipes facade / Sanity helpers | Mocks for env + clients |
 | API routes (`reviews`, `comments`, `profile`, `recipes`, `users`, review images) | Handler tests with mocked session/DB/store |
 | Review & comment UI, sign-in, profile forms | `@testing-library/react` + jsdom |

@@ -150,3 +150,57 @@
 .recipe-reveal {
   animation: rise-in 0.7s ease-out both;
 }
+
+/* Branded no-photo fallback — herb garden tones, not a gray void */
+.recipe-photo-fallback {
+  background:
+    radial-gradient(ellipse 90% 70% at 15% 10%, rgba(184, 137, 45, 0.28), transparent 55%),
+    radial-gradient(ellipse 80% 60% at 90% 85%, rgba(159, 179, 154, 0.35), transparent 50%),
+    linear-gradient(155deg, #2f4238 0%, var(--sage-deep) 48%, #24362c 100%);
+}
+
+.recipe-photo-fallback--tone-b {
+  background:
+    radial-gradient(ellipse 85% 65% at 80% 15%, rgba(184, 137, 45, 0.32), transparent 55%),
+    radial-gradient(ellipse 70% 55% at 10% 90%, rgba(223, 232, 220, 0.12), transparent 50%),
+    linear-gradient(165deg, #3d5648 0%, #2a4034 55%, #1c2e24 100%);
+}
+
+.recipe-photo-fallback--tone-c {
+  background:
+    radial-gradient(ellipse 75% 60% at 40% 0%, rgba(159, 179, 154, 0.4), transparent 50%),
+    radial-gradient(ellipse 60% 50% at 100% 70%, rgba(138, 100, 32, 0.25), transparent 55%),
+    linear-gradient(140deg, #24362c 0%, #3d5648 42%, #2f4238 100%);
+}
+
+.recipe-photo-fallback__pattern {
+  position: absolute;
+  inset: 0;
+  opacity: 0.22;
+  background-image:
+    radial-gradient(circle at 1px 1px, rgba(243, 240, 232, 0.55) 1px, transparent 0);
+  background-size: 18px 18px;
+  mask-image: radial-gradient(ellipse 70% 65% at 50% 45%, black 20%, transparent 75%);
+}
+
+.recipe-photo-fallback__glow {
+  position: absolute;
+  inset: -20%;
+  background: radial-gradient(
+    circle at 50% 40%,
+    rgba(243, 240, 232, 0.1),
+    transparent 55%
+  );
+  animation: recipe-fallback-breathe 7s ease-in-out infinite alternate;
+}
+
+@keyframes recipe-fallback-breathe {
+  from {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  to {
+    transform: scale(1.08);
+    opacity: 1;
+  }
+}

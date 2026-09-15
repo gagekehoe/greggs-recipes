@@ -12,6 +12,12 @@ import type { Recipe, RecipeInput } from "./types";
 
 export type { Recipe, RecipeInput } from "./types";
 export { slugify } from "./slug";
+export {
+  hasRecipeImage,
+  recipeImageInitials,
+  recipePlaceholderTone,
+  resolveRecipeImageUrl,
+} from "./image";
 
 type SanityRecipeDoc = {
   _id: string;
@@ -82,10 +88,10 @@ function mapSanityRecipe(doc: SanityRecipeDoc): Recipe {
     prepMinutes: doc.prepMinutes ?? 0,
     cookMinutes: doc.cookMinutes ?? 0,
     servings: doc.servings ?? 1,
-    imageUrl:
-      doc.imageUrl ||
-      "https://images.unsplash.com/photo-1495521821757-a1efb672935e?auto=format&fit=crop&w=1600&q=80",
-    imageAlt: doc.imageAlt || `${doc.title} plated`,
+    imageUrl: doc.imageUrl?.trim() || "",
+    imageAlt:
+      doc.imageAlt ||
+      (doc.imageUrl?.trim() ? `${doc.title} plated` : ""),
     source: "sanity",
     updatedAt: doc._updatedAt || new Date().toISOString(),
     authorId: doc.authorId || "system",
@@ -217,10 +223,10 @@ export async function createRecipe(input: RecipeInput): Promise<{
       prepMinutes: input.prepMinutes,
       cookMinutes: input.cookMinutes,
       servings: input.servings,
-      imageUrl:
-        input.imageUrl?.trim() ||
-        "https://images.unsplash.com/photo-1495521821757-a1efb672935e?auto=format&fit=crop&w=1600&q=80",
-      imageAlt: input.imageAlt?.trim() || `${input.title.trim()} plated`,
+      imageUrl: input.imageUrl?.trim() || "",
+      imageAlt:
+        input.imageAlt?.trim() ||
+        (input.imageUrl?.trim() ? `${input.title.trim()} plated` : ""),
       authorId: input.authorId,
       authorName: input.authorName,
     });
@@ -274,8 +280,14 @@ export async function updateRecipe(
           prepMinutes: input.prepMinutes,
           cookMinutes: input.cookMinutes,
           servings: input.servings,
-          imageUrl: input.imageUrl?.trim() || undefined,
-          imageAlt: input.imageAlt?.trim() || undefined,
+          imageUrl:
+            input.imageUrl !== undefined
+              ? input.imageUrl.trim() || ""
+              : undefined,
+          imageAlt:
+            input.imageAlt !== undefined
+              ? input.imageAlt.trim() || ""
+              : undefined,
         })
         .commit();
       const recipe = await getRecipeById(id);
