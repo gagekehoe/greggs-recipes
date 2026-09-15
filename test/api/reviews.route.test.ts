@@ -52,39 +52,33 @@ describe("GET/POST/DELETE /api/reviews", () => {
     const ok = await GET(
       new Request("http://localhost/api/reviews?recipeId=recipe-1")
     );
-    expect(ok.status).toBe(200);
-    const body = await ok.json();
-    expect(body.mine.userId).toBe("u1");
+    expect(ok?.status).toBe(200);
+    const body = await ok!.json();
+    expect(body.mine?.userId).toBe("u1");
     expect(body.signedIn).toBe(true);
   });
 
   it("POST rejects guests and users without display names", async () => {
     const { POST } = await import("@/app/api/reviews/route");
     getSessionUser.mockResolvedValue(null);
-    expect(
-      (
-        await POST(
-          new Request("http://localhost/api/reviews", {
-            method: "POST",
-            body: "{}",
-          })
-        )
-      ).status
-    ).toBe(401);
+    const guest = await POST(
+      new Request("http://localhost/api/reviews", {
+        method: "POST",
+        body: "{}",
+      })
+    );
+    expect(guest?.status).toBe(401);
 
     getSessionUser.mockResolvedValue({ id: "u1", role: "viewer" });
     getUserDisplayName.mockResolvedValue(null);
-    expect(
-      (
-        await POST(
-          new Request("http://localhost/api/reviews", {
-            method: "POST",
-            headers: { "content-type": "application/json" },
-            body: JSON.stringify({ recipeId: "r1", rating: 5 }),
-          })
-        )
-      ).status
-    ).toBe(403);
+    const noDisplayName = await POST(
+      new Request("http://localhost/api/reviews", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ recipeId: "r1", rating: 5 }),
+      })
+    );
+    expect(noDisplayName?.status).toBe(403);
   });
 
   it("POST validates JSON and creates a review", async () => {
@@ -100,7 +94,7 @@ describe("GET/POST/DELETE /api/reviews", () => {
         body: JSON.stringify({ recipeId: "missing", rating: 5 }),
       })
     );
-    expect(notFound.status).toBe(404);
+    expect(notFound?.status).toBe(404);
 
     const invalid = await POST(
       new Request("http://localhost/api/reviews", {
@@ -109,7 +103,7 @@ describe("GET/POST/DELETE /api/reviews", () => {
         body: JSON.stringify({ recipeId: "r1", rating: 9 }),
       })
     );
-    expect(invalid.status).toBe(400);
+    expect(invalid?.status).toBe(400);
 
     getRecipeById.mockResolvedValue({ id: "r1" });
     upsertReview.mockResolvedValue({ id: "rev1", rating: 4 });
@@ -123,7 +117,7 @@ describe("GET/POST/DELETE /api/reviews", () => {
         body: JSON.stringify({ recipeId: "r1", rating: 4, body: " yum " }),
       })
     );
-    expect(created.status).toBe(201);
+    expect(created?.status).toBe(201);
     expect(upsertReview).toHaveBeenCalledWith({
       recipeId: "r1",
       userId: "u1",
@@ -161,7 +155,7 @@ describe("GET/POST/DELETE /api/reviews", () => {
         body: form,
       })
     );
-    expect(created.status).toBe(201);
+    expect(created?.status).toBe(201);
     expect(saveReviewImageFile).toHaveBeenCalled();
     expect(upsertReview).toHaveBeenCalledWith({
       recipeId: "r1",
