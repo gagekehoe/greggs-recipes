@@ -15,7 +15,7 @@ describe("toFriendlyMagicLinkUrl", () => {
     expect(parsed.origin).toBe("https://greggsrecipes.com");
     expect(parsed.pathname).toBe("/signin/verify");
     expect(parsed.searchParams.get("token")).toBe("abc123");
-    expect(parsed.searchParams.get("email")).toBe("gage@example.com");
+    expect(parsed.searchParams.get("email")).toBe("cook@example.com");
     expect(parsed.searchParams.get("callbackUrl")).toBe(
       "https://greggsrecipes.com/signin/done?next=%2Frecipes%2Fsoup"
     );
@@ -49,7 +49,7 @@ describe("authCallbackFromVerifyParams", () => {
     expect(
       authCallbackFromVerifyParams({
         token: "abc123",
-        email: "gage@example.com",
+        email: "cook@example.com",
         callbackUrl: "https://greggsrecipes.com/signin/done?next=%2F",
       })
     ).toBe(
