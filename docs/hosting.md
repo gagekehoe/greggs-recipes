@@ -41,7 +41,7 @@ If `DATABASE_URL` is missing on Vercel, **public recipe pages still load** from 
 |----------|----------|--------|
 | `DATABASE_URL` | **Yes (prod)** | Neon Postgres URL (`postgresql://…?sslmode=require`) — auth, reviews, **and recipe catalog** |
 | `AUTH_SECRET` | Yes | Long random string (`openssl rand -base64 32`) |
-| `AUTH_URL` | Yes (prod) | Canonical site URL: `https://greggsrecipes.com` |
+| `AUTH_URL` | Yes (prod) | Canonical site URL: `https://www.greggsrecipes.com` (must match Production host) |
 | `ADMIN_EMAIL` | Yes | Bootstrap admin — `gagekehoe17@gmail.com` |
 | `AUTH_RESEND_KEY` | Prod email | Resend API key so magic links are emailed |
 | `EMAIL_FROM` | With Resend | Prefer a verified sender on your domain, e.g. `Gregg's Recipes <noreply@greggsrecipes.com>` (avoid bare `onboarding@resend.dev` in production — mismatched From/link domains look phishing-like) |
@@ -52,14 +52,14 @@ If `DATABASE_URL` is missing on Vercel, **public recipe pages still load** from 
 | `SANITY_API_WRITE_TOKEN` | For writes → Sanity | Editor token |
 | `BLOB_READ_WRITE_TOKEN` | **Yes for durable recipe/review photo uploads** | Vercel Blob store token (Storage → Blob) |
 
-4. Click **Deploy**. Production custom domain: `https://greggsrecipes.com`.
+4. Click **Deploy**. Production custom domain: `https://www.greggsrecipes.com` (apex redirects → www).
 
 ### Exact Vercel env vars for this site
 
 ```bash
 DATABASE_URL=postgresql://USER:PASSWORD@HOST/DB?sslmode=require
 AUTH_SECRET=<openssl rand -base64 32>
-AUTH_URL=https://greggsrecipes.com
+AUTH_URL=https://www.greggsrecipes.com
 ADMIN_EMAIL=gagekehoe17@gmail.com
 BLOB_READ_WRITE_TOKEN=vercel_blob_rw_...
 # Optional but recommended for real email delivery:
@@ -67,13 +67,15 @@ AUTH_RESEND_KEY=re_...
 EMAIL_FROM=Gregg's Recipes <noreply@greggsrecipes.com>
 ```
 
-Verify in Vercel that `AUTH_URL` matches the host cooks actually use. Production
-traffic may land on **`www.greggsrecipes.com`** while env docs often show the apex —
-set `AUTH_URL` to the canonical redirect target (and keep both hosts on the Vercel
-project) so magic links and Auth.js callbacks stay on one hostname. Blob uploads
+Verify in Vercel that `AUTH_URL` is **`https://www.greggsrecipes.com`** — that is
+the Production host. Apex `greggsrecipes.com` should 308 → www (do not flip
+primary to apex). Magic links and Auth.js callbacks must match www. Blob uploads
 are host-agnostic (`*.blob.vercel-storage.com`); a blank External API target in
 logs usually means Blob was called with a missing/empty token URL rather than a
 www/apex mismatch.
+
+SEO metadata, sitemap absolute URLs, and `robots` host also use www — see the
+project store doc `docs/seo-and-domains.md`.
 
 ### Exact Vercel env vars for this site (legacy preview URL)
 
@@ -88,7 +90,7 @@ AUTH_RESEND_KEY=re_...
 EMAIL_FROM=Gregg's Recipes <onboarding@resend.dev>
 ```
 
-Switch `AUTH_URL` / `EMAIL_FROM` to `greggsrecipes.com` as soon as the custom domain is live.
+Switch `AUTH_URL` to `https://www.greggsrecipes.com` and `EMAIL_FROM` to a verified `greggsrecipes.com` sender as soon as the custom domain is live.
 
 ### Auth storage notes
 
@@ -101,13 +103,22 @@ Review photos are written under `public/uploads/reviews/` locally. That path is 
 
 ## 4. Connect a custom domain
 
-1. In Vercel: **Project → Settings → Domains → Add**.
-2. Enter your domain (e.g. `greggsrecipes.com` or `www.greggsrecipes.com`).
-3. Follow Vercel’s DNS instructions for your registrar, typically:
-   - **Apex domain:** `A` record to `76.76.21.21` (confirm the current value in the Vercel UI)
-   - **Subdomain (www):** `CNAME` to `cname.vercel-dns.com`
-4. Wait for DNS propagation. Vercel issues HTTPS automatically. Set `AUTH_URL` to the final HTTPS URL and redeploy.
-5. If you use **www**, add `www.greggsrecipes.com` in Vercel Domains so the TLS cert includes it (apex-only certs fail HTTPS for www).
+**Current production setup (keep this):**
+
+| Domain | Role |
+|--------|------|
+| `www.greggsrecipes.com` | **Production** (canonical) |
+| `greggsrecipes.com` | **308 redirect → www** |
+
+Do **not** make apex primary. Metadata / sitemap / `AUTH_URL` all use www.
+
+1. In Vercel: **Project → Settings → Domains**.
+2. Confirm both hosts are listed with the roles above.
+3. DNS (typical):
+   - **www:** `CNAME` to `cname.vercel-dns.com`
+   - **Apex:** `A` record to `76.76.21.21` (confirm in the Vercel UI)
+4. Wait for DNS propagation. Vercel issues HTTPS automatically.
+5. Set `AUTH_URL=https://www.greggsrecipes.com` and redeploy so magic links match Production.
 
 ## 5. Content after go-live
 

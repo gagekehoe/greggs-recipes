@@ -46,5 +46,6 @@ export function safeAuthRedirect(url: string, baseUrl: string): string {
 
 /** Canonical public origin for sanitizing callback URLs in emails / verify. */
 export function authPublicOrigin(): string {
-  return process.env.AUTH_URL || "https://greggsrecipes.com";
+  // Production canonical host is www (apex redirects → www on Vercel).
+  return process.env.AUTH_URL || "https://www.greggsrecipes.com";
 }

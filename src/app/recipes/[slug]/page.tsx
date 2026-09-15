@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
@@ -12,6 +13,7 @@ import {
   listCommentsForRecipe,
   listReviewsForRecipe,
 } from "@/lib/reviews/store";
+import { absoluteImageUrl, SITE_NAME } from "@/lib/seo/site";
 
 export const dynamic = "force-dynamic";
 
@@ -19,13 +21,45 @@ type Props = {
   params: Promise<{ slug: string }>;
 };
 
-export async function generateMetadata({ params }: Props) {
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const { recipe } = await getRecipe(slug);
-  if (!recipe) return { title: "Recipe not found" };
+  if (!recipe) {
+    return {
+      title: "Recipe not found",
+      robots: { index: false, follow: false },
+    };
+  }
+
+  const canonicalPath = `/recipes/${recipe.slug}`;
+  const imageUrl = absoluteImageUrl(recipe.imageUrl);
+  const imageAlt = recipe.imageAlt || recipe.title;
+
   return {
     title: recipe.title,
     description: recipe.summary,
+    alternates: {
+      canonical: canonicalPath,
+    },
+    openGraph: {
+      type: "article",
+      url: canonicalPath,
+      title: recipe.title,
+      description: recipe.summary,
+      siteName: SITE_NAME,
+      images: [
+        {
+          url: imageUrl,
+          alt: imageAlt,
+        },
+      ],
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: recipe.title,
+      description: recipe.summary,
+      images: [imageUrl],
+    },
   };
 }
 
