@@ -112,7 +112,7 @@ export function RecipeCommentsSection({
           </p>
           <Link
             href={signInHref}
-            className="mt-4 inline-flex h-9 items-center rounded-lg bg-[var(--ink)] px-4 text-sm font-medium text-[#f7f4ec] transition-colors hover:bg-[var(--sage-deep)]"
+            className="mt-4 inline-flex h-11 items-center rounded-lg bg-[var(--ink)] px-4 text-sm font-medium text-[#f7f4ec] transition-colors hover:bg-[var(--sage-deep)] md:h-9"
           >
             Sign in to comment
           </Link>
@@ -124,7 +124,7 @@ export function RecipeCommentsSection({
           </p>
           <Link
             href={profileHref}
-            className="mt-4 inline-flex h-9 items-center rounded-lg bg-[var(--ink)] px-4 text-sm font-medium text-[#f7f4ec] transition-colors hover:bg-[var(--sage-deep)]"
+            className="mt-4 inline-flex h-11 items-center rounded-lg bg-[var(--ink)] px-4 text-sm font-medium text-[#f7f4ec] transition-colors hover:bg-[var(--sage-deep)] md:h-9"
           >
             Set display name
           </Link>

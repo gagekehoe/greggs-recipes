@@ -39,6 +39,11 @@ export default async function HomePage() {
           )}
           <div className="absolute inset-0 bg-[linear-gradient(105deg,rgba(28,46,36,0.82)_0%,rgba(28,46,36,0.55)_42%,rgba(28,46,36,0.22)_100%)]" />
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(184,137,45,0.18),transparent_45%)]" />
+          {/* Extra bottom scrim on phones — hero copy sits at the bottom over food photos */}
+          <div
+            aria-hidden
+            className="absolute inset-0 bg-[linear-gradient(to_top,rgba(28,46,36,0.9)_0%,rgba(28,46,36,0.62)_38%,rgba(28,46,36,0.2)_58%,transparent_72%)] md:hidden"
+          />
         </div>
 
         <div className="relative z-10 flex min-h-[100svh] items-end px-5 pb-16 pt-28 md:items-center md:px-8 md:pb-24">

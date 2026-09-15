@@ -1,21 +1,27 @@
 import Link from "next/link";
 import { AuthNav } from "@/components/auth/auth-nav";
 
+const headerNavLinkClassName =
+  "inline-flex min-h-11 items-center px-2.5 text-sm font-medium transition-colors hover:text-[var(--ink)] md:min-h-9 md:px-3";
+
 export function SiteHeader() {
   return (
     <header className="absolute inset-x-0 top-0 z-20 border-b border-[var(--line)]/70 bg-[var(--paper)]/95 shadow-[0_1px_0_rgba(28,46,36,0.04)] backdrop-blur-md">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 md:px-8 md:py-5">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-1 px-5 py-2.5 md:px-8 md:py-4">
         <Link
           href="/"
-          className="font-display text-xl tracking-tight text-[var(--ink)] transition-opacity hover:opacity-80 md:text-2xl"
+          className="inline-flex min-h-11 items-center font-display text-xl tracking-tight text-[var(--ink)] transition-opacity hover:opacity-80 md:min-h-9 md:text-2xl"
         >
           Gregg&apos;s Recipes
         </Link>
-        <nav className="flex items-center gap-5 text-sm font-medium text-[var(--ink-muted)]">
-          <Link href="/#recipes" className="transition-colors hover:text-[var(--ink)]">
+        <nav
+          aria-label="Primary"
+          className="flex max-w-full flex-wrap items-center justify-end gap-x-0.5 gap-y-1 text-[var(--ink-muted)]"
+        >
+          <Link href="/#recipes" className={headerNavLinkClassName}>
             Recipes
           </Link>
-          <AuthNav />
+          <AuthNav linkClassName={headerNavLinkClassName} />
         </nav>
       </div>
     </header>
