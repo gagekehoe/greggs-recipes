@@ -3,12 +3,47 @@ import {
   deleteLocalRecipe,
   getLocalRecipe,
   getLocalRecipeById,
+  getSeedRecipes,
   listLocalRecipes,
   updateLocalRecipe,
 } from "./local-store";
 import { getSanityClient, isSanityConfigured } from "./sanity";
 import { slugify } from "./slug";
 import type { Recipe, RecipeInput } from "./types";
+
+/** Never ship an empty pantry when seed dishes exist. */
+async function localRecipesOrSeed(): Promise<Recipe[]> {
+  try {
+    const local = await listLocalRecipes();
+    if (local.length > 0) return local;
+  } catch {
+    // fall through to in-memory seeds
+  }
+  return getSeedRecipes().sort(
+    (a, b) =>
+      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+  );
+}
+
+async function localRecipeOrSeedBySlug(slug: string): Promise<Recipe | null> {
+  try {
+    const local = await getLocalRecipe(slug);
+    if (local) return local;
+  } catch {
+    // fall through
+  }
+  return getSeedRecipes().find((r) => r.slug === slug) ?? null;
+}
+
+async function localRecipeOrSeedById(id: string): Promise<Recipe | null> {
+  try {
+    const local = await getLocalRecipeById(id);
+    if (local) return local;
+  } catch {
+    // fall through
+  }
+  return getSeedRecipes().find((r) => r.id === id) ?? null;
+}
 
 export type { Recipe, RecipeInput } from "./types";
 export { slugify } from "./slug";
@@ -118,25 +153,26 @@ export async function listRecipes(): Promise<{
       if (!client) throw new Error("Sanity client unavailable");
       const docs = await client.fetch<SanityRecipeDoc[]>(RECIPE_QUERY);
       if (!docs?.length) {
-        const local = await listLocalRecipes();
+        const local = await localRecipesOrSeed();
         return { recipes: local, mode: "local" };
       }
       return { recipes: docs.map(mapSanityRecipe), mode };
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to load recipes from Sanity";
-      const local = await listLocalRecipes();
+      const local = await localRecipesOrSeed();
       return { recipes: local, mode: "local", error: message };
     }
   }
 
   try {
-    const recipes = await listLocalRecipes();
+    const recipes = await localRecipesOrSeed();
     return { recipes, mode };
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "Failed to load local recipes";
-    return { recipes: [], mode, error: message };
+    // Last resort — seeds are in-memory and must always be available.
+    return { recipes: getSeedRecipes(), mode, error: message };
   }
 }
 
@@ -156,29 +192,33 @@ export async function getRecipe(slug: string): Promise<{
         { slug }
       );
       if (doc) return { recipe: mapSanityRecipe(doc), mode };
-      const local = await getLocalRecipe(slug);
+      const local = await localRecipeOrSeedBySlug(slug);
       return { recipe: local, mode: local ? "local" : mode };
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to load recipe from Sanity";
-      const local = await getLocalRecipe(slug);
+      const local = await localRecipeOrSeedBySlug(slug);
       return { recipe: local, mode: "local", error: message };
     }
   }
 
   try {
-    const recipe = await getLocalRecipe(slug);
+    const recipe = await localRecipeOrSeedBySlug(slug);
     return { recipe, mode };
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "Failed to load recipe";
-    return { recipe: null, mode, error: message };
+    return {
+      recipe: getSeedRecipes().find((r) => r.slug === slug) ?? null,
+      mode,
+      error: message,
+    };
   }
 }
 
 export async function getRecipeById(id: string): Promise<Recipe | null> {
   if (id.startsWith("local-") || id.startsWith("seed-")) {
-    return getLocalRecipeById(id);
+    return localRecipeOrSeedById(id);
   }
   const client = getSanityClient();
   if (client) {
@@ -196,7 +236,7 @@ export async function getRecipeById(id: string): Promise<Recipe | null> {
       // fall through
     }
   }
-  return getLocalRecipeById(id);
+  return localRecipeOrSeedById(id);
 }
 
 export async function createRecipe(input: RecipeInput): Promise<{

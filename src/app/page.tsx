@@ -80,8 +80,8 @@ export default async function HomePage() {
               role="alert"
               className="mb-8 border border-amber-700/30 bg-amber-50 px-4 py-3 text-sm text-amber-950"
             >
-              Couldn&apos;t reach the CMS ({error}). Showing local recipes
-              instead.
+              Couldn&apos;t reach the live recipe source ({error}). Showing
+              Gregg&apos;s kitchen recipes instead.
             </div>
           ) : null}
 

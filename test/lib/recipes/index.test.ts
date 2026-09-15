@@ -17,6 +17,27 @@ vi.mock("@/lib/recipes/local-store", () => ({
   createLocalRecipe: (...args: unknown[]) => createLocalRecipe(...args),
   updateLocalRecipe: (...args: unknown[]) => updateLocalRecipe(...args),
   deleteLocalRecipe: (...args: unknown[]) => deleteLocalRecipe(...args),
+  getSeedRecipes: () => [
+    {
+      id: "seed-herb-roast-chicken",
+      slug: "herb-roast-chicken",
+      title: "Herb Roast Chicken",
+      summary: "Sunday bird",
+      ingredients: ["chicken"],
+      steps: ["roast"],
+      tags: ["dinner"],
+      prepMinutes: 20,
+      cookMinutes: 70,
+      servings: 4,
+      imageUrl: "",
+      imageAlt: "",
+      source: "local",
+      updatedAt: "2026-03-01T12:00:00.000Z",
+      authorId: "system",
+      authorName: "Gregg's Kitchen",
+    },
+  ],
+  isLocalRecipeStoreWritable: () => true,
 }));
 
 vi.mock("@/lib/recipes/sanity", () => ({
@@ -122,7 +143,7 @@ describe("recipes facade", () => {
     });
   });
 
-  it("gets recipes by slug in local mode and handles errors", async () => {
+  it("gets recipes by slug in local mode and falls back to seeds on errors", async () => {
     isSanityConfigured.mockReturnValue(false);
     getLocalRecipe.mockResolvedValue(recipe());
     const { getRecipe } = await import("@/lib/recipes");
@@ -132,11 +153,21 @@ describe("recipes facade", () => {
     });
 
     getLocalRecipe.mockRejectedValue(new Error("disk"));
-    expect(await getRecipe("soup")).toEqual({
-      recipe: null,
-      mode: "local",
-      error: "disk",
-    });
+    const failed = await getRecipe("herb-roast-chicken");
+    expect(failed.mode).toBe("local");
+    expect(failed.error).toBeUndefined();
+    expect(failed.recipe?.slug).toBe("herb-roast-chicken");
+  });
+
+  it("never returns an empty list when local store fails", async () => {
+    isSanityConfigured.mockReturnValue(false);
+    listLocalRecipes.mockRejectedValue(new Error("EROFS: read-only file system"));
+    const { listRecipes } = await import("@/lib/recipes");
+    const result = await listRecipes();
+    expect(result.recipes.length).toBeGreaterThan(0);
+    expect(result.recipes.some((r) => r.slug === "herb-roast-chicken")).toBe(
+      true
+    );
   });
 
   it("creates locally when Sanity write token is missing", async () => {

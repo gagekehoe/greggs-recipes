@@ -13,11 +13,13 @@ describe("local recipe store", () => {
     await mkdir(path.join(tmpDir, "data"), { recursive: true });
     process.chdir(tmpDir);
     vi.resetModules();
+    vi.unstubAllEnvs();
   });
 
   afterEach(async () => {
     process.chdir(previousCwd);
     await rm(tmpDir, { recursive: true, force: true });
+    vi.unstubAllEnvs();
   });
 
   it("seeds from SEED_RECIPES when recipes.json is missing", async () => {
@@ -25,8 +27,49 @@ describe("local recipe store", () => {
     const recipes = await listLocalRecipes();
     expect(recipes.length).toBeGreaterThan(0);
     expect(recipes.some((r) => r.slug === "herb-roast-chicken")).toBe(true);
+    expect(
+      recipes.some((r) => r.slug === "extra-saucy-late-night-cajun-tuna-bowl")
+    ).toBe(true);
     const raw = await readFile(path.join(tmpDir, "data", "recipes.json"), "utf8");
     expect(JSON.parse(raw).length).toBe(recipes.length);
+  });
+
+  it("uses in-memory seeds on Vercel without opening recipes.json", async () => {
+    vi.stubEnv("VERCEL", "1");
+    const { listLocalRecipes, isLocalRecipeStoreWritable } = await import(
+      "@/lib/recipes/local-store"
+    );
+    expect(isLocalRecipeStoreWritable()).toBe(false);
+
+    const recipes = await listLocalRecipes();
+    expect(recipes.length).toBeGreaterThan(0);
+    expect(
+      recipes.some((r) => r.slug === "extra-saucy-late-night-cajun-tuna-bowl")
+    ).toBe(true);
+
+    // Must not create/write the JSON file on serverless.
+    await expect(
+      readFile(path.join(tmpDir, "data", "recipes.json"), "utf8")
+    ).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("refuses local mutations on serverless", async () => {
+    vi.stubEnv("VERCEL", "1");
+    const store = await import("@/lib/recipes/local-store");
+    await expect(
+      store.createLocalRecipe({
+        title: "Should Fail",
+        summary: "Serverless must not write recipes.json on Vercel.",
+        ingredients: ["x"],
+        steps: ["y"],
+        tags: [],
+        prepMinutes: 1,
+        cookMinutes: 1,
+        servings: 1,
+        authorId: "u",
+        authorName: "Gregg",
+      })
+    ).rejects.toThrow(/read-only on serverless/i);
   });
 
   it("creates, updates, and deletes a local recipe", async () => {
