@@ -1,21 +1,16 @@
-import { HeroCtas } from "@/components/layout/hero-ctas";
 import { RecipeGrid } from "@/components/recipes/recipe-card";
 import { RecipePhoto } from "@/components/recipes/recipe-photo";
-import { getSessionUser } from "@/lib/auth/session";
 import { listRecipes } from "@/lib/recipes";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const [{ recipes, mode, error }, user] = await Promise.all([
-    listRecipes(),
-    getSessionUser(),
-  ]);
+  const { recipes, mode, error } = await listRecipes();
   const featured = recipes[0];
 
   return (
     <>
-      <section className="relative min-h-[100svh] overflow-hidden">
+      <section className="relative overflow-hidden">
         <div className="absolute inset-0">
           {featured ? (
             <RecipePhoto
@@ -26,7 +21,7 @@ export default async function HomePage() {
               priority
               sizes="100vw"
               className="absolute inset-0"
-              imageClassName="hero-image-motion"
+              imageClassName="hero-image-motion object-[center_40%]"
             />
           ) : (
             <div
@@ -37,37 +32,26 @@ export default async function HomePage() {
               <div className="recipe-photo-fallback__glow" />
             </div>
           )}
-          <div className="absolute inset-0 bg-[linear-gradient(105deg,rgba(28,46,36,0.82)_0%,rgba(28,46,36,0.55)_42%,rgba(28,46,36,0.22)_100%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(184,137,45,0.18),transparent_45%)]" />
-          {/* Extra bottom scrim on phones — hero copy sits at the bottom over food photos */}
-          <div
-            aria-hidden
-            className="absolute inset-0 bg-[linear-gradient(to_top,rgba(28,46,36,0.9)_0%,rgba(28,46,36,0.62)_38%,rgba(28,46,36,0.2)_58%,transparent_72%)] md:hidden"
-          />
+          <div className="absolute inset-0 bg-[linear-gradient(105deg,rgba(28,46,36,0.84)_0%,rgba(28,46,36,0.62)_48%,rgba(28,46,36,0.4)_100%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_30%,rgba(184,137,45,0.2),transparent_48%)]" />
         </div>
 
-        <div className="relative z-10 flex min-h-[100svh] items-end px-5 pb-16 pt-28 md:items-center md:px-8 md:pb-24">
+        <div className="relative z-10 px-5 pb-8 pt-[5.75rem] md:px-8 md:pb-10 md:pt-28">
           <div className="hero-copy mx-auto w-full max-w-6xl">
-            <p className="font-display text-4xl text-[#f3f0e8] drop-shadow-sm sm:text-5xl md:text-7xl lg:text-8xl">
+            <p className="font-display text-4xl leading-none text-[#f3f0e8] drop-shadow-sm sm:text-5xl md:text-6xl">
               Gregg&apos;s Recipes
             </p>
-            <h1 className="mt-5 max-w-xl text-xl font-medium leading-snug text-[#f3f0e8] md:text-2xl">
+            <h1 className="mt-3 max-w-2xl text-base font-medium leading-snug text-[#e8ebe3] md:mt-4 md:text-lg">
               Cook what&apos;s written down — weeknight plates and Sunday roasts
               worth making again.
             </h1>
-            <p className="mt-4 max-w-lg text-sm leading-relaxed text-[#e8ebe3] md:text-base">
-              Browse anytime. Sign in to cook along, leave reviews and comments.
-              Cooks add recipes to Gregg&apos;s shared collection — no redeploy
-              needed.
-            </p>
-            <HeroCtas user={user} />
           </div>
         </div>
       </section>
 
-      <section id="recipes" className="scroll-mt-8 px-5 py-20 md:px-8 md:py-28">
+      <section id="recipes" className="scroll-mt-8 px-5 py-10 md:px-8 md:py-14">
         <div className="mx-auto max-w-6xl">
-          <div className="mb-12 max-w-2xl">
+          <div className="mb-8 max-w-2xl md:mb-10">
             <h2 className="font-display text-4xl text-[var(--ink)] md:text-5xl">
               On the table
             </h2>
