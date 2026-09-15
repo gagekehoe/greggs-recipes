@@ -1,5 +1,53 @@
 [
   {
+    "id": "local-1789432044257",
+    "slug": "kitchen-desk-fix-check",
+    "title": "Kitchen Desk Fix Check",
+    "summary": "Verifying admin works after allowedDevOrigins fix on Mac.",
+    "ingredients": [
+      "1 tbsp olive oil",
+      "salt"
+    ],
+    "steps": [
+      "Heat oil",
+      "Season"
+    ],
+    "tags": [
+      "verify"
+    ],
+    "prepMinutes": 5,
+    "cookMinutes": 5,
+    "servings": 1,
+    "imageUrl": "https://images.unsplash.com/photo-1495521821757-a1efb672935e?auto=format&fit=crop&w=1600&q=80",
+    "imageAlt": "Kitchen Desk Fix Check plated",
+    "source": "local",
+    "updatedAt": "2026-09-15T00:27:24.257Z"
+  },
+  {
+    "id": "local-1789431990838",
+    "slug": "test-mac-soup",
+    "title": "Test Mac Soup",
+    "summary": "Diagnosing kitchen desk",
+    "ingredients": [
+      "1 onion",
+      "2 cups stock"
+    ],
+    "steps": [
+      "Chop onion",
+      "Simmer"
+    ],
+    "tags": [
+      "test"
+    ],
+    "prepMinutes": 10,
+    "cookMinutes": 20,
+    "servings": 2,
+    "imageUrl": "https://images.unsplash.com/photo-1495521821757-a1efb672935e?auto=format&fit=crop&w=1600&q=80",
+    "imageAlt": "Test Mac Soup plated",
+    "source": "local",
+    "updatedAt": "2026-09-15T00:26:30.838Z"
+  },
+  {
     "id": "seed-herb-roast-chicken",
     "slug": "herb-roast-chicken",
     "title": "Herb Roast Chicken",
@@ -21,7 +69,11 @@
       "Roast 55–70 minutes until the thickest part of the thigh hits 165°F. Rest 15 minutes before carving.",
       "Spoon pan juices over the meat and finish with a squeeze of roasted lemon."
     ],
-    "tags": ["dinner", "roast", "sunday"],
+    "tags": [
+      "dinner",
+      "roast",
+      "sunday"
+    ],
     "prepMinutes": 20,
     "cookMinutes": 70,
     "servings": 4,
@@ -50,7 +102,11 @@
       "Off heat, toss drained pasta into the skillet with a splash of pasta water.",
       "Quickly stir in the egg mixture, adding pasta water until glossy. Serve immediately."
     ],
-    "tags": ["pasta", "quick", "italian"],
+    "tags": [
+      "pasta",
+      "quick",
+      "italian"
+    ],
     "prepMinutes": 10,
     "cookMinutes": 20,
     "servings": 3,
@@ -84,7 +140,11 @@
       "Fold wet into dry until just combined. Pour into the pan.",
       "Bake 35–40 minutes until a tester comes out clean. Cool before slicing."
     ],
-    "tags": ["dessert", "baking", "citrus"],
+    "tags": [
+      "dessert",
+      "baking",
+      "citrus"
+    ],
     "prepMinutes": 15,
     "cookMinutes": 40,
     "servings": 8,
@@ -119,7 +179,11 @@
       "Add beans, tomatoes, and broth. Simmer gently 25–30 minutes.",
       "Season with salt. Finish with lime and cilantro. Serve with rice or cornbread."
     ],
-    "tags": ["vegetarian", "soup", "weeknight"],
+    "tags": [
+      "vegetarian",
+      "soup",
+      "weeknight"
+    ],
     "prepMinutes": 15,
     "cookMinutes": 35,
     "servings": 6,
@@ -149,7 +213,11 @@
       "Cook skin-side down 4–5 minutes until crisp. Flip, spread miso butter on top, and cook 2–3 minutes more.",
       "Rest briefly. Scatter scallions and sesame; serve over rice."
     ],
-    "tags": ["seafood", "quick", "dinner"],
+    "tags": [
+      "seafood",
+      "quick",
+      "dinner"
+    ],
     "prepMinutes": 10,
     "cookMinutes": 12,
     "servings": 4,
