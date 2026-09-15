@@ -28,11 +28,7 @@ export function HeroCtas({ user }: { user: SessionUser | null }) {
             Profile
           </Link>
         )
-      ) : (
-        <Link href="/signin" className={secondaryClassName}>
-          Sign in
-        </Link>
-      )}
+      ) : null}
     </div>
   );
 }

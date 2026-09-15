@@ -56,9 +56,8 @@ export default async function HomePage() {
               worth making again.
             </h1>
             <p className="mt-4 max-w-lg text-sm leading-relaxed text-[#e8ebe3] md:text-base">
-              Browse anytime. Sign in to cook along, leave reviews and comments.
-              Cooks add recipes to Gregg&apos;s shared collection — no redeploy
-              needed.
+              Browse anytime — no account needed. Cooks add recipes to
+              Gregg&apos;s shared collection — no redeploy needed.
             </p>
             <HeroCtas user={user} />
           </div>

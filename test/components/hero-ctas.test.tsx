@@ -24,20 +24,17 @@ vi.mock("next/link", () => ({
 }));
 
 describe("HeroCtas", () => {
-  it("shows Sign in for guests", () => {
+  it("shows only Browse recipes for guests (Sign in stays in the header)", () => {
     render(<HeroCtas user={null} />);
     expect(screen.getByRole("link", { name: /browse recipes/i })).toHaveAttribute(
       "href",
       "/#recipes"
     );
-    expect(screen.getByRole("link", { name: /^sign in$/i })).toHaveAttribute(
-      "href",
-      "/signin"
-    );
+    expect(screen.queryByRole("link", { name: /^sign in$/i })).toBeNull();
     expect(screen.queryByRole("link", { name: /my recipes/i })).toBeNull();
   });
 
-  it("replaces Sign in with My recipes for cooks", () => {
+  it("adds My recipes for cooks", () => {
     const user: SessionUser = {
       id: "u1",
       email: "cook@example.com",
@@ -52,7 +49,7 @@ describe("HeroCtas", () => {
     );
   });
 
-  it("replaces Sign in with Profile for viewers", () => {
+  it("adds Profile for viewers", () => {
     const user: SessionUser = {
       id: "u2",
       email: "viewer@example.com",
