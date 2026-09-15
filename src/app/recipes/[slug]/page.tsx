@@ -76,37 +76,36 @@ export default async function RecipePage({ params }: Props) {
           sizes="100vw"
           className="absolute inset-0"
         />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[var(--ink)]/75 via-[var(--ink)]/25 to-[var(--ink)]/20" />
-        <div className="absolute inset-x-0 bottom-0 px-5 pb-10 md:px-8 md:pb-14">
-          <div className="mx-auto max-w-4xl">
-            <div className="flex flex-wrap gap-2">
-              {recipe.tags.map((tag) => (
-                <Badge
-                  key={tag}
-                  className="border-0 bg-[var(--paper)]/90 text-[var(--ink)]"
-                >
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-            <h1 className="mt-4 font-display text-4xl text-[#f3f0e8] md:text-6xl">
-              {recipe.title}
-            </h1>
-            <p className="mt-3 max-w-2xl text-base text-[#dfe8dc] md:text-lg">
-              {recipe.summary}
-            </p>
-            <p className="mt-4 text-xs uppercase tracking-[0.14em] text-[#c5d0c2]">
-              {recipe.prepMinutes} prep · {recipe.cookMinutes} cook · {minutes}{" "}
-              total · serves {recipe.servings}
-              {summary.count > 0
-                ? ` · ${summary.average}★ (${summary.count})`
-                : ""}
-            </p>
-          </div>
-        </div>
       </div>
 
-      <div className="mx-auto grid max-w-4xl gap-12 px-5 py-14 md:grid-cols-[0.9fr_1.1fr] md:px-8 md:py-20">
+      <div className="mx-auto max-w-4xl px-5 pt-10 md:px-8 md:pt-14">
+        <div className="flex flex-wrap gap-2">
+          {recipe.tags.map((tag) => (
+            <Badge
+              key={tag}
+              variant="secondary"
+              className="border-0 bg-[var(--mist)] text-[var(--ink)]"
+            >
+              {tag}
+            </Badge>
+          ))}
+        </div>
+        <h1 className="mt-4 font-display text-4xl text-[var(--ink)] md:text-6xl">
+          {recipe.title}
+        </h1>
+        <p className="mt-3 max-w-2xl text-base text-[var(--ink-muted)] md:text-lg">
+          {recipe.summary}
+        </p>
+        <p className="mt-4 text-xs uppercase tracking-[0.14em] text-[var(--ink-soft)]">
+          {recipe.prepMinutes} prep · {recipe.cookMinutes} cook · {minutes}{" "}
+          total · serves {recipe.servings}
+          {summary.count > 0
+            ? ` · ${summary.average}★ (${summary.count})`
+            : ""}
+        </p>
+      </div>
+
+      <div className="mx-auto grid max-w-4xl gap-12 px-5 py-12 md:grid-cols-[0.9fr_1.1fr] md:px-8 md:py-16">
         <section>
           <h2 className="font-display text-3xl text-[var(--ink)]">Ingredients</h2>
           <ul className="mt-6 space-y-3 text-[var(--ink-muted)]">

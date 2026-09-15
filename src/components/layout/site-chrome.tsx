@@ -3,8 +3,8 @@ import { AuthNav } from "@/components/auth/auth-nav";
 
 export function SiteHeader() {
   return (
-    <header className="absolute inset-x-0 top-0 z-20">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 md:px-8">
+    <header className="absolute inset-x-0 top-0 z-20 border-b border-[var(--line)]/70 bg-[var(--paper)]/95 shadow-[0_1px_0_rgba(28,46,36,0.04)] backdrop-blur-md">
+      <div className="mx-auto flex max-w-6xl items-center justify-between px-5 py-4 md:px-8 md:py-5">
         <Link
           href="/"
           className="font-display text-xl tracking-tight text-[var(--ink)] transition-opacity hover:opacity-80 md:text-2xl"
