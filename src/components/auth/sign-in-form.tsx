@@ -1,41 +1,70 @@
 "use client";
 
-import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { useState } from "react";
-import { signIn } from "next-auth/react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { getSession, signIn } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { subscribeAuthSessionReady } from "@/lib/auth/cross-tab-session";
+import { safeNextPath, signInDoneUrl, welcomeCallbackUrl } from "@/lib/auth/safe-next";
 
 type Props = {
   sent?: boolean;
   error?: string | null;
 };
 
-function welcomeCallback(rawNext: string | null): string {
-  const next =
-    rawNext && rawNext.startsWith("/") && !rawNext.startsWith("//")
-      ? rawNext
-      : "/";
-  return `/welcome?next=${encodeURIComponent(next)}`;
-}
+const POLL_MS = 2000;
 
 export function SignInForm({ sent, error }: Props) {
   const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl");
   const [email, setEmail] = useState("");
   const [pending, setPending] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
+  const [waitingCopy, setWaitingCopy] = useState("Waiting for you to open the link…");
+  const navigating = useRef(false);
+
+  const continueAfterSession = useCallback(() => {
+    if (navigating.current) return;
+    navigating.current = true;
+    setWaitingCopy("Signed in — continuing…");
+    window.location.href = welcomeCallbackUrl(callbackUrl);
+  }, [callbackUrl]);
+
+  const checkSession = useCallback(async () => {
+    const session = await getSession();
+    if (session?.user) continueAfterSession();
+  }, [continueAfterSession]);
+
+  useEffect(() => {
+    if (!sent) return;
+
+    void checkSession();
+
+    const unsubscribe = subscribeAuthSessionReady(() => {
+      void checkSession();
+    });
+
+    const timer = window.setInterval(() => {
+      void checkSession();
+    }, POLL_MS);
+
+    return () => {
+      unsubscribe();
+      window.clearInterval(timer);
+    };
+  }, [sent, checkSession]);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setPending(true);
     setLocalError(null);
     try {
-      const callbackUrl = welcomeCallback(searchParams.get("callbackUrl"));
+      const magicLinkCallback = signInDoneUrl(safeNextPath(callbackUrl));
       const result = await signIn("nodemailer", {
         email: email.trim(),
-        callbackUrl,
+        callbackUrl: magicLinkCallback,
         redirect: false,
       });
       if (result?.error) {
@@ -43,7 +72,11 @@ export function SignInForm({ sent, error }: Props) {
         setPending(false);
         return;
       }
-      window.location.href = "/signin?sent=1";
+      const sentParams = new URLSearchParams({ sent: "1" });
+      if (callbackUrl) {
+        sentParams.set("callbackUrl", safeNextPath(callbackUrl));
+      }
+      window.location.href = `/signin?${sentParams.toString()}`;
     } catch {
       setLocalError("Network error. Try again.");
       setPending(false);
@@ -61,6 +94,9 @@ export function SignInForm({ sent, error }: Props) {
           email provider configured, open the terminal running{" "}
           <code className="text-[var(--ink)]">npm run dev</code> — the link is
           printed there.
+        </p>
+        <p className="text-sm text-[var(--ink-soft)]" role="status" aria-live="polite">
+          {waitingCopy} Keep this tab open.
         </p>
         <p className="text-sm text-[var(--ink-soft)]">
           New here? The same link creates your account. You&apos;ll choose a

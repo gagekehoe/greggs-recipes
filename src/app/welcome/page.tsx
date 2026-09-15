@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { ProfileForm } from "@/components/auth/profile-form";
 import { isDisplayNameSet, needsProfileSetup } from "@/lib/auth/profile";
+import { safeNextPath } from "@/lib/auth/safe-next";
 import { getSessionUser } from "@/lib/auth/session";
 
 export const metadata = {
@@ -12,11 +13,6 @@ type Props = {
   searchParams: Promise<{ next?: string }>;
 };
 
-function safeNext(raw: string | undefined): string {
-  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/";
-  return raw;
-}
-
 export default async function WelcomePage({ searchParams }: Props) {
   const user = await getSessionUser();
   if (!user) {
@@ -24,7 +20,7 @@ export default async function WelcomePage({ searchParams }: Props) {
   }
 
   const params = await searchParams;
-  const next = safeNext(params.next);
+  const next = safeNextPath(params.next);
 
   if (!needsProfileSetup(user.name)) {
     redirect(next);
