@@ -1,6 +1,7 @@
 import { promises as fs } from "fs";
 import path from "path";
 import { SEED_RECIPES } from "./seed";
+import { slugify } from "./slug";
 import type { Recipe, RecipeInput } from "./types";
 
 const DATA_PATH = path.join(process.cwd(), "data", "recipes.json");
@@ -9,14 +10,6 @@ const SYSTEM_AUTHOR = {
   authorId: "system",
   authorName: "Gregg's Kitchen",
 };
-
-function slugify(title: string): string {
-  return title
-    .toLowerCase()
-    .trim()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-}
 
 function normalizeRecipe(raw: Partial<Recipe> & Pick<Recipe, "id" | "slug" | "title">): Recipe {
   return {

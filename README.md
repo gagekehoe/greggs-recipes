@@ -69,3 +69,13 @@ Recommended: **Vercel + custom domain**. Auth sessions should use a durable data
 | `npm run build` | Production build |
 | `npm run start` | Serve production build on **43127** |
 | `npm run lint` | ESLint |
+| `npm test` | Unit tests (Vitest, one-shot) |
+| `npm run test:watch` | Unit tests in watch mode |
+
+### Unit tests
+
+Fast Vitest coverage for pure helpers (roles, slugify, recipe timing). Path aliases (`@/`) are wired in `vitest.config.ts`.
+
+```bash
+npm test
+```
