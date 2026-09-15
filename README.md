@@ -30,7 +30,7 @@ Leave `AUTH_RESEND_KEY` unset. Request a magic link on `/signin`, then copy the 
 
 ### Admin bootstrap
 
-`ADMIN_EMAIL` (default in `.env.example`: `gagekehoe17@gmail.com`) is promoted to **admin** on sign-in. Gage can change it in `.env.local` / Vercel env if needed.
+`ADMIN_EMAIL` (default in `.env.example`: `gagekehoe17@gmail.com`) is promoted to **admin** on sign-in. You can change it in `.env.local` / Vercel env if needed.
 
 ### Roles
 
