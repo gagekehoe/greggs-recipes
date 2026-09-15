@@ -28,10 +28,10 @@ export function isValidRating(value: unknown): value is number {
   );
 }
 
-/** Soft caps for review photo uploads (local disk storage). */
+/** Soft caps for review photo uploads (aligned with shared image upload limits). */
 export const REVIEW_IMAGE_LIMITS = {
   maxFilesPerReview: 4,
-  maxBytesPerFile: 4 * 1024 * 1024,
+  maxBytesPerFile: 8 * 1024 * 1024,
   allowedMimeTypes: [
     "image/jpeg",
     "image/png",

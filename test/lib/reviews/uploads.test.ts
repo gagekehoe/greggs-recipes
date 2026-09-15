@@ -36,7 +36,7 @@ describe("review uploads", () => {
     ).rejects.toThrow(/Unsupported image type/);
 
     const big = new File(
-      [new Uint8Array(4 * 1024 * 1024 + 1)],
+      [new Uint8Array(8 * 1024 * 1024 + 1)],
       "big.jpg",
       { type: "image/jpeg" }
     );

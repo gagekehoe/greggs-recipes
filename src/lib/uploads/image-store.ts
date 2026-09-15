@@ -1,19 +1,11 @@
 import { del, put } from "@vercel/blob";
 import fs from "fs/promises";
 import path from "path";
+import { IMAGE_UPLOAD_LIMITS } from "@/lib/uploads/limits";
 
 export type UploadKind = "recipes" | "reviews";
 
-/** Soft caps for recipe / review photo uploads. */
-export const IMAGE_UPLOAD_LIMITS = {
-  maxBytesPerFile: 4 * 1024 * 1024,
-  allowedMimeTypes: [
-    "image/jpeg",
-    "image/png",
-    "image/webp",
-    "image/gif",
-  ] as const,
-} as const;
+export { IMAGE_UPLOAD_LIMITS } from "@/lib/uploads/limits";
 
 export function isAllowedImageMime(mime: string): boolean {
   return (IMAGE_UPLOAD_LIMITS.allowedMimeTypes as readonly string[]).includes(

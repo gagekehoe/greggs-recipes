@@ -67,7 +67,13 @@ AUTH_RESEND_KEY=re_...
 EMAIL_FROM=Gregg's Recipes <noreply@greggsrecipes.com>
 ```
 
-Verify in Vercel that `AUTH_URL` is the custom domain (not an old `*.vercel.app` URL). Magic-link emails must use the same host users type in the browser.
+Verify in Vercel that `AUTH_URL` matches the host cooks actually use. Production
+traffic may land on **`www.greggsrecipes.com`** while env docs often show the apex —
+set `AUTH_URL` to the canonical redirect target (and keep both hosts on the Vercel
+project) so magic links and Auth.js callbacks stay on one hostname. Blob uploads
+are host-agnostic (`*.blob.vercel-storage.com`); a blank External API target in
+logs usually means Blob was called with a missing/empty token URL rather than a
+www/apex mismatch.
 
 ### Exact Vercel env vars for this site (legacy preview URL)
 
