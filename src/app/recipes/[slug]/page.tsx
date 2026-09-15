@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { RecipeCommentsSection } from "@/components/recipes/recipe-comments";
 import { RecipeReviewsSection } from "@/components/recipes/recipe-reviews";
+import { isDisplayNameSet } from "@/lib/auth/profile";
 import { getSessionUser } from "@/lib/auth/session";
 import { getRecipe, totalMinutes } from "@/lib/recipes";
 import {
@@ -60,6 +61,8 @@ export default async function RecipePage({ params }: Props) {
     listCommentsForRecipe(recipe.id),
   ]);
   const signInHref = `/signin?callbackUrl=${encodeURIComponent(`/recipes/${recipe.slug}`)}`;
+  const profileHref = `/welcome?next=${encodeURIComponent(`/recipes/${recipe.slug}`)}`;
+  const hasDisplayName = isDisplayNameSet(user?.name);
 
   return (
     <article>
@@ -139,17 +142,21 @@ export default async function RecipePage({ params }: Props) {
           initialReviews={reviews}
           initialSummary={summary}
           signedIn={Boolean(user)}
+          hasDisplayName={hasDisplayName}
           currentUserId={user?.id ?? null}
           isAdmin={user?.role === "admin"}
           signInHref={signInHref}
+          profileHref={profileHref}
         />
         <RecipeCommentsSection
           recipeId={recipe.id}
           initialComments={comments}
           signedIn={Boolean(user)}
+          hasDisplayName={hasDisplayName}
           currentUserId={user?.id ?? null}
           isAdmin={user?.role === "admin"}
           signInHref={signInHref}
+          profileHref={profileHref}
         />
         <Link
           href="/#recipes"

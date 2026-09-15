@@ -15,9 +15,11 @@ type Props = {
   initialReviews: ReviewWithAuthor[];
   initialSummary: RatingSummary;
   signedIn: boolean;
+  hasDisplayName: boolean;
   currentUserId: string | null;
   isAdmin: boolean;
   signInHref: string;
+  profileHref: string;
 };
 
 function StarRow({
@@ -85,9 +87,11 @@ export function RecipeReviewsSection({
   initialReviews,
   initialSummary,
   signedIn,
+  hasDisplayName,
   currentUserId,
   isAdmin,
   signInHref,
+  profileHref,
 }: Props) {
   const router = useRouter();
   const [reviews, setReviews] = useState(initialReviews);
@@ -216,6 +220,21 @@ export function RecipeReviewsSection({
             className="mt-4 inline-flex h-9 items-center rounded-lg bg-[var(--ink)] px-4 text-sm font-medium text-[#f7f4ec] transition-colors hover:bg-[var(--sage-deep)]"
           >
             Sign in to review
+          </Link>
+        </div>
+      ) : !hasDisplayName ? (
+        <div className="mt-8 border border-[var(--line)] bg-[var(--paper)]/70 px-5 py-6">
+          <p className="text-[var(--ink)]">
+            Choose a display name before you post a review.
+          </p>
+          <p className="mt-1 text-sm text-[var(--ink-muted)]">
+            Reviews show your name — not your email.
+          </p>
+          <Link
+            href={profileHref}
+            className="mt-4 inline-flex h-9 items-center rounded-lg bg-[var(--ink)] px-4 text-sm font-medium text-[#f7f4ec] transition-colors hover:bg-[var(--sage-deep)]"
+          >
+            Set display name
           </Link>
         </div>
       ) : (

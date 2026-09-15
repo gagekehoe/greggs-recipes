@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getSessionUser } from "@/lib/auth/session";
+import { getSessionUser, getUserDisplayName } from "@/lib/auth/session";
 import { getRecipeById } from "@/lib/recipes";
 import {
   canEditOwnReview,
@@ -23,6 +23,31 @@ const jsonUpsertSchema = z.object({
   rating: z.number().int().min(1).max(5),
   body: z.string().max(1000).optional().nullable(),
 });
+
+async function requirePoster() {
+  const user = await getSessionUser();
+  if (!user || !canLeaveReview(user.role)) {
+    return {
+      error: NextResponse.json(
+        { error: "Sign in to leave a review." },
+        { status: 401 }
+      ),
+    } as const;
+  }
+  const displayName = await getUserDisplayName(user.id);
+  if (!displayName) {
+    return {
+      error: NextResponse.json(
+        {
+          error: "Set a display name on your profile before reviewing.",
+          code: "PROFILE_REQUIRED",
+        },
+        { status: 403 }
+      ),
+    } as const;
+  }
+  return { user } as const;
+}
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -50,14 +75,10 @@ export async function GET(request: Request) {
 }
 
 export async function POST(request: Request) {
-  // Hard requirement: no guest reviews
-  const user = await getSessionUser();
-  if (!user || !canLeaveReview(user.role)) {
-    return NextResponse.json(
-      { error: "Sign in to leave a review." },
-      { status: 401 }
-    );
-  }
+  // Hard requirement: no guest reviews; display name required
+  const gate = await requirePoster();
+  if ("error" in gate) return gate.error;
+  const { user } = gate;
 
   const contentType = request.headers.get("content-type") || "";
 

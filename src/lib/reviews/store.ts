@@ -1,4 +1,5 @@
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
+import { publicAuthorLabel } from "@/lib/auth/profile";
 import { db } from "@/lib/db";
 import {
   recipeComments,
@@ -37,15 +38,6 @@ export type CommentWithAuthor = {
   authorName: string | null;
   authorEmail: string | null;
 };
-
-function displayName(
-  name: string | null,
-  email: string | null
-): string | null {
-  if (name?.trim()) return name.trim();
-  if (email) return email.split("@")[0] || email;
-  return null;
-}
 
 export async function getRatingSummary(
   recipeId: string
@@ -130,7 +122,7 @@ export async function listReviewsForRecipe(
     body: row.body,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
-    authorName: displayName(row.authorName, row.authorEmail),
+    authorName: publicAuthorLabel(row.authorName, row.authorEmail),
     authorEmail: row.authorEmail,
     images: imagesByReview.get(row.id) ?? [],
   }));
@@ -291,7 +283,7 @@ export async function listCommentsForRecipe(
     userId: row.userId,
     body: row.body,
     createdAt: row.createdAt,
-    authorName: displayName(row.authorName, row.authorEmail),
+    authorName: publicAuthorLabel(row.authorName, row.authorEmail),
     authorEmail: row.authorEmail,
   }));
 }

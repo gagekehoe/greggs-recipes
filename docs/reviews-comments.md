@@ -2,6 +2,13 @@
 
 Signed-in household members (viewer, cook, admin) can leave **one star review per recipe** (optional text + up to 4 photos) and post **comments**. Guests can read everything and see a clear sign-in CTA — **no anonymous posting**.
 
+## Account / display name
+
+- Magic-link sign-in **creates an account** on first use.
+- After first sign-in, `/welcome` asks for a **display name** (stored on Auth.js `user.name` in SQLite).
+- `/profile` lets signed-in users edit it later (header shows the name).
+- Reviews and comments **prefer display name**; posting is blocked until a name is set (API `403` + UI prompt).
+
 ## Auth rules
 
 | Action | Who |

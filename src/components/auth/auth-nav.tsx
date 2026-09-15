@@ -25,6 +25,7 @@ export function AuthNav({ variant = "header" }: { variant?: "header" | "hero" })
 
   const role = data.user.role;
   const canWrite = role === "admin" || role === "cook";
+  const label = data.user.name?.trim() || "Profile";
 
   return (
     <div className="flex items-center gap-4 text-sm font-medium">
@@ -38,6 +39,9 @@ export function AuthNav({ variant = "header" }: { variant?: "header" | "hero" })
           People
         </Link>
       ) : null}
+      <Link href="/profile" className={`transition-colors ${muted}`} title="Your profile">
+        {label}
+      </Link>
       <Button
         type="button"
         variant="ghost"

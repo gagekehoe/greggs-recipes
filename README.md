@@ -18,7 +18,9 @@ Open [http://127.0.0.1:43127](http://127.0.0.1:43127).
 |------|------------|
 | `/` | Home + recipe index (public) |
 | `/recipes/[slug]` | Recipe detail — reviews, photos, comments (public read; sign-in to post) |
-| `/signin` | Email magic-link sign-in |
+| `/signin` | Email magic-link sign-in (creates account on first use) |
+| `/welcome` | First-time display name setup |
+| `/profile` | Edit display name |
 | `/my-recipes` | Create/manage recipes (cook + admin) |
 | `/people` | Promote/demote roles (admin only) |
 

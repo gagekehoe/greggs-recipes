@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { SignInForm } from "@/components/auth/sign-in-form";
 
 export const metadata = {
@@ -19,7 +20,9 @@ export default async function SignInPage({ searchParams }: Props) {
       <div className="relative mx-auto flex min-h-[80svh] max-w-lg flex-col justify-center px-5 py-28 md:px-8 md:py-32">
         <p className="font-display text-2xl text-[var(--ink)]">Gregg&apos;s Recipes</p>
         <div className="mt-8">
-          <SignInForm sent={params.sent === "1"} error={params.error || null} />
+          <Suspense fallback={<p className="text-[var(--ink-muted)]">Loading…</p>}>
+            <SignInForm sent={params.sent === "1"} error={params.error || null} />
+          </Suspense>
         </div>
       </div>
     </div>
