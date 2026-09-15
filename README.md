@@ -40,7 +40,7 @@ Leave `AUTH_RESEND_KEY` unset. Request a magic link on `/signin`, then copy the 
 | `cook` | Add / edit / delete **own** recipes; reviews & comments |
 | `admin` | Manage **any** recipe + `/people` roles; moderate reviews/comments |
 
-Reviews & comments details: [docs/reviews-comments.md](./docs/reviews-comments.md). Testing notes: [docs/testing.md](./docs/testing.md). Recipe photo placeholders: [docs/recipe-photo-fallbacks.md](./docs/recipe-photo-fallbacks.md).
+Reviews & comments details: [docs/reviews-comments.md](./docs/reviews-comments.md). Testing notes: [docs/testing.md](./docs/testing.md). Recipe photo placeholders: [docs/recipe-photo-fallbacks.md](./docs/recipe-photo-fallbacks.md). Recipe photo uploads (Vercel Blob): see `.env.example` (`BLOB_READ_WRITE_TOKEN`).
 
 ## How content works
 

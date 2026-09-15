@@ -19,6 +19,7 @@
     "@neondatabase/serverless": "^1.1.0",
     "@sanity/client": "^8.6.1",
     "@sanity/image-url": "^2.1.1",
+    "@vercel/blob": "^2.8.0",
     "better-sqlite3": "^13.0.3",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

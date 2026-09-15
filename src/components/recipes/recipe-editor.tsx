@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -16,13 +16,38 @@ type Props = {
   canManageAll: boolean;
 };
 
+const PHOTO_ACCEPT = "image/jpeg,image/png,image/webp,image/gif";
+
+const fileInputClassName =
+  "block w-full text-sm text-[var(--ink-muted)] file:mr-3 file:rounded-lg file:border-0 file:bg-[var(--mist)] file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-[var(--ink)]";
+
+async function uploadRecipePhoto(file: File): Promise<string> {
+  const form = new FormData();
+  form.set("file", file);
+  const res = await fetch("/api/recipes/images", {
+    method: "POST",
+    body: form,
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(
+      typeof data.error === "string" ? data.error : "Could not upload photo"
+    );
+  }
+  if (typeof data.url !== "string" || !data.url) {
+    throw new Error("Upload did not return a photo URL");
+  }
+  return data.url;
+}
+
 export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
   const router = useRouter();
+  const createPhotoRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [photoDrafts, setPhotoDrafts] = useState<Record<string, string>>({});
+  const [photoFiles, setPhotoFiles] = useState<Record<string, File | null>>({});
   const [savingPhotoId, setSavingPhotoId] = useState<string | null>(null);
 
   const [title, setTitle] = useState("");
@@ -33,7 +58,7 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
   const [prepMinutes, setPrepMinutes] = useState(15);
   const [cookMinutes, setCookMinutes] = useState(30);
   const [servings, setServings] = useState(4);
-  const [imageUrl, setImageUrl] = useState("");
+  const [createPhotoFile, setCreatePhotoFile] = useState<File | null>(null);
 
   async function saveRecipe(e: React.FormEvent) {
     e.preventDefault();
@@ -41,6 +66,11 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
     setError(null);
     setStatus(null);
     try {
+      let imageUrl: string | undefined;
+      if (createPhotoFile) {
+        imageUrl = await uploadRecipePhoto(createPhotoFile);
+      }
+
       const res = await fetch("/api/recipes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -62,7 +92,8 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
           prepMinutes: Number(prepMinutes),
           cookMinutes: Number(cookMinutes),
           servings: Number(servings),
-          imageUrl: imageUrl || undefined,
+          imageUrl,
+          imageAlt: imageUrl ? `${title.trim()} plated` : undefined,
         }),
       });
       const data = await res.json();
@@ -76,17 +107,19 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
       setIngredients("");
       setSteps("");
       setTags("");
-      setImageUrl("");
+      setCreatePhotoFile(null);
+      if (createPhotoRef.current) createPhotoRef.current.value = "";
       router.refresh();
-    } catch {
-      setError("Network error while saving.");
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Network error while saving."
+      );
     } finally {
       setSaving(false);
     }
   }
 
-  async function saveRecipePhoto(recipe: Recipe) {
-    const nextUrl = (photoDrafts[recipe.id] ?? recipe.imageUrl ?? "").trim();
+  async function saveRecipePhoto(recipe: Recipe, nextUrl: string) {
     setSavingPhotoId(recipe.id);
     setError(null);
     setStatus(null);
@@ -118,7 +151,7 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
           ? `Updated photo for “${recipe.title}”.`
           : `Cleared photo for “${recipe.title}” — placeholder will show.`
       );
-      setPhotoDrafts((prev) => {
+      setPhotoFiles((prev) => {
         const next = { ...prev };
         delete next[recipe.id];
         return next;
@@ -127,6 +160,26 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
     } catch {
       setError("Network error while updating photo.");
     } finally {
+      setSavingPhotoId(null);
+    }
+  }
+
+  async function uploadAndSavePhoto(recipe: Recipe) {
+    const file = photoFiles[recipe.id];
+    if (!file) {
+      setError("Choose a photo file first.");
+      return;
+    }
+    setSavingPhotoId(recipe.id);
+    setError(null);
+    setStatus(null);
+    try {
+      const url = await uploadRecipePhoto(file);
+      await saveRecipePhoto(recipe, url);
+    } catch (err) {
+      setError(
+        err instanceof Error ? err.message : "Could not upload recipe photo"
+      );
       setSavingPhotoId(null);
     }
   }
@@ -231,18 +284,25 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="imageUrl">Recipe photo URL (optional)</Label>
-          <Input
-            id="imageUrl"
-            type="url"
-            value={imageUrl}
-            onChange={(e) => setImageUrl(e.target.value)}
-            placeholder="https://…"
+          <Label htmlFor="recipePhoto">Recipe photo (optional)</Label>
+          <input
+            ref={createPhotoRef}
+            id="recipePhoto"
+            type="file"
+            accept={PHOTO_ACCEPT}
+            className={fileInputClassName}
+            onChange={(e) => setCreatePhotoFile(e.target.files?.[0] ?? null)}
           />
           <p className="text-xs text-[var(--ink-soft)]">
-            Leave blank for a sage kitchen placeholder with the dish initials.
-            Review photos are separate and stay on the recipe page.
+            JPEG, PNG, WebP, or GIF up to 4MB. Leave blank for a sage kitchen
+            placeholder with the dish initials. Review photos are separate and
+            stay on the recipe page.
           </p>
+          {createPhotoFile ? (
+            <p className="text-xs text-[var(--ink-muted)]">
+              Selected: {createPhotoFile.name}
+            </p>
+          ) : null}
         </div>
 
         <div className="grid grid-cols-3 gap-3 md:col-span-2">
@@ -299,7 +359,7 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
         ) : (
           <ul className="divide-y divide-[var(--line)]">
             {recipes.map((recipe) => {
-              const draft = photoDrafts[recipe.id] ?? recipe.imageUrl ?? "";
+              const pendingFile = photoFiles[recipe.id];
               const hasPhoto = hasRecipeImage(recipe.imageUrl);
               return (
                 <li key={recipe.id} className="space-y-3 py-4">
@@ -336,31 +396,52 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
                         htmlFor={`photo-${recipe.id}`}
                         className="text-xs text-[var(--ink-soft)]"
                       >
-                        Recipe photo URL
+                        Replace recipe photo
                       </Label>
-                      <Input
+                      <input
                         id={`photo-${recipe.id}`}
-                        type="url"
-                        value={draft}
+                        type="file"
+                        accept={PHOTO_ACCEPT}
+                        className={fileInputClassName}
                         onChange={(e) =>
-                          setPhotoDrafts((prev) => ({
+                          setPhotoFiles((prev) => ({
                             ...prev,
-                            [recipe.id]: e.target.value,
+                            [recipe.id]: e.target.files?.[0] ?? null,
                           }))
                         }
-                        placeholder="https://… (optional)"
                       />
+                      {pendingFile ? (
+                        <p className="text-xs text-[var(--ink-muted)]">
+                          Selected: {pendingFile.name}
+                        </p>
+                      ) : null}
                     </div>
-                    <Button
-                      type="button"
-                      variant="secondary"
-                      size="sm"
-                      disabled={savingPhotoId === recipe.id}
-                      onClick={() => saveRecipePhoto(recipe)}
-                      className="shrink-0"
-                    >
-                      {savingPhotoId === recipe.id ? "Saving…" : "Save photo"}
-                    </Button>
+                    <div className="flex shrink-0 gap-2">
+                      <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        disabled={
+                          savingPhotoId === recipe.id || !pendingFile
+                        }
+                        onClick={() => uploadAndSavePhoto(recipe)}
+                      >
+                        {savingPhotoId === recipe.id
+                          ? "Saving…"
+                          : "Upload photo"}
+                      </Button>
+                      {hasPhoto ? (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          disabled={savingPhotoId === recipe.id}
+                          onClick={() => saveRecipePhoto(recipe, "")}
+                        >
+                          Clear
+                        </Button>
+                      ) : null}
+                    </div>
                   </div>
                 </li>
               );

@@ -50,6 +50,7 @@ If `DATABASE_URL` is missing on Vercel, **public recipe pages still load** from 
 | `NEXT_PUBLIC_SANITY_API_VERSION` | Optional | e.g. `2025-01-01` |
 | `SANITY_API_READ_TOKEN` | If private | Viewer token |
 | `SANITY_API_WRITE_TOKEN` | For writes → Sanity | Editor token |
+| `BLOB_READ_WRITE_TOKEN` | **Yes for durable recipe/review photo uploads** | Vercel Blob store token (Storage → Blob) |
 
 4. Click **Deploy**. Production custom domain: `https://greggsrecipes.com`.
 
@@ -60,6 +61,7 @@ DATABASE_URL=postgresql://USER:PASSWORD@HOST/DB?sslmode=require
 AUTH_SECRET=<openssl rand -base64 32>
 AUTH_URL=https://greggsrecipes.com
 ADMIN_EMAIL=gagekehoe17@gmail.com
+BLOB_READ_WRITE_TOKEN=vercel_blob_rw_...
 # Optional but recommended for real email delivery:
 AUTH_RESEND_KEY=re_...
 EMAIL_FROM=Gregg's Recipes <noreply@greggsrecipes.com>
