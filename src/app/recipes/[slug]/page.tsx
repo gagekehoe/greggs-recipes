@@ -96,12 +96,30 @@ export default async function RecipePage({ params }: Props) {
         <p className="mt-3 max-w-2xl text-base text-[var(--ink-muted)] md:text-lg">
           {recipe.summary}
         </p>
-        <p className="mt-4 text-xs uppercase tracking-[0.14em] text-[var(--ink-soft)]">
-          {recipe.prepMinutes} prep · {recipe.cookMinutes} cook · {minutes}{" "}
-          total · serves {recipe.servings}
-          {summary.count > 0
-            ? ` · ${summary.average}★ (${summary.count})`
-            : ""}
+        <p className="mt-5 flex flex-wrap gap-x-3 gap-y-2 text-sm leading-relaxed text-[var(--ink-soft)] md:mt-4 md:gap-x-4 md:text-xs md:uppercase md:tracking-[0.14em]">
+          <span>{recipe.prepMinutes} prep</span>
+          <span aria-hidden className="text-[var(--line)]">
+            ·
+          </span>
+          <span>{recipe.cookMinutes} cook</span>
+          <span aria-hidden className="text-[var(--line)]">
+            ·
+          </span>
+          <span>{minutes} total</span>
+          <span aria-hidden className="text-[var(--line)]">
+            ·
+          </span>
+          <span>serves {recipe.servings}</span>
+          {summary.count > 0 ? (
+            <>
+              <span aria-hidden className="text-[var(--line)]">
+                ·
+              </span>
+              <span>
+                {summary.average}★ ({summary.count})
+              </span>
+            </>
+          ) : null}
         </p>
       </div>
 
