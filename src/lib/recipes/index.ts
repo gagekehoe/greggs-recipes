@@ -2,7 +2,9 @@ import {
   createLocalRecipe,
   deleteLocalRecipe,
   getLocalRecipe,
+  getLocalRecipeById,
   listLocalRecipes,
+  updateLocalRecipe,
 } from "./local-store";
 import { getSanityClient, isSanityConfigured } from "./sanity";
 import type { Recipe, RecipeInput } from "./types";
@@ -22,6 +24,8 @@ type SanityRecipeDoc = {
   servings?: number;
   imageUrl?: string;
   imageAlt?: string;
+  authorId?: string;
+  authorName?: string;
   _updatedAt?: string;
 };
 
@@ -38,6 +42,8 @@ const RECIPE_QUERY = `*[_type == "recipe"] | order(_updatedAt desc) {
   servings,
   imageUrl,
   imageAlt,
+  authorId,
+  authorName,
   _updatedAt
 }`;
 
@@ -54,6 +60,8 @@ const RECIPE_BY_SLUG_QUERY = `*[_type == "recipe" && slug.current == $slug][0] {
   servings,
   imageUrl,
   imageAlt,
+  authorId,
+  authorName,
   _updatedAt
 }`;
 
@@ -78,6 +86,8 @@ function mapSanityRecipe(doc: SanityRecipeDoc): Recipe {
     imageAlt: doc.imageAlt || `${doc.title} plated`,
     source: "sanity",
     updatedAt: doc._updatedAt || new Date().toISOString(),
+    authorId: doc.authorId || "system",
+    authorName: doc.authorName || "Gregg's Kitchen",
   };
 }
 
@@ -108,7 +118,6 @@ export async function listRecipes(): Promise<{
       if (!client) throw new Error("Sanity client unavailable");
       const docs = await client.fetch<SanityRecipeDoc[]>(RECIPE_QUERY);
       if (!docs?.length) {
-        // Configured but empty — fall back to local seed so the site isn't blank
         const local = await listLocalRecipes();
         return { recipes: local, mode: "local" };
       }
@@ -147,7 +156,6 @@ export async function getRecipe(slug: string): Promise<{
         { slug }
       );
       if (doc) return { recipe: mapSanityRecipe(doc), mode };
-      // Try local fallback for seeded demos
       const local = await getLocalRecipe(slug);
       return { recipe: local, mode: local ? "local" : mode };
     } catch (err) {
@@ -168,6 +176,29 @@ export async function getRecipe(slug: string): Promise<{
   }
 }
 
+export async function getRecipeById(id: string): Promise<Recipe | null> {
+  if (id.startsWith("local-") || id.startsWith("seed-")) {
+    return getLocalRecipeById(id);
+  }
+  const client = getSanityClient();
+  if (client) {
+    try {
+      const doc = await client.fetch<SanityRecipeDoc | null>(
+        `*[_type == "recipe" && _id == $id][0]{
+          _id, title, slug, summary, ingredients, steps, tags,
+          prepMinutes, cookMinutes, servings, imageUrl, imageAlt,
+          authorId, authorName, _updatedAt
+        }`,
+        { id }
+      );
+      if (doc) return mapSanityRecipe(doc);
+    } catch {
+      // fall through
+    }
+  }
+  return getLocalRecipeById(id);
+}
+
 export async function createRecipe(input: RecipeInput): Promise<{
   recipe: Recipe;
   mode: ContentMode;
@@ -177,7 +208,6 @@ export async function createRecipe(input: RecipeInput): Promise<{
   if (mode === "sanity") {
     const client = getSanityClient(true);
     if (!client || !process.env.SANITY_API_WRITE_TOKEN) {
-      // Write token missing — persist locally so admin still works
       const recipe = await createLocalRecipe(input);
       return { recipe, mode: "local" };
     }
@@ -197,6 +227,8 @@ export async function createRecipe(input: RecipeInput): Promise<{
         input.imageUrl?.trim() ||
         "https://images.unsplash.com/photo-1495521821757-a1efb672935e?auto=format&fit=crop&w=1600&q=80",
       imageAlt: input.imageAlt?.trim() || `${input.title.trim()} plated`,
+      authorId: input.authorId,
+      authorName: input.authorName,
     });
     return {
       recipe: mapSanityRecipe({
@@ -212,6 +244,8 @@ export async function createRecipe(input: RecipeInput): Promise<{
         servings: input.servings,
         imageUrl: input.imageUrl,
         imageAlt: input.imageAlt,
+        authorId: input.authorId,
+        authorName: input.authorName,
         _updatedAt: doc._updatedAt,
       }),
       mode,
@@ -220,6 +254,45 @@ export async function createRecipe(input: RecipeInput): Promise<{
 
   const recipe = await createLocalRecipe(input);
   return { recipe, mode };
+}
+
+export async function updateRecipe(
+  id: string,
+  input: Omit<RecipeInput, "authorId" | "authorName">
+): Promise<{ recipe: Recipe; mode: ContentMode } | null> {
+  const mode = getContentMode();
+
+  if (
+    !id.startsWith("local-") &&
+    !id.startsWith("seed-") &&
+    mode === "sanity"
+  ) {
+    const client = getSanityClient(true);
+    if (client && process.env.SANITY_API_WRITE_TOKEN) {
+      await client
+        .patch(id)
+        .set({
+          title: input.title.trim(),
+          summary: input.summary.trim(),
+          ingredients: input.ingredients.map((i) => i.trim()).filter(Boolean),
+          steps: input.steps.map((s) => s.trim()).filter(Boolean),
+          tags: input.tags.map((t) => t.trim().toLowerCase()).filter(Boolean),
+          prepMinutes: input.prepMinutes,
+          cookMinutes: input.cookMinutes,
+          servings: input.servings,
+          imageUrl: input.imageUrl?.trim() || undefined,
+          imageAlt: input.imageAlt?.trim() || undefined,
+        })
+        .commit();
+      const recipe = await getRecipeById(id);
+      if (!recipe) return null;
+      return { recipe, mode };
+    }
+  }
+
+  const recipe = await updateLocalRecipe(id, input);
+  if (!recipe) return null;
+  return { recipe, mode: "local" };
 }
 
 export async function removeRecipe(id: string): Promise<boolean> {

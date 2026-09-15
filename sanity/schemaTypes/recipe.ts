@@ -68,5 +68,16 @@ export const recipeType = defineType({
       title: "Image alt text",
       type: "string",
     }),
+    defineField({
+      name: "authorId",
+      title: "Author ID",
+      type: "string",
+      description: "Auth user id of the cook who published this recipe",
+    }),
+    defineField({
+      name: "authorName",
+      title: "Author name",
+      type: "string",
+    }),
   ],
 });

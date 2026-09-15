@@ -13,6 +13,8 @@ export type Recipe = {
   imageAlt: string;
   source: "local" | "sanity";
   updatedAt: string;
+  authorId: string;
+  authorName: string;
 };
 
 export type RecipeInput = {
@@ -26,4 +28,6 @@ export type RecipeInput = {
   servings: number;
   imageUrl?: string;
   imageAlt?: string;
+  authorId: string;
+  authorName: string;
 };

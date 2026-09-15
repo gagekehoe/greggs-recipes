@@ -1,53 +1,5 @@
 [
   {
-    "id": "local-1789432044257",
-    "slug": "kitchen-desk-fix-check",
-    "title": "Kitchen Desk Fix Check",
-    "summary": "Verifying admin works after allowedDevOrigins fix on Mac.",
-    "ingredients": [
-      "1 tbsp olive oil",
-      "salt"
-    ],
-    "steps": [
-      "Heat oil",
-      "Season"
-    ],
-    "tags": [
-      "verify"
-    ],
-    "prepMinutes": 5,
-    "cookMinutes": 5,
-    "servings": 1,
-    "imageUrl": "https://images.unsplash.com/photo-1495521821757-a1efb672935e?auto=format&fit=crop&w=1600&q=80",
-    "imageAlt": "Kitchen Desk Fix Check plated",
-    "source": "local",
-    "updatedAt": "2026-09-15T00:27:24.257Z"
-  },
-  {
-    "id": "local-1789431990838",
-    "slug": "test-mac-soup",
-    "title": "Test Mac Soup",
-    "summary": "Diagnosing kitchen desk",
-    "ingredients": [
-      "1 onion",
-      "2 cups stock"
-    ],
-    "steps": [
-      "Chop onion",
-      "Simmer"
-    ],
-    "tags": [
-      "test"
-    ],
-    "prepMinutes": 10,
-    "cookMinutes": 20,
-    "servings": 2,
-    "imageUrl": "https://images.unsplash.com/photo-1495521821757-a1efb672935e?auto=format&fit=crop&w=1600&q=80",
-    "imageAlt": "Test Mac Soup plated",
-    "source": "local",
-    "updatedAt": "2026-09-15T00:26:30.838Z"
-  },
-  {
     "id": "seed-herb-roast-chicken",
     "slug": "herb-roast-chicken",
     "title": "Herb Roast Chicken",
@@ -80,7 +32,9 @@
     "imageUrl": "https://images.unsplash.com/photo-1598103442097-8b74394b95c6?auto=format&fit=crop&w=1600&q=80",
     "imageAlt": "Golden roast chicken on a platter with herbs",
     "source": "local",
-    "updatedAt": "2026-03-01T12:00:00.000Z"
+    "updatedAt": "2026-03-01T12:00:00.000Z",
+    "authorId": "system",
+    "authorName": "Gregg's Kitchen"
   },
   {
     "id": "seed-weeknight-carbonara",
@@ -113,7 +67,9 @@
     "imageUrl": "https://images.unsplash.com/photo-1612874742237-6526221588e3?auto=format&fit=crop&w=1600&q=80",
     "imageAlt": "Bowl of creamy spaghetti carbonara with black pepper",
     "source": "local",
-    "updatedAt": "2026-03-04T12:00:00.000Z"
+    "updatedAt": "2026-03-04T12:00:00.000Z",
+    "authorId": "system",
+    "authorName": "Gregg's Kitchen"
   },
   {
     "id": "seed-citrus-olive-oil-cake",
@@ -151,7 +107,9 @@
     "imageUrl": "https://images.unsplash.com/photo-1578985545062-69928b1d9587?auto=format&fit=crop&w=1600&q=80",
     "imageAlt": "Slice of olive oil cake with citrus",
     "source": "local",
-    "updatedAt": "2026-03-08T12:00:00.000Z"
+    "updatedAt": "2026-03-08T12:00:00.000Z",
+    "authorId": "system",
+    "authorName": "Gregg's Kitchen"
   },
   {
     "id": "seed-smoky-black-bean-chili",
@@ -190,7 +148,9 @@
     "imageUrl": "https://images.unsplash.com/photo-1567576060324-f0a7dba1354a?auto=format&fit=crop&w=1600&q=80",
     "imageAlt": "Bowl of smoky black bean chili with toppings",
     "source": "local",
-    "updatedAt": "2026-03-10T12:00:00.000Z"
+    "updatedAt": "2026-03-10T12:00:00.000Z",
+    "authorId": "system",
+    "authorName": "Gregg's Kitchen"
   },
   {
     "id": "seed-miso-butter-salmon",
@@ -224,6 +184,8 @@
     "imageUrl": "https://images.unsplash.com/photo-1467003909585-2f8a72700288?auto=format&fit=crop&w=1600&q=80",
     "imageAlt": "Pan-seared salmon fillet with greens",
     "source": "local",
-    "updatedAt": "2026-03-12T12:00:00.000Z"
+    "updatedAt": "2026-03-12T12:00:00.000Z",
+    "authorId": "system",
+    "authorName": "Gregg's Kitchen"
   }
 ]
