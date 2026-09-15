@@ -42,6 +42,13 @@ describe("toFriendlyMagicLinkUrl", () => {
   it("returns the original string when it is not a valid URL", () => {
     expect(toFriendlyMagicLinkUrl("not-a-url")).toBe("not-a-url");
   });
+
+  it("strips an evil callbackUrl during the friendly rewrite", () => {
+    const authUrl =
+      "https://greggsrecipes.com/api/auth/callback/nodemailer?callbackUrl=https%3A%2F%2Fevil.example%2Fx&token=abc&email=u%40ex.com";
+    const friendly = new URL(toFriendlyMagicLinkUrl(authUrl));
+    expect(friendly.searchParams.get("callbackUrl")).toBeNull();
+  });
 });
 
 describe("authCallbackFromVerifyParams", () => {
@@ -62,6 +69,16 @@ describe("authCallbackFromVerifyParams", () => {
       authCallbackFromVerifyParams({
         token: "t",
         email: "a@b.co",
+      })
+    ).toBe("/api/auth/callback/nodemailer?token=t&email=a%40b.co");
+  });
+
+  it("drops external callbackUrl values", () => {
+    expect(
+      authCallbackFromVerifyParams({
+        token: "t",
+        email: "a@b.co",
+        callbackUrl: "https://evil.example/phish",
       })
     ).toBe("/api/auth/callback/nodemailer?token=t&email=a%40b.co");
   });

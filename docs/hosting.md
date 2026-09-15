@@ -40,29 +40,46 @@ If `DATABASE_URL` is missing on Vercel, **public recipe pages still load** (JSON
 |----------|----------|--------|
 | `DATABASE_URL` | **Yes (prod auth)** | Neon Postgres URL (`postgresql://…?sslmode=require`) |
 | `AUTH_SECRET` | Yes | Long random string (`openssl rand -base64 32`) |
-| `AUTH_URL` | Yes (prod) | Canonical site URL — for this deploy: `https://greggs-recipes.vercel.app` |
+| `AUTH_URL` | Yes (prod) | Canonical site URL: `https://greggsrecipes.com` |
 | `ADMIN_EMAIL` | Yes | Bootstrap admin — `gagekehoe17@gmail.com` |
 | `AUTH_RESEND_KEY` | Prod email | Resend API key so magic links are emailed |
-| `EMAIL_FROM` | With Resend | Verified sender, e.g. `Gregg's Recipes <noreply@yourdomain.com>` |
+| `EMAIL_FROM` | With Resend | Prefer a verified sender on your domain, e.g. `Gregg's Recipes <noreply@greggsrecipes.com>` (avoid bare `onboarding@resend.dev` in production — mismatched From/link domains look phishing-like) |
 | `NEXT_PUBLIC_SANITY_PROJECT_ID` | For CMS | From Sanity project settings |
 | `NEXT_PUBLIC_SANITY_DATASET` | For CMS | Usually `production` |
 | `NEXT_PUBLIC_SANITY_API_VERSION` | Optional | e.g. `2025-01-01` |
 | `SANITY_API_READ_TOKEN` | If private | Viewer token |
 | `SANITY_API_WRITE_TOKEN` | For writes → Sanity | Editor token |
 
-4. Click **Deploy**. Current production URL: `https://greggs-recipes.vercel.app`.
+4. Click **Deploy**. Production custom domain: `https://greggsrecipes.com`.
 
 ### Exact Vercel env vars for this site
 
 ```bash
 DATABASE_URL=postgresql://USER:PASSWORD@HOST/DB?sslmode=require
 AUTH_SECRET=<openssl rand -base64 32>
-AUTH_URL=https://greggs-recipes.vercel.app
+AUTH_URL=https://greggsrecipes.com
 ADMIN_EMAIL=gagekehoe17@gmail.com
 # Optional but recommended for real email delivery:
 AUTH_RESEND_KEY=re_...
+EMAIL_FROM=Gregg's Recipes <noreply@greggsrecipes.com>
+```
+
+Verify in Vercel that `AUTH_URL` is the custom domain (not an old `*.vercel.app` URL). Magic-link emails must use the same host users type in the browser.
+
+### Exact Vercel env vars for this site (legacy preview URL)
+
+If you still use a Vercel preview hostname before DNS is ready:
+
+```bash
+DATABASE_URL=postgresql://USER:PASSWORD@HOST/DB?sslmode=require
+AUTH_SECRET=<openssl rand -base64 32>
+AUTH_URL=https://YOUR-PROJECT.vercel.app
+ADMIN_EMAIL=gagekehoe17@gmail.com
+AUTH_RESEND_KEY=re_...
 EMAIL_FROM=Gregg's Recipes <onboarding@resend.dev>
 ```
+
+Switch `AUTH_URL` / `EMAIL_FROM` to `greggsrecipes.com` as soon as the custom domain is live.
 
 ### Auth storage notes
 
@@ -81,6 +98,7 @@ Review photos are written under `public/uploads/reviews/` locally. That path is 
    - **Apex domain:** `A` record to `76.76.21.21` (confirm the current value in the Vercel UI)
    - **Subdomain (www):** `CNAME` to `cname.vercel-dns.com`
 4. Wait for DNS propagation. Vercel issues HTTPS automatically. Set `AUTH_URL` to the final HTTPS URL and redeploy.
+5. If you use **www**, add `www.greggsrecipes.com` in Vercel Domains so the TLS cert includes it (apex-only certs fail HTTPS for www).
 
 ## 5. Content after go-live
 
