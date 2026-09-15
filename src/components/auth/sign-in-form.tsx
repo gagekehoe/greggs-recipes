@@ -90,10 +90,8 @@ export function SignInForm({ sent, error }: Props) {
           Check your inbox
         </h1>
         <p className="text-[var(--ink-muted)] leading-relaxed">
-          We sent a magic link if that email can receive mail. Locally, with no
-          email provider configured, open the terminal running{" "}
-          <code className="text-[var(--ink)]">npm run dev</code> — the link is
-          printed there.
+          Check your email for a sign-in link. If you don&apos;t see it, look in
+          spam or request another link.
         </p>
         <p className="text-sm text-[var(--ink-soft)]" role="status" aria-live="polite">
           {waitingCopy} Keep this tab open.

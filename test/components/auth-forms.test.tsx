@@ -104,6 +104,11 @@ describe("SignInForm", () => {
     const { SignInForm } = await import("@/components/auth/sign-in-form");
     render(<SignInForm sent />);
     expect(screen.getByText(/check your inbox/i)).toBeInTheDocument();
+    expect(
+      screen.getByText(/check your email for a sign-in link/i)
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/npm run dev/i)).not.toBeInTheDocument();
+    expect(screen.queryByText(/printed there/i)).not.toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent(/keep this tab open/i);
   });
 
