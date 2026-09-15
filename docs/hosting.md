@@ -139,6 +139,8 @@ The app ships `@vercel/analytics` and `@vercel/speed-insights` in the root layou
 
 No extra env vars are required for Analytics or Speed Insights on Vercel.
 
+Magic-link pages (`/signin/verify`, `/signin/done`, `/api/auth/*`) are not sent to either product, and leftover `token` / `email` query params are stripped elsewhere, so unused sign-in credentials never land in the dashboard.
+
 ## 7. Git workflow
 
 - All changes go through pull requests.

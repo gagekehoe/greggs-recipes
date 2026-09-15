@@ -1,9 +1,8 @@
 import type { Metadata } from "next";
-import { Analytics } from "@vercel/analytics/next";
-import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Figtree, Fraunces } from "next/font/google";
 import { AuthSessionProvider } from "@/components/auth/auth-session-provider";
 import { SiteFooter, SiteHeader } from "@/components/layout/site-chrome";
+import { SiteTelemetry } from "@/components/layout/site-telemetry";
 import {
   DEFAULT_OG_IMAGE_PATH,
   SITE_DESCRIPTION,
@@ -77,8 +76,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           </main>
           <SiteFooter />
         </AuthSessionProvider>
-        <Analytics />
-        <SpeedInsights />
+        <SiteTelemetry />
       </body>
     </html>
   );
