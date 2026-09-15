@@ -30,9 +30,23 @@ describe("/api/comments", () => {
     const { GET } = await import("@/app/api/comments/route");
     expect((await GET(new Request("http://x/api/comments"))).status).toBe(400);
     getSessionUser.mockResolvedValue(null);
+    listCommentsForRecipe.mockResolvedValue([
+      {
+        id: "c1",
+        userId: "u1",
+        body: "Hi",
+        authorName: "Maya",
+        createdAt: new Date("2026-01-01"),
+      },
+    ]);
     const ok = await GET(new Request("http://x/api/comments?recipeId=r1"));
     expect(ok.status).toBe(200);
-    expect((await ok.json()).signedIn).toBe(false);
+    const body = await ok.json();
+    expect(body.signedIn).toBe(false);
+    expect(JSON.stringify(body)).not.toMatch(/authorEmail/);
+    for (const comment of body.comments) {
+      expect(comment).not.toHaveProperty("authorEmail");
+    }
   });
 
   it("POST requires sign-in and valid body", async () => {

@@ -99,12 +99,50 @@ describe("reviews store", () => {
 
     const listed = await store.listReviewsForRecipe("recipe-1");
     expect(listed[0].images.length + listed[1].images.length).toBe(2);
+    for (const review of listed) {
+      expect(review).not.toHaveProperty("authorEmail");
+      expect(JSON.stringify(review)).not.toMatch(/@example\.com/);
+    }
     expect(
       await store.getUserReviewForRecipe("recipe-1", "user-1")
     ).toMatchObject({ rating: 4 });
     expect(await store.getReviewById(created.id)).toMatchObject({
       id: created.id,
     });
+  });
+
+  it("omits authorEmail from public review and comment DTOs", async () => {
+    await seedUser("user-1", "Maya");
+    const store = await import("@/lib/reviews/store");
+
+    const review = await store.upsertReview({
+      recipeId: "recipe-email",
+      userId: "user-1",
+      rating: 5,
+      body: "Secret sauce",
+    });
+    expect(review).not.toHaveProperty("authorEmail");
+    expect(review.authorName).toBe("Maya");
+    expect(JSON.stringify(review)).not.toContain("user-1@example.com");
+
+    const listed = await store.listReviewsForRecipe("recipe-email");
+    expect(listed).toHaveLength(1);
+    expect(listed[0]).not.toHaveProperty("authorEmail");
+    expect(JSON.stringify(listed)).not.toContain("@example.com");
+
+    const comment = await store.createComment({
+      recipeId: "recipe-email",
+      userId: "user-1",
+      body: "Also yum",
+    });
+    expect(comment).not.toHaveProperty("authorEmail");
+    expect(comment.authorName).toBe("Maya");
+    expect(JSON.stringify(comment)).not.toContain("user-1@example.com");
+
+    const comments = await store.listCommentsForRecipe("recipe-email");
+    expect(comments).toHaveLength(1);
+    expect(comments[0]).not.toHaveProperty("authorEmail");
+    expect(JSON.stringify(comments)).not.toContain("@example.com");
   });
 
   it("deletes reviews, images, and comments", async () => {
