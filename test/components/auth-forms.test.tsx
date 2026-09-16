@@ -98,82 +98,80 @@ describe("SignInForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     getSession.mockResolvedValue(null);
-  });
-
-  it("shows the sent confirmation state and waits for the link", async () => {
-    const { SignInForm } = await import("@/components/auth/sign-in-form");
-    render(<SignInForm sent />);
-    expect(screen.getByText(/check your inbox/i)).toBeInTheDocument();
-    expect(
-      screen.getByText(/check your email for a sign-in link/i)
-    ).toBeInTheDocument();
-    expect(screen.queryByText(/npm run dev/i)).not.toBeInTheDocument();
-    expect(screen.queryByText(/printed there/i)).not.toBeInTheDocument();
-    expect(screen.getByRole("status")).toHaveTextContent(/keep this tab open/i);
-  });
-
-  it("continues from the sent tab once a session appears", async () => {
-    getSession.mockResolvedValue({ user: { id: "u1", email: "a@b.com" } });
     Object.defineProperty(window, "location", {
       value: { href: "" },
       writable: true,
     });
-
-    const { SignInForm } = await import("@/components/auth/sign-in-form");
-    render(<SignInForm sent />);
-
-    await waitFor(() => {
-      expect(window.location.href).toBe("/welcome?next=%2F");
-    });
   });
 
-  it("submits an email magic link request to the done page", async () => {
+  it("signs in with email and password", async () => {
     signIn.mockResolvedValue({ error: undefined, ok: true, status: 200, url: "" });
-    Object.defineProperty(window, "location", {
-      value: { href: "" },
-      writable: true,
-    });
 
     const { SignInForm } = await import("@/components/auth/sign-in-form");
     const user = userEvent.setup();
     render(<SignInForm />);
-    await user.type(screen.getByLabelText(/email/i), "cook@example.com");
-    await user.click(screen.getByRole("button", { name: /email me a link/i }));
+
+    expect(screen.getByRole("heading", { name: /sign in/i })).toBeInTheDocument();
+    expect(screen.queryByText(/check your inbox/i)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /email me a link/i })).not.toBeInTheDocument();
+
+    await user.type(screen.getByLabelText(/^email$/i), "cook@example.com");
+    await user.type(screen.getByLabelText(/^password$/i), "password123");
+    await user.click(screen.getByRole("button", { name: /^sign in$/i }));
+
     await waitFor(() => {
       expect(signIn).toHaveBeenCalledWith(
-        "nodemailer",
+        "credentials",
         expect.objectContaining({
           email: "cook@example.com",
-          callbackUrl: "/signin/done?next=%2F",
+          password: "password123",
           redirect: false,
         })
       );
     });
-    expect(window.location.href).toBe("/signin?sent=1");
-  });
-});
-
-describe("SignInDone", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    getSession.mockResolvedValue({ user: { id: "u1", email: "a@b.com" } });
+    expect(window.location.href).toBe("/welcome?next=%2F");
   });
 
-  it("tells the user they can close the magic-link tab", async () => {
-    const close = vi.fn();
-    Object.defineProperty(window, "close", { value: close, writable: true });
+  it("registers then signs in", async () => {
+    signIn.mockResolvedValue({ error: undefined, ok: true, status: 200, url: "" });
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ ok: true }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
 
-    const { SignInDone } = await import("@/components/auth/sign-in-done");
-    render(<SignInDone nextPath="/recipes/soup" />);
+    const { SignInForm } = await import("@/components/auth/sign-in-form");
+    const user = userEvent.setup();
+    render(<SignInForm />);
+
+    await user.click(screen.getByRole("tab", { name: /new here/i }));
+    await user.type(screen.getByLabelText(/^email$/i), "new@example.com");
+    await user.type(screen.getByLabelText(/^password$/i), "password123");
+    await user.type(screen.getByLabelText(/confirm password/i), "password123");
+    await user.click(screen.getByRole("button", { name: /^create account$/i }));
 
     await waitFor(() => {
-      expect(screen.getByText(/you’re signed in/i)).toBeInTheDocument();
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/auth/register",
+        expect.objectContaining({ method: "POST" })
+      );
     });
-    expect(screen.getByRole("button", { name: /close this tab/i })).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: /continue here instead/i })).toHaveAttribute(
-      "href",
-      "/welcome?next=%2Frecipes%2Fsoup"
-    );
-    expect(close).toHaveBeenCalled();
+    await waitFor(() => {
+      expect(signIn).toHaveBeenCalledWith(
+        "credentials",
+        expect.objectContaining({
+          email: "new@example.com",
+          password: "password123",
+        })
+      );
+    });
+  });
+
+  it("links to forgot password", async () => {
+    const { SignInForm } = await import("@/components/auth/sign-in-form");
+    render(<SignInForm />);
+    const links = screen.getAllByRole("link", { name: /forgot password/i });
+    expect(links.length).toBeGreaterThan(0);
+    expect(links[0]).toHaveAttribute("href", "/forgot-password");
   });
 });

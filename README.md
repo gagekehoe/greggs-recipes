@@ -1,8 +1,8 @@
 # Gregg's Recipes
 
-A shared recipe site for cooks — browse dishes publicly, then sign in with email to join, cook from the collection, and publish when you have cook or admin access.
+A shared recipe site for cooks — browse dishes publicly, then sign in with email and password to join, cook from the collection, and publish when you have cook or admin access.
 
-**Stack:** Next.js (App Router) · TypeScript · Tailwind CSS · shadcn/ui · Auth.js (email magic link) · SQLite (local) / Neon Postgres (Vercel) · optional [Sanity](https://www.sanity.io/) CMS
+**Stack:** Next.js (App Router) · TypeScript · Tailwind CSS · shadcn/ui · Auth.js (email + password) · SQLite (local) / Neon Postgres (Vercel) · optional [Sanity](https://www.sanity.io/) CMS
 
 ## Run locally
 
@@ -18,7 +18,9 @@ Open [http://127.0.0.1:43127](http://127.0.0.1:43127).
 |------|------------|
 | `/` | Home + recipe index (public) |
 | `/recipes/[slug]` | Recipe detail — reviews, photos, comments (public read; sign-in to post) |
-| `/signin` | Email magic-link sign-in (creates account on first use) |
+| `/signin` | Email + password sign-in / create account |
+| `/forgot-password` | Email a password-reset link (Resend in prod) |
+| `/reset-password` | Set a new password from a reset link |
 | `/welcome` | First-time display name setup |
 | `/profile` | Edit display name |
 | `/my-recipes` | Create/manage recipes (cook + admin + owner) |
@@ -26,7 +28,7 @@ Open [http://127.0.0.1:43127](http://127.0.0.1:43127).
 
 ### Auth without email keys
 
-Leave `AUTH_RESEND_KEY` unset. Request a magic link on `/signin`, then copy the URL printed in the terminal running `npm run dev`.
+Leave `AUTH_RESEND_KEY` unset. Sign in and register work with email + password locally. Forgot-password / first-time set-password links print in the terminal running `npm run dev`.
 
 ### Admin bootstrap
 

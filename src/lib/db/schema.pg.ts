@@ -19,6 +19,8 @@ export const users = pgTable("user", {
   email: text("email").notNull().unique(),
   emailVerified: timestamp("emailVerified", { mode: "date", withTimezone: true }),
   image: text("image"),
+  /** bcrypt hash; null until the user sets a password (e.g. former magic-link accounts). */
+  passwordHash: text("passwordHash"),
   role: text("role", { enum: ROLES }).notNull().default("viewer"),
 });
 

@@ -61,6 +61,7 @@ function createSqlite(): DbBundle {
       email TEXT NOT NULL UNIQUE,
       emailVerified INTEGER,
       image TEXT,
+      passwordHash TEXT,
       role TEXT NOT NULL DEFAULT 'viewer'
     );
     CREATE TABLE IF NOT EXISTS account (
@@ -162,6 +163,12 @@ function createSqlite(): DbBundle {
     sqlite.exec(
       `ALTER TABLE recipe ADD COLUMN inspiredByUrl TEXT NOT NULL DEFAULT ''`
     );
+  } catch {
+    // Column already present on existing local DBs.
+  }
+
+  try {
+    sqlite.exec(`ALTER TABLE user ADD COLUMN passwordHash TEXT`);
   } catch {
     // Column already present on existing local DBs.
   }

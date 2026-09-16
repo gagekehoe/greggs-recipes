@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS "user" (
   "email" text NOT NULL UNIQUE,
   "emailVerified" timestamptz,
   "image" text,
+  "passwordHash" text,
   "role" text DEFAULT 'viewer' NOT NULL
 );
 

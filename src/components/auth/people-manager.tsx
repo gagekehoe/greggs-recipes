@@ -89,7 +89,7 @@ export function PeopleManager({
 
       {rows.length === 0 ? (
         <p className="text-[var(--ink-muted)]">
-          No signed-in users yet. After someone uses the magic link, they appear
+          No signed-in users yet. After someone creates an account, they appear
           here.
         </p>
       ) : (
