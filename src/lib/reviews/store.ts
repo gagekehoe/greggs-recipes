@@ -28,7 +28,7 @@ export type ReviewWithAuthor = {
   createdAt: Date;
   updatedAt: Date;
   authorName: string | null;
-  /** owner | authorized_cook — derived server-side; email never exposed. */
+  /** owner | admin | authorized_cook — from user.role; email never exposed. */
   authorPrivilege: AuthorPrivilege;
   images: ReviewImage[];
 };
@@ -111,7 +111,6 @@ export async function listReviewsForRecipe(
         updatedAt: recipeReviews.updatedAt,
         authorName: users.name,
         authorRole: users.role,
-        authorEmail: users.email,
       })
       .from(recipeReviews)
       .leftJoin(users, eq(recipeReviews.userId, users.id))
@@ -145,12 +144,8 @@ export async function listReviewsForRecipe(
         updatedAt: Date;
         authorName: string | null;
         authorRole: string | null;
-        authorEmail: string | null;
       }) => {
-        const privilege = authorPrivilege({
-          role: row.authorRole,
-          email: row.authorEmail,
-        });
+        const privilege = authorPrivilege({ role: row.authorRole });
         return {
           id: row.id,
           recipeId: row.recipeId,
@@ -321,7 +316,6 @@ export async function listCommentsForRecipe(
         createdAt: recipeComments.createdAt,
         authorName: users.name,
         authorRole: users.role,
-        authorEmail: users.email,
       })
       .from(recipeComments)
       .leftJoin(users, eq(recipeComments.userId, users.id))
@@ -337,12 +331,8 @@ export async function listCommentsForRecipe(
         createdAt: Date;
         authorName: string | null;
         authorRole: string | null;
-        authorEmail: string | null;
       }) => {
-        const privilege = authorPrivilege({
-          role: row.authorRole,
-          email: row.authorEmail,
-        });
+        const privilege = authorPrivilege({ role: row.authorRole });
         return {
           id: row.id,
           recipeId: row.recipeId,

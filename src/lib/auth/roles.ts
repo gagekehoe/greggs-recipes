@@ -7,12 +7,37 @@ export function isRole(value: unknown): value is Role {
   return typeof value === "string" && (ROLES as readonly string[]).includes(value);
 }
 
+/**
+ * Owner and admin share elevated kitchen powers: People, any public recipe,
+ * moderate reviews/comments. Owner is the site identity (Gregg); admin is staff.
+ */
+export function hasKitchenStaffPowers(role: Role | undefined | null): boolean {
+  return role === "owner" || role === "admin";
+}
+
 export function canWriteRecipes(role: Role | undefined | null): boolean {
-  return role === "admin" || role === "cook";
+  return role === "owner" || role === "admin" || role === "cook";
 }
 
 export function canManagePeople(role: Role | undefined | null): boolean {
-  return role === "admin";
+  return hasKitchenStaffPowers(role);
+}
+
+/**
+ * Who may assign a role on People.
+ * Only an existing **owner** may grant or change the `owner` role.
+ * Admins may assign viewer / cook / admin.
+ */
+export function canAssignRole(
+  actorRole: Role | undefined | null,
+  nextRole: Role,
+  currentTargetRole?: Role | null
+): boolean {
+  if (!actorRole || !canManagePeople(actorRole)) return false;
+  if (nextRole === "owner" || currentTargetRole === "owner") {
+    return actorRole === "owner";
+  }
+  return true;
 }
 
 export function canEditRecipe(
@@ -21,7 +46,7 @@ export function canEditRecipe(
   userId: string | undefined | null
 ): boolean {
   if (!role || !userId) return false;
-  if (role === "admin") return true;
+  if (hasKitchenStaffPowers(role)) return true;
   if (role === "cook" && authorId && authorId === userId) return true;
   return false;
 }
@@ -36,7 +61,7 @@ export function canViewRecipe(
 }
 
 /**
- * Edit/delete: admins may manage public recipes from anyone, but private recipes
+ * Edit/delete: staff may manage public recipes from anyone, but private recipes
  * stay author-only (same identity as My recipes ownership).
  */
 export function canManageRecipe(
@@ -54,6 +79,7 @@ export function canManageRecipe(
   return canEditRecipe(role, recipe.authorId, userId);
 }
 
+/** Bootstrap email for the site owner (Gregg). Env name kept as ADMIN_EMAIL. */
 export function getAdminEmail(): string {
   return (process.env.ADMIN_EMAIL || "gagekehoe17@gmail.com").trim().toLowerCase();
 }
@@ -63,27 +89,25 @@ export function isAdminEmail(email: string | null | undefined): boolean {
   return email.trim().toLowerCase() === getAdminEmail();
 }
 
-/** Site owner (Gregg): admin role and/or ADMIN_EMAIL. Never expose the real account name. */
-export function isSiteOwner(user: {
-  role?: string | null;
-  email?: string | null;
-}): boolean {
-  return user.role === "admin" || isAdminEmail(user.email);
+/** Site owner role (Gregg). Badge and public name — not email heuristics. */
+export function isSiteOwner(user: { role?: string | null }): boolean {
+  return user.role === "owner";
 }
 
 /**
- * Public privilege badge for reviews/comments.
- * - owner → Gregg (ADMIN_EMAIL / admin role)
- * - authorized_cook → cook role (granted on People)
- * Email is used only server-side for matching; never sent to clients.
+ * Public privilege badge from **role** (not email).
+ * - owner → Owner (Gregg)
+ * - admin → Admin
+ * - cook → Authorized cook
+ * - viewer → none
  */
-export type AuthorPrivilege = "owner" | "authorized_cook" | null;
+export type AuthorPrivilege = "owner" | "admin" | "authorized_cook" | null;
 
 export function authorPrivilege(user: {
   role?: string | null;
-  email?: string | null;
 }): AuthorPrivilege {
-  if (isSiteOwner(user)) return "owner";
+  if (user.role === "owner") return "owner";
+  if (user.role === "admin") return "admin";
   if (user.role === "cook") return "authorized_cook";
   return null;
 }

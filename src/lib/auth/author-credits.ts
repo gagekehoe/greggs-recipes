@@ -15,7 +15,7 @@ function seedKitchenOwnerPrivilege(authorId: string): AuthorPrivilege {
   return null;
 }
 
-/** Batch-resolve privilege badges for recipe authors (by Auth.js user id). */
+/** Batch-resolve privilege badges for recipe authors (by Auth.js user id / role). */
 export async function getAuthorPrivilegesByUserIds(
   userIds: string[]
 ): Promise<Record<string, AuthorPrivilege>> {
@@ -31,20 +31,12 @@ export async function getAuthorPrivilegesByUserIds(
       .select({
         id: users.id,
         role: users.role,
-        email: users.email,
       })
       .from(users)
       .where(inArray(users.id, unique));
 
-    for (const row of rows as {
-      id: string;
-      role: string | null;
-      email: string | null;
-    }[]) {
-      result[row.id] = authorPrivilege({
-        role: row.role,
-        email: row.email,
-      });
+    for (const row of rows as { id: string; role: string | null }[]) {
+      result[row.id] = authorPrivilege({ role: row.role });
     }
     return result;
   } catch (error) {

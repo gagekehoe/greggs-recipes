@@ -4,6 +4,8 @@ import Link from "next/link";
 import { signOut, useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 
+import { canWriteRecipes, canManagePeople } from "@/lib/auth/roles";
+
 const defaultHeaderLinkClassName =
   "inline-flex min-h-11 items-center px-2.5 text-sm font-medium transition-colors md:min-h-9 md:px-3";
 
@@ -52,7 +54,7 @@ export function AuthNav({
   }
 
   const role = data.user.role;
-  const canWrite = role === "admin" || role === "cook";
+  const canWrite = canWriteRecipes(role);
   const label = data.user.name?.trim() || "Profile";
   const signedInLinkClass = linkClassName
     ? `${linkClassName} ${muted}`
@@ -65,7 +67,7 @@ export function AuthNav({
           My recipes
         </Link>
       ) : null}
-      {role === "admin" ? (
+      {canManagePeople(role) ? (
         <Link href="/people" className={signedInLinkClass}>
           People
         </Link>

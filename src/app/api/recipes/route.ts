@@ -3,6 +3,7 @@ import { publicAuthorLabel } from "@/lib/auth/profile";
 import {
   canManageRecipe,
   canWriteRecipes,
+  hasKitchenStaffPowers,
   isSiteOwner,
 } from "@/lib/auth/roles";
 import { getSessionUser } from "@/lib/auth/session";
@@ -37,7 +38,7 @@ export async function GET(request: Request) {
   });
 
   const filtered =
-    user.role === "admin"
+    hasKitchenStaffPowers(user.role)
       ? recipes
       : recipes.filter((r) => r.authorId === user.id);
 

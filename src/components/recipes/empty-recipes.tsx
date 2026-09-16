@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { canWriteRecipes } from "@/lib/auth/roles";
 import type { SessionUser } from "@/lib/auth/session";
 
 type Props = {
@@ -10,7 +11,7 @@ type Props = {
  * not a dead “pantry empty” kitchen message.
  */
 export function EmptyRecipes({ user }: Props) {
-  const canWrite = user?.role === "admin" || user?.role === "cook";
+  const canWrite = canWriteRecipes(user?.role);
 
   if (!user) {
     return (
@@ -58,8 +59,8 @@ export function EmptyRecipes({ user }: Props) {
         Nothing published yet
       </p>
       <p className="mx-auto mt-3 max-w-md text-[var(--ink-muted)]">
-        Cooks and admins add dishes to this shared site. You can browse,
-        review, and comment as soon as recipes land.
+        Cooks, admins, and the owner add dishes to this shared site. You can
+        browse, review, and comment as soon as recipes land.
       </p>
       <Link
         href="/profile"

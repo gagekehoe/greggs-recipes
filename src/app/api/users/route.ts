@@ -1,14 +1,19 @@
 import { NextResponse } from "next/server";
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { canManagePeople, isRole } from "@/lib/auth/roles";
+import {
+  canAssignRole,
+  canManagePeople,
+  hasKitchenStaffPowers,
+  isRole,
+} from "@/lib/auth/roles";
 import { getSessionUser } from "@/lib/auth/session";
 import { db, users } from "@/lib/db";
 import type { Role } from "@/lib/db/schema";
 
 const updateSchema = z.object({
   userId: z.string().min(1),
-  role: z.enum(["admin", "cook", "viewer"]),
+  role: z.enum(["owner", "admin", "cook", "viewer"]),
 });
 
 export async function GET() {
@@ -54,9 +59,34 @@ export async function PATCH(request: Request) {
 
     const { userId, role } = parsed.data;
 
-    if (userId === user.id && role !== "admin") {
+    const existing = await db
+      .select({ id: users.id, role: users.role })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    const target = existing[0] as { id: string; role: string } | undefined;
+    if (!target) {
+      return NextResponse.json({ error: "User not found" }, { status: 404 });
+    }
+    const currentRole = (isRole(target.role) ? target.role : "viewer") as Role;
+
+    if (!canAssignRole(user.role, role, currentRole)) {
       return NextResponse.json(
-        { error: "You can’t demote yourself from admin." },
+        {
+          error:
+            "Only the site owner can assign or change the Owner role.",
+        },
+        { status: 403 }
+      );
+    }
+
+    if (
+      userId === user.id &&
+      hasKitchenStaffPowers(user.role) &&
+      !hasKitchenStaffPowers(role)
+    ) {
+      return NextResponse.json(
+        { error: "You can’t demote yourself from owner/admin." },
         { status: 400 }
       );
     }

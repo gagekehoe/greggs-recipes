@@ -11,7 +11,7 @@ import {
   resolveRecipeAuthorCredit,
 } from "@/lib/auth/author-credits";
 import { isDisplayNameSet } from "@/lib/auth/profile";
-import { canViewRecipe } from "@/lib/auth/roles";
+import { canViewRecipe, hasKitchenStaffPowers } from "@/lib/auth/roles";
 import { getSessionUser } from "@/lib/auth/session";
 import { getRecipe, totalMinutes } from "@/lib/recipes";
 import {
@@ -232,7 +232,7 @@ export default async function RecipePage({ params }: Props) {
           signedIn={Boolean(user)}
           hasDisplayName={hasDisplayName}
           currentUserId={user?.id ?? null}
-          isAdmin={user?.role === "admin"}
+          isAdmin={hasKitchenStaffPowers(user?.role)}
           signInHref={signInHref}
           profileHref={profileHref}
         />
@@ -242,7 +242,7 @@ export default async function RecipePage({ params }: Props) {
           signedIn={Boolean(user)}
           hasDisplayName={hasDisplayName}
           currentUserId={user?.id ?? null}
-          isAdmin={user?.role === "admin"}
+          isAdmin={hasKitchenStaffPowers(user?.role)}
           signInHref={signInHref}
           profileHref={profileHref}
         />

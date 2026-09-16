@@ -21,15 +21,20 @@ describe("author credits", () => {
     mod.__testSqlite.exec(`DELETE FROM user;`);
   });
 
-  it("maps admin and cook users to privilege badges", async () => {
+  it("maps owner, admin, and cook roles to privilege badges", async () => {
     const { db } = await import("@/lib/db");
     const { users } = await import("@/lib/db/schema");
-    process.env.ADMIN_EMAIL = "owner@example.com";
     await db.insert(users).values([
       {
-        id: "u-admin",
+        id: "u-owner",
         email: "owner@example.com",
         name: "Gage",
+        role: "owner",
+      },
+      {
+        id: "u-admin",
+        email: "staff@example.com",
+        name: "Pat",
         role: "admin",
       },
       {
@@ -41,7 +46,7 @@ describe("author credits", () => {
       {
         id: "u-viewer",
         email: "v@example.com",
-        name: "Pat",
+        name: "Sam",
         role: "viewer",
       },
     ]);
@@ -52,22 +57,30 @@ describe("author credits", () => {
     } = await import("@/lib/auth/author-credits");
 
     const privileges = await getAuthorPrivilegesByUserIds([
+      "u-owner",
       "u-admin",
       "u-cook",
       "u-viewer",
       "admin",
     ]);
-    expect(privileges["u-admin"]).toBe("owner");
+    expect(privileges["u-owner"]).toBe("owner");
+    expect(privileges["u-admin"]).toBe("admin");
     expect(privileges["u-cook"]).toBe("authorized_cook");
     expect(privileges["u-viewer"]).toBe(null);
     expect(privileges.admin).toBe("owner");
 
     expect(
       resolveRecipeAuthorCredit(
-        { authorId: "u-admin", authorName: "Gage" },
+        { authorId: "u-owner", authorName: "Gage" },
         privileges
       )
     ).toEqual({ label: "Gregg", privilege: "owner" });
+    expect(
+      resolveRecipeAuthorCredit(
+        { authorId: "u-admin", authorName: "Pat" },
+        privileges
+      )
+    ).toEqual({ label: "Pat", privilege: "admin" });
     expect(
       resolveRecipeAuthorCredit(
         { authorId: "u-cook", authorName: "Mom" },

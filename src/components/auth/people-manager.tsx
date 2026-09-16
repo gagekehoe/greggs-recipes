@@ -10,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { canAssignRole } from "@/lib/auth/roles";
 import type { Role } from "@/lib/db/schema";
 
 export type PeopleRow = {
@@ -22,15 +23,20 @@ export type PeopleRow = {
 const ROLE_LABELS: Record<Role, string> = {
   viewer: "Viewer",
   cook: "Authorized cook",
-  admin: "Admin (Owner)",
+  admin: "Admin",
+  owner: "Owner (Gregg)",
 };
+
+const ASSIGNABLE: Role[] = ["viewer", "cook", "admin", "owner"];
 
 export function PeopleManager({
   initialUsers,
   currentUserId,
+  currentUserRole,
 }: {
   initialUsers: PeopleRow[];
   currentUserId: string;
+  currentUserRole: Role;
 }) {
   const router = useRouter();
   const [rows, setRows] = useState(initialUsers);
@@ -69,11 +75,13 @@ export function PeopleManager({
           People
         </h1>
         <p className="mt-3 max-w-2xl text-[var(--ink-muted)]">
-          Promote someone to <strong>Authorized cook</strong> so they can publish
-          recipes and show an Authorized cook badge on reviews and comments.
-          Admins (Gregg) get the Owner badge. The account matching{" "}
-          <code className="text-[var(--ink)]">ADMIN_EMAIL</code> stays admin on
-          sign-in.
+          Roles drive badges and permissions.{" "}
+          <strong>Authorized cook</strong> can publish. <strong>Admin</strong>{" "}
+          can manage people and public recipes. <strong>Owner</strong> is Gregg
+          (same powers as admin, Owner badge) — only an existing owner can
+          assign Owner.{" "}
+          <code className="text-[var(--ink)]">ADMIN_EMAIL</code> bootstraps to
+          Owner on sign-in.
         </p>
       </div>
 
@@ -86,49 +94,75 @@ export function PeopleManager({
         </p>
       ) : (
         <ul className="divide-y divide-[var(--line)] border-y border-[var(--line)]">
-          {rows.map((person) => (
-            <li
-              key={person.id}
-              className="flex flex-col gap-3 py-5 sm:flex-row sm:items-center sm:justify-between"
-            >
-              <div>
-                <p className="font-medium text-[var(--ink)]">
-                  {person.name || person.email}
-                  {person.id === currentUserId ? (
-                    <span className="ml-2 text-xs uppercase tracking-wider text-[var(--ink-soft)]">
-                      you
+          {rows.map((person) => {
+            const options = ASSIGNABLE.filter((role) =>
+              canAssignRole(currentUserRole, role, person.role)
+            );
+            // Always show current role even if actor can't re-assign it (e.g. admin viewing owner)
+            const selectOptions =
+              options.includes(person.role) || options.length === 0
+                ? options.length
+                  ? options
+                  : [person.role]
+                : [person.role, ...options];
+            const locked =
+              person.role === "owner" && currentUserRole !== "owner";
+
+            return (
+              <li
+                key={person.id}
+                className="flex flex-col gap-3 py-5 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div>
+                  <p className="font-medium text-[var(--ink)]">
+                    {person.name || person.email}
+                    {person.id === currentUserId ? (
+                      <span className="ml-2 text-xs uppercase tracking-wider text-[var(--ink-soft)]">
+                        you
+                      </span>
+                    ) : null}
+                  </p>
+                  <p className="text-sm text-[var(--ink-muted)]">
+                    {person.email}
+                  </p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <Select
+                    value={person.role}
+                    disabled={savingId === person.id || locked}
+                    onValueChange={(value) => {
+                      if (value) setRole(person.id, value as Role);
+                    }}
+                  >
+                    <SelectTrigger className="w-48">
+                      <SelectValue>{ROLE_LABELS[person.role]}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      {selectOptions.map((role) => (
+                        <SelectItem key={role} value={role}>
+                          {ROLE_LABELS[role]}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {savingId === person.id ? (
+                    <span className="text-xs text-[var(--ink-soft)]">
+                      Saving…
                     </span>
-                  ) : null}
-                </p>
-                <p className="text-sm text-[var(--ink-muted)]">{person.email}</p>
-              </div>
-              <div className="flex items-center gap-3">
-                <Select
-                  value={person.role}
-                  disabled={savingId === person.id}
-                  onValueChange={(value) => {
-                    if (value) setRole(person.id, value as Role);
-                  }}
-                >
-                  <SelectTrigger className="w-44">
-                    <SelectValue>{ROLE_LABELS[person.role]}</SelectValue>
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="viewer">{ROLE_LABELS.viewer}</SelectItem>
-                    <SelectItem value="cook">{ROLE_LABELS.cook}</SelectItem>
-                    <SelectItem value="admin">{ROLE_LABELS.admin}</SelectItem>
-                  </SelectContent>
-                </Select>
-                {savingId === person.id ? (
-                  <span className="text-xs text-[var(--ink-soft)]">Saving…</span>
-                ) : (
-                  <Button variant="ghost" size="sm" className="invisible" tabIndex={-1}>
-                    —
-                  </Button>
-                )}
-              </div>
-            </li>
-          ))}
+                  ) : (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="invisible"
+                      tabIndex={-1}
+                    >
+                      —
+                    </Button>
+                  )}
+                </div>
+              </li>
+            );
+          })}
         </ul>
       )}
     </div>

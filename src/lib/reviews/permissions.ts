@@ -1,8 +1,13 @@
 import type { Role } from "@/lib/db/schema";
 
-/** Any signed-in role (viewer, cook, admin) may leave a review. */
+/** Any signed-in role may leave a review. */
 export function canLeaveReview(role: Role | undefined | null): boolean {
-  return role === "admin" || role === "cook" || role === "viewer";
+  return (
+    role === "owner" ||
+    role === "admin" ||
+    role === "cook" ||
+    role === "viewer"
+  );
 }
 
 /** Same gate as reviews — signed-in members can comment. */
@@ -19,24 +24,24 @@ export function canEditOwnReview(
   return reviewUserId === userId;
 }
 
-/** Authors delete their own comments; admins can delete any. */
+/** Authors delete their own comments; owner/admin can delete any. */
 export function canDeleteComment(
   role: Role | undefined | null,
   commentUserId: string | undefined | null,
   userId: string | undefined | null
 ): boolean {
   if (!role || !userId || !commentUserId) return false;
-  if (role === "admin") return true;
+  if (role === "owner" || role === "admin") return true;
   return commentUserId === userId;
 }
 
-/** Authors manage their own review images; admins can remove any. */
+/** Authors manage their own review images; owner/admin can remove any. */
 export function canManageReviewImages(
   role: Role | undefined | null,
   reviewUserId: string | undefined | null,
   userId: string | undefined | null
 ): boolean {
   if (!role || !userId || !reviewUserId) return false;
-  if (role === "admin") return true;
+  if (role === "owner" || role === "admin") return true;
   return reviewUserId === userId;
 }

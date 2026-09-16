@@ -8,10 +8,11 @@ import {
 } from "@/lib/reviews/permissions";
 
 describe("canLeaveReview / canPostComment", () => {
-  it("allows signed-in viewer, cook, and admin", () => {
+  it("allows signed-in viewer, cook, admin, and owner", () => {
     expect(canLeaveReview("viewer")).toBe(true);
     expect(canLeaveReview("cook")).toBe(true);
     expect(canLeaveReview("admin")).toBe(true);
+    expect(canLeaveReview("owner")).toBe(true);
     expect(canPostComment("viewer")).toBe(true);
   });
 
@@ -43,8 +44,9 @@ describe("canDeleteComment", () => {
     expect(canDeleteComment("cook", "u1", "u1")).toBe(true);
   });
 
-  it("lets admin delete any comment", () => {
+  it("lets owner or admin delete any comment", () => {
     expect(canDeleteComment("admin", "u1", "admin-id")).toBe(true);
+    expect(canDeleteComment("owner", "u1", "owner-id")).toBe(true);
   });
 
   it("blocks other non-admins and guests", () => {
@@ -56,9 +58,10 @@ describe("canDeleteComment", () => {
 });
 
 describe("canManageReviewImages", () => {
-  it("allows owner or admin only — never guests", () => {
+  it("allows review author or kitchen staff — never guests", () => {
     expect(canManageReviewImages("viewer", "u1", "u1")).toBe(true);
     expect(canManageReviewImages("admin", "u1", "admin")).toBe(true);
+    expect(canManageReviewImages("owner", "u1", "owner")).toBe(true);
     expect(canManageReviewImages("cook", "u1", "u2")).toBe(false);
     expect(canManageReviewImages(null, "u1", "u1")).toBe(false);
   });

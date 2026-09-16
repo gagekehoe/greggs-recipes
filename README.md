@@ -21,8 +21,8 @@ Open [http://127.0.0.1:43127](http://127.0.0.1:43127).
 | `/signin` | Email magic-link sign-in (creates account on first use) |
 | `/welcome` | First-time display name setup |
 | `/profile` | Edit display name |
-| `/my-recipes` | Create/manage recipes (cook + admin) |
-| `/people` | Promote/demote roles (admin only) |
+| `/my-recipes` | Create/manage recipes (cook + admin + owner) |
+| `/people` | Promote/demote roles (admin + owner) |
 
 ### Auth without email keys
 
@@ -30,17 +30,18 @@ Leave `AUTH_RESEND_KEY` unset. Request a magic link on `/signin`, then copy the 
 
 ### Admin bootstrap
 
-`ADMIN_EMAIL` (default in `.env.example`: `gagekehoe17@gmail.com`) is promoted to **admin** on sign-in. You can change it in `.env.local` / Vercel env if needed.
+`ADMIN_EMAIL` (default in `.env.example`: `gagekehoe17@gmail.com`) is promoted to **owner** on sign-in (Gregg). You can change it in `.env.local` / Vercel env if needed.
 
 ### Roles
 
 | Role | Can do |
 |------|--------|
 | `viewer` | Default for new signups — browse; leave reviews & comments |
-| `cook` | Add / edit / delete **own** recipes; **Authorized cook** badge on reviews/comments |
-| `admin` | Manage **any** public recipe + `/people` roles; **Owner** badge (Gregg); moderate reviews/comments |
+| `cook` | Add / edit / delete **own** recipes; **Authorized cook** badge |
+| `admin` | Manage public recipes + People (not Owner); **Admin** badge |
+| `owner` | Same powers as admin; **Owner** badge (Gregg); only an owner can assign Owner |
 
-Recipe cards and detail show **By {display name}** (Gregg for the site owner; never email). Private recipes appear in Browse for the signed-in author only, with a Private label.
+Recipe cards and detail show **By {display name}** plus the role badge when relevant (never email). Private recipes appear in Browse for the signed-in author only, with a Private label.
 
 Reviews & comments details: [docs/reviews-comments.md](./docs/reviews-comments.md). Testing notes: [docs/testing.md](./docs/testing.md). Recipe photo placeholders: [docs/recipe-photo-fallbacks.md](./docs/recipe-photo-fallbacks.md). Recipe photo uploads (Vercel Blob): see `.env.example` (`BLOB_READ_WRITE_TOKEN`). Private recipes (author-only): [docs/private-recipes.md](./docs/private-recipes.md).
 

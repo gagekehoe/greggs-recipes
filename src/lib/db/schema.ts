@@ -7,7 +7,7 @@ import {
   uniqueIndex,
 } from "drizzle-orm/sqlite-core";
 
-export const ROLES = ["admin", "cook", "viewer"] as const;
+export const ROLES = ["owner", "admin", "cook", "viewer"] as const;
 export type Role = (typeof ROLES)[number];
 
 export const users = sqliteTable("user", {

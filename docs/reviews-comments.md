@@ -1,6 +1,6 @@
 # Reviews & comments
 
-Signed-in members (viewer, cook, admin) can leave **one star review per recipe** (optional text + up to 4 photos) and post **comments**. Guests can read everything and see a clear sign-in CTA — **no anonymous posting**.
+Signed-in members (viewer, cook, admin, owner) can leave **one star review per recipe** (optional text + up to 4 photos) and post **comments**. Guests can read everything and see a clear sign-in CTA — **no anonymous posting**.
 
 ## Account / display name
 
@@ -8,17 +8,18 @@ Signed-in members (viewer, cook, admin) can leave **one star review per recipe**
 - After first sign-in, `/welcome` asks for a **display name** (stored on Auth.js `user.name` in SQLite).
 - `/profile` lets signed-in users edit it later (header shows the name).
 - Reviews and comments **prefer display name**; posting is blocked until a name is set (API `403` + UI prompt).
-- Public labels never fall back to email. Site owner posts as **Gregg**.
-- Recipe cards and detail show the same **Owner** / **Authorized cook** chips next to **By {name}** (looked up by `authorId`), because display names are not unique.
+- Public labels never fall back to email. Site **owner** role posts as **Gregg**.
+- Recipe cards and detail show the same privilege chips next to **By {name}** (from `user.role` via `authorId`), because display names are not unique.
 
-## Privilege badges
+## Privilege badges (role-based)
 
-| Badge | Who | How |
-|-------|-----|-----|
-| **Owner** | Gregg (admin role and/or `ADMIN_EMAIL`) | Automatic; public name forced to Gregg |
-| **Authorized cook** | Users with the **cook** role | Grant/revoke on `/people` (promote to cook / demote to viewer) |
+| Badge | Role | How |
+|-------|------|-----|
+| **Owner** | `owner` | Bootstrap via `ADMIN_EMAIL` on sign-in; only an existing owner can assign Owner on `/people`. Public name forced to Gregg. |
+| **Admin** | `admin` | Grant on `/people` (owner or admin). Same kitchen powers as owner except assigning Owner. |
+| **Authorized cook** | `cook` | Grant/revoke on `/people`. |
 
-Badges appear next to the display name on reviews and comments. Email and real legal names are never shown in the badge.
+Viewers have no privilege badge. Badges appear on reviews, comments, and recipe author credits. Email is never shown in the badge.
 
 ## Auth rules
 

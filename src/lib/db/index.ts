@@ -148,6 +148,22 @@ function createSqlite(): DbBundle {
     // Column already present on existing local DBs.
   }
 
+  // Legacy bootstrap: ADMIN_EMAIL was stored as admin → promote to owner.
+  try {
+    const bootstrapEmail = (
+      process.env.ADMIN_EMAIL || "gagekehoe17@gmail.com"
+    )
+      .trim()
+      .toLowerCase();
+    sqlite
+      .prepare(
+        `UPDATE user SET role = 'owner' WHERE lower(email) = ? AND role = 'admin'`
+      )
+      .run(bootstrapEmail);
+  } catch {
+    // user table may be empty / unavailable during first probe.
+  }
+
   return {
     db: drizzle(sqlite, { schema: sqliteSchema }),
     schema: sqliteSchema,
