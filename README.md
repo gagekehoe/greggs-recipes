@@ -79,7 +79,9 @@ Recommended: **Vercel + custom domain**. Auth sessions should use a durable data
 | `npm run lint` | ESLint |
 | `npm test` | Unit/integration tests (Vitest, one-shot) |
 | `npm run test:watch` | Vitest in watch mode |
-| `npm run test:coverage` | Vitest with V8 coverage report |
+| `npm run test:coverage` | Vitest with V8 coverage report (`coverage/`) |
+
+PRs to `main` also run coverage in GitHub Actions (**Checks → Unit tests + coverage**). Vercel previews do not. See [docs/testing.md](./docs/testing.md).
 | `npm run db:push` | Push Postgres schema to Neon (`DATABASE_URL` required) |
 | `npm run db:generate` | Generate Drizzle migrations from `schema.pg.ts` |
 
