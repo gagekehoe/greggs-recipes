@@ -196,6 +196,117 @@ describe("SignInForm", () => {
     await user.click(hide);
     expect(password).toHaveAttribute("type", "password");
   });
+
+  it("shows a safe error when credentials do not match", async () => {
+    signIn.mockResolvedValue({
+      error: "CredentialsSignin",
+      ok: false,
+      status: 401,
+      url: null,
+    });
+
+    const { SignInForm } = await import("@/components/auth/sign-in-form");
+    const user = userEvent.setup();
+    render(<SignInForm />);
+
+    await user.type(screen.getByLabelText(/^email$/i), "cook@example.com");
+    await user.type(screen.getByLabelText(/^password$/i), "wrong-password");
+    await user.click(screen.getByRole("button", { name: /^sign in$/i }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/email or password doesn’t match/i)
+      ).toBeInTheDocument();
+    });
+    expect(window.location.href).toBe("");
+  });
+
+  it("rejects mismatched and weak passwords on register", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { SignInForm } = await import("@/components/auth/sign-in-form");
+    const user = userEvent.setup();
+    render(<SignInForm />);
+
+    await user.click(screen.getByRole("tab", { name: /new here/i }));
+    await user.type(screen.getByLabelText(/^email$/i), "new@example.com");
+    await user.type(screen.getByLabelText(/^password$/i), "password123");
+    await user.type(screen.getByLabelText(/^confirm password$/i), "password456");
+    await user.click(screen.getByRole("button", { name: /^create account$/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/passwords don’t match/i)).toBeInTheDocument();
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(signIn).not.toHaveBeenCalled();
+  });
+
+  it("surfaces register API errors such as duplicate email", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      json: async () => ({
+        error: "That email already has an account. Sign in instead.",
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { SignInForm } = await import("@/components/auth/sign-in-form");
+    const user = userEvent.setup();
+    render(<SignInForm />);
+
+    await user.click(screen.getByRole("tab", { name: /new here/i }));
+    await user.type(screen.getByLabelText(/^email$/i), "dup@example.com");
+    await user.type(screen.getByLabelText(/^password$/i), "password123");
+    await user.type(screen.getByLabelText(/^confirm password$/i), "password123");
+    await user.click(screen.getByRole("button", { name: /^create account$/i }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByText(/that email already has an account/i)
+      ).toBeInTheDocument();
+    });
+    expect(signIn).not.toHaveBeenCalled();
+  });
+});
+
+describe("ForgotPasswordForm", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    searchParams = new URLSearchParams("email=cook%40example.com");
+  });
+
+  it("requests a reset and shows the Gregg inbox confirmation", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        ok: true,
+        message:
+          "If that email is on Gregg's Recipes, you'll get a reset link shortly.",
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { ForgotPasswordForm } = await import(
+      "@/components/auth/forgot-password-form"
+    );
+    const user = userEvent.setup();
+    render(<ForgotPasswordForm />);
+
+    expect(screen.getByLabelText(/^email$/i)).toHaveValue("cook@example.com");
+    await user.click(screen.getByRole("button", { name: /email reset link/i }));
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("heading", { name: /check your inbox/i })
+      ).toBeInTheDocument();
+    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/auth/forgot-password",
+      expect.objectContaining({ method: "POST" })
+    );
+    expect(screen.getByText(/Gregg's Recipes/i)).toBeInTheDocument();
+  });
 });
 
 describe("ResetPasswordForm", () => {
@@ -235,5 +346,108 @@ describe("ResetPasswordForm", () => {
       screen.getByRole("button", { name: /^view confirm password$/i })
     );
     expect(confirm).toHaveAttribute("type", "text");
+  });
+
+  it("saves a new password and signs in", async () => {
+    signIn.mockResolvedValue({ error: undefined, ok: true, status: 200, url: "" });
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: async () => ({ ok: true }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { ResetPasswordForm } = await import(
+      "@/components/auth/reset-password-form"
+    );
+    const user = userEvent.setup();
+    render(<ResetPasswordForm />);
+
+    await user.type(screen.getByLabelText(/^new password$/i), "new-password-99");
+    await user.type(
+      screen.getByLabelText(/^confirm password$/i),
+      "new-password-99"
+    );
+    await user.click(
+      screen.getByRole("button", { name: /save password and sign in/i })
+    );
+
+    await waitFor(() => {
+      expect(fetchMock).toHaveBeenCalledWith(
+        "/api/auth/reset-password",
+        expect.objectContaining({ method: "POST" })
+      );
+    });
+    await waitFor(() => {
+      expect(signIn).toHaveBeenCalledWith(
+        "credentials",
+        expect.objectContaining({
+          email: "cook@example.com",
+          password: "new-password-99",
+          redirect: false,
+        })
+      );
+    });
+    expect(window.location.href).toBe("/welcome?next=%2F");
+  });
+
+  it("rejects mismatched passwords before calling the API", async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { ResetPasswordForm } = await import(
+      "@/components/auth/reset-password-form"
+    );
+    const user = userEvent.setup();
+    render(<ResetPasswordForm />);
+
+    await user.type(screen.getByLabelText(/^new password$/i), "password123");
+    await user.type(screen.getByLabelText(/^confirm password$/i), "password456");
+    await user.click(
+      screen.getByRole("button", { name: /save password and sign in/i })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/passwords don’t match/i)).toBeInTheDocument();
+    });
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("shows reset-link-needed when email or token is missing", async () => {
+    searchParams = new URLSearchParams();
+    const { ResetPasswordForm } = await import(
+      "@/components/auth/reset-password-form"
+    );
+    render(<ResetPasswordForm />);
+    expect(
+      screen.getByRole("heading", { name: /reset link needed/i })
+    ).toBeInTheDocument();
+  });
+
+  it("surfaces invalid or expired token errors from the API", async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      json: async () => ({
+        error:
+          "This reset link is invalid or expired. Request a new one from Forgot password.",
+      }),
+    });
+    vi.stubGlobal("fetch", fetchMock);
+
+    const { ResetPasswordForm } = await import(
+      "@/components/auth/reset-password-form"
+    );
+    const user = userEvent.setup();
+    render(<ResetPasswordForm />);
+
+    await user.type(screen.getByLabelText(/^new password$/i), "password123");
+    await user.type(screen.getByLabelText(/^confirm password$/i), "password123");
+    await user.click(
+      screen.getByRole("button", { name: /save password and sign in/i })
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText(/invalid or expired/i)).toBeInTheDocument();
+    });
+    expect(signIn).not.toHaveBeenCalled();
   });
 });
