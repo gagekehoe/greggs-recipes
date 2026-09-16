@@ -111,10 +111,8 @@ export const recipeInputSchema = z.object({
   inspiredByUrl: inspiredByUrlSchema,
   /** Ephemeral attestation — required to publish/save; never stored on the recipe. */
   rightsAttested: z.literal(true, {
-    errorMap: () => ({
-      message:
-        "Confirm you wrote this recipe or have the right to share it",
-    }),
+    message:
+      "Confirm you wrote this recipe or have the right to share it",
   }),
 });
 
