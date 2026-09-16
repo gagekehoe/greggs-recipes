@@ -1,12 +1,16 @@
 import { RecipeGrid } from "@/components/recipes/recipe-card";
 import { RecipePhoto } from "@/components/recipes/recipe-photo";
+import { getSessionUser } from "@/lib/auth/session";
 import { listRecipes } from "@/lib/recipes";
 
 export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
-  const { recipes, mode, error } = await listRecipes();
-  const featured = recipes[0];
+  const user = await getSessionUser();
+  const { recipes, mode, error } = await listRecipes({
+    includePrivateForUserId: user?.id ?? null,
+  });
+  const featured = recipes.find((r) => !r.isPrivate) ?? recipes[0];
 
   return (
     <>

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { EmptyRecipes } from "@/components/recipes/empty-recipes";
 import { RecipePhoto } from "@/components/recipes/recipe-photo";
+import { recipeAuthorLabel } from "@/lib/auth/profile";
 import { getSessionUser } from "@/lib/auth/session";
 import { totalMinutes, type Recipe } from "@/lib/recipes";
 import type { RatingSummary } from "@/lib/reviews/rating";
@@ -17,6 +18,7 @@ export function RecipeCard({
   rating?: RatingSummary;
 }) {
   const minutes = totalMinutes(recipe);
+  const author = recipeAuthorLabel(recipe.authorName);
   return (
     <article
       className="group recipe-reveal"
@@ -34,7 +36,15 @@ export function RecipeCard({
           />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[var(--ink)]/55 via-transparent to-transparent opacity-80" />
           <div className="absolute bottom-3 left-3 right-3 flex flex-wrap gap-2">
-            {recipe.tags.slice(0, 2).map((tag) => (
+            {recipe.isPrivate ? (
+              <Badge
+                variant="secondary"
+                className="border border-[var(--accent-deep)]/45 bg-[var(--paper)]/95 text-[var(--accent-deep)] backdrop-blur-sm"
+              >
+                Private
+              </Badge>
+            ) : null}
+            {recipe.tags.slice(0, recipe.isPrivate ? 1 : 2).map((tag) => (
               <Badge
                 key={tag}
                 variant="secondary"
@@ -57,6 +67,9 @@ export function RecipeCard({
             {rating && rating.count > 0
               ? ` · ${rating.average}★ (${rating.count})`
               : ""}
+          </p>
+          <p className="mt-1.5 text-xs text-[var(--ink-soft)]">
+            By {author}
           </p>
         </div>
       </Link>

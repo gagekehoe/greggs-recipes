@@ -62,3 +62,28 @@ export function isAdminEmail(email: string | null | undefined): boolean {
   if (!email) return false;
   return email.trim().toLowerCase() === getAdminEmail();
 }
+
+/** Site owner (Gregg): admin role and/or ADMIN_EMAIL. Never expose the real account name. */
+export function isSiteOwner(user: {
+  role?: string | null;
+  email?: string | null;
+}): boolean {
+  return user.role === "admin" || isAdminEmail(user.email);
+}
+
+/**
+ * Public privilege badge for reviews/comments.
+ * - owner → Gregg (ADMIN_EMAIL / admin role)
+ * - authorized_cook → cook role (granted on People)
+ * Email is used only server-side for matching; never sent to clients.
+ */
+export type AuthorPrivilege = "owner" | "authorized_cook" | null;
+
+export function authorPrivilege(user: {
+  role?: string | null;
+  email?: string | null;
+}): AuthorPrivilege {
+  if (isSiteOwner(user)) return "owner";
+  if (user.role === "cook") return "authorized_cook";
+  return null;
+}

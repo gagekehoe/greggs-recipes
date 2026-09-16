@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
+import { publicAuthorLabel } from "@/lib/auth/profile";
 import {
   canManageRecipe,
   canWriteRecipes,
+  isSiteOwner,
 } from "@/lib/auth/roles";
 import { getSessionUser } from "@/lib/auth/session";
 import {
@@ -70,7 +72,9 @@ export async function POST(request: Request) {
       tags: data.tags,
       isPrivate: Boolean(data.isPrivate),
       authorId: user.id,
-      authorName: user.name || user.email || "Cook",
+      authorName: publicAuthorLabel(user.name, user.email, {
+        isSiteOwner: isSiteOwner(user),
+      }),
     });
 
     return NextResponse.json({ recipe, mode }, { status: 201 });

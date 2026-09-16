@@ -37,8 +37,10 @@ Leave `AUTH_RESEND_KEY` unset. Request a magic link on `/signin`, then copy the 
 | Role | Can do |
 |------|--------|
 | `viewer` | Default for new signups — browse; leave reviews & comments |
-| `cook` | Add / edit / delete **own** recipes; reviews & comments |
-| `admin` | Manage **any** recipe + `/people` roles; moderate reviews/comments |
+| `cook` | Add / edit / delete **own** recipes; **Authorized cook** badge on reviews/comments |
+| `admin` | Manage **any** public recipe + `/people` roles; **Owner** badge (Gregg); moderate reviews/comments |
+
+Recipe cards and detail show **By {display name}** (Gregg for the site owner; never email). Private recipes appear in Browse for the signed-in author only, with a Private label.
 
 Reviews & comments details: [docs/reviews-comments.md](./docs/reviews-comments.md). Testing notes: [docs/testing.md](./docs/testing.md). Recipe photo placeholders: [docs/recipe-photo-fallbacks.md](./docs/recipe-photo-fallbacks.md). Recipe photo uploads (Vercel Blob): see `.env.example` (`BLOB_READ_WRITE_TOKEN`). Private recipes (author-only): [docs/private-recipes.md](./docs/private-recipes.md).
 
@@ -46,7 +48,7 @@ Reviews & comments details: [docs/reviews-comments.md](./docs/reviews-comments.m
 
 ### Production path (Neon / SQLite)
 
-When a database is configured (`DATABASE_URL` on Vercel, or local SQLite), recipes live in the `recipe` table. Browse Recipes and `/api/recipes` read from the DB. Cooks/admins publish via `/my-recipes` without a redeploy. Recipes marked **Private (only me)** stay off the public catalog and return 404 for everyone except the author.
+When a database is configured (`DATABASE_URL` on Vercel, or local SQLite), recipes live in the `recipe` table. Browse Recipes and `/api/recipes` read from the DB. Cooks/admins publish via `/my-recipes` without a redeploy. Recipes marked **Private (only me)** stay off the public API and sitemap; the signed-in author still sees them on home Browse with a Private label, and everyone else gets 404 on the direct URL.
 
 A fresh database is seeded with **Extra-Saucy Late-Night Cajun Tuna Bowl** (photo + author Gregg). See [docs/production-recipes.md](./docs/production-recipes.md).
 

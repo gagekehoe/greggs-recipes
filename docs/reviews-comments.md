@@ -8,6 +8,16 @@ Signed-in members (viewer, cook, admin) can leave **one star review per recipe**
 - After first sign-in, `/welcome` asks for a **display name** (stored on Auth.js `user.name` in SQLite).
 - `/profile` lets signed-in users edit it later (header shows the name).
 - Reviews and comments **prefer display name**; posting is blocked until a name is set (API `403` + UI prompt).
+- Public labels never fall back to email. Site owner posts as **Gregg**.
+
+## Privilege badges
+
+| Badge | Who | How |
+|-------|-----|-----|
+| **Owner** | Gregg (admin role and/or `ADMIN_EMAIL`) | Automatic; public name forced to Gregg |
+| **Authorized cook** | Users with the **cook** role | Grant/revoke on `/people` (promote to cook / demote to viewer) |
+
+Badges appear next to the display name on reviews and comments. Email and real legal names are never shown in the badge.
 
 ## Auth rules
 
@@ -51,6 +61,7 @@ See [hosting.md](./hosting.md) for the full env table.
 4. Leave 1–5 stars, optional text, optional photos; edit/replace your one review
 5. Post a comment; delete your own
 6. As admin: delete someone else’s comment/review
+7. As admin on `/people`: promote a cook and confirm the Authorized cook badge on their posts
 
 ```bash
 npm test
@@ -58,7 +69,3 @@ npm run test:coverage
 ```
 
 Coverage focuses on `src/lib`, API routes (authz + validation), and the review/comment/profile/sign-in client components. shadcn primitives and Auth.js wiring are excluded from the gate.
-
-## Out of scope (next workstream)
-
-Missing **recipe** photo fallbacks — not part of this feature.

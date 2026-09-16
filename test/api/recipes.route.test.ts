@@ -90,6 +90,7 @@ describe("/api/recipes", () => {
       expect.objectContaining({
         isPrivate: true,
         authorId: "u1",
+        authorName: "Maya",
       })
     );
   });

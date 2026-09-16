@@ -19,6 +19,12 @@ export type PeopleRow = {
   role: Role;
 };
 
+const ROLE_LABELS: Record<Role, string> = {
+  viewer: "Viewer",
+  cook: "Authorized cook",
+  admin: "Admin (Owner)",
+};
+
 export function PeopleManager({
   initialUsers,
   currentUserId,
@@ -63,9 +69,11 @@ export function PeopleManager({
           People
         </h1>
         <p className="mt-3 max-w-2xl text-[var(--ink-muted)]">
-          Promote cooks who can publish, or keep folks as viewers. The account
-          matching <code className="text-[var(--ink)]">ADMIN_EMAIL</code> stays
-          admin on sign-in.
+          Promote someone to <strong>Authorized cook</strong> so they can publish
+          recipes and show an Authorized cook badge on reviews and comments.
+          Admins (Gregg) get the Owner badge. The account matching{" "}
+          <code className="text-[var(--ink)]">ADMIN_EMAIL</code> stays admin on
+          sign-in.
         </p>
       </div>
 
@@ -102,13 +110,13 @@ export function PeopleManager({
                     if (value) setRole(person.id, value as Role);
                   }}
                 >
-                  <SelectTrigger className="w-36">
-                    <SelectValue />
+                  <SelectTrigger className="w-44">
+                    <SelectValue>{ROLE_LABELS[person.role]}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="viewer">viewer</SelectItem>
-                    <SelectItem value="cook">cook</SelectItem>
-                    <SelectItem value="admin">admin</SelectItem>
+                    <SelectItem value="viewer">{ROLE_LABELS.viewer}</SelectItem>
+                    <SelectItem value="cook">{ROLE_LABELS.cook}</SelectItem>
+                    <SelectItem value="admin">{ROLE_LABELS.admin}</SelectItem>
                   </SelectContent>
                 </Select>
                 {savingId === person.id ? (

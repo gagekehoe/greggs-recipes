@@ -173,7 +173,8 @@ export function getContentMode(): ContentMode {
 export type ListRecipesOptions = {
   /**
    * Include private recipes owned by this user id.
-   * Omit for public catalog (home, sitemap, GET /api/recipes).
+   * Home passes the signed-in user so authors see their private dishes in Browse.
+   * Omit for the public catalog (sitemap, GET /api/recipes without mine).
    */
   includePrivateForUserId?: string | null;
 };

@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from "vitest";
 import {
+  authorPrivilege,
   canEditRecipe,
   canManagePeople,
   canManageRecipe,
@@ -8,6 +9,7 @@ import {
   getAdminEmail,
   isAdminEmail,
   isRole,
+  isSiteOwner,
 } from "@/lib/auth/roles";
 
 describe("isRole", () => {
@@ -147,5 +149,44 @@ describe("admin email helpers", () => {
     expect(isAdminEmail(" other@example.com ")).toBe(false);
     expect(isAdminEmail(null)).toBe(false);
     expect(isAdminEmail(undefined)).toBe(false);
+  });
+});
+
+describe("site owner + author privilege badges", () => {
+  const previous = process.env.ADMIN_EMAIL;
+
+  afterEach(() => {
+    if (previous === undefined) {
+      delete process.env.ADMIN_EMAIL;
+    } else {
+      process.env.ADMIN_EMAIL = previous;
+    }
+  });
+
+  it("treats admin role or ADMIN_EMAIL as site owner", () => {
+    process.env.ADMIN_EMAIL = "owner@example.com";
+    expect(isSiteOwner({ role: "admin", email: "other@example.com" })).toBe(
+      true
+    );
+    expect(isSiteOwner({ role: "viewer", email: "owner@example.com" })).toBe(
+      true
+    );
+    expect(isSiteOwner({ role: "cook", email: "cook@example.com" })).toBe(
+      false
+    );
+  });
+
+  it("maps owner and authorized cook privileges without inventing a new role", () => {
+    process.env.ADMIN_EMAIL = "owner@example.com";
+    expect(
+      authorPrivilege({ role: "admin", email: "a@x.com" })
+    ).toBe("owner");
+    expect(
+      authorPrivilege({ role: "viewer", email: "owner@example.com" })
+    ).toBe("owner");
+    expect(authorPrivilege({ role: "cook", email: "c@x.com" })).toBe(
+      "authorized_cook"
+    );
+    expect(authorPrivilege({ role: "viewer", email: "v@x.com" })).toBe(null);
   });
 });

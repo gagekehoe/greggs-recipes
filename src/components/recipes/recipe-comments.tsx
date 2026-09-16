@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
+import { AuthorPrivilegeBadge } from "@/components/auth/author-privilege-badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { CommentWithAuthor } from "@/lib/reviews/store";
@@ -171,8 +172,9 @@ export function RecipeCommentsSection({
               className="border-b border-[var(--line)]/60 pb-6 last:border-0"
             >
               <div className="flex flex-wrap items-baseline justify-between gap-2">
-                <p className="font-medium text-[var(--ink)]">
-                  {comment.authorName || "Cook"}
+                <p className="flex flex-wrap items-center gap-2 font-medium text-[var(--ink)]">
+                  <span>{comment.authorName || "Cook"}</span>
+                  <AuthorPrivilegeBadge privilege={comment.authorPrivilege} />
                 </p>
                 <p className="text-xs uppercase tracking-[0.12em] text-[var(--ink-soft)]">
                   {formatWhen(comment.createdAt)}
