@@ -11,9 +11,13 @@ describe("password helpers", () => {
     expect(normalizeEmail("  Cook@Example.COM ")).toBe("cook@example.com");
   });
 
-  it("rejects short passwords", () => {
-    expect(validatePassword("short")).toMatch(/at least 8/i);
+  it("rejects short and overly long passwords", () => {
+    expect(validatePassword("short")).toBe(
+      "Password must be at least 8 characters."
+    );
+    expect(validatePassword("x".repeat(201))).toBe("Password is too long.");
     expect(validatePassword("longenough")).toBeNull();
+    expect(validatePassword("x".repeat(200))).toBeNull();
   });
 
   it("hashes and verifies", async () => {

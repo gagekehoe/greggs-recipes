@@ -20,11 +20,13 @@ export default defineConfig({
       ],
       exclude: [
         "src/components/ui/**",
-        "src/app/api/auth/**",
+        // Auth.js catch-all only — custom register/forgot/reset routes are covered.
+        "src/app/api/auth/[...nextauth]/**",
         "src/lib/db/index.ts",
         "src/lib/recipes/types.ts",
         "**/*.d.ts",
       ],
+
       thresholds: {
         lines: 75,
         functions: 75,
