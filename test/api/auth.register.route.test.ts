@@ -124,24 +124,22 @@ describe("POST /api/auth/register", () => {
       error: "That email already has an account. Sign in instead.",
     });
     expect(insertValues).not.toHaveBeenCalled();
+    expect(updateSet).not.toHaveBeenCalled();
   });
 
-  it("attaches a password to a legacy magic-link account", async () => {
+  it("rejects a legacy magic-link account instead of attaching a password", async () => {
     const { POST } = await import("@/app/api/auth/register/route");
     selectLimit.mockResolvedValue([{ id: "u-legacy", passwordHash: null }]);
 
     const res = await POST(
       post({ email: "legacy@example.com", password: "password123" })
     );
-    expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ ok: true });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({
+      error: "That email already has an account. Sign in instead.",
+    });
     expect(insertValues).not.toHaveBeenCalled();
-    expect(updateSet).toHaveBeenCalledWith(
-      expect.objectContaining({
-        passwordHash: expect.any(String),
-        emailVerified: expect.any(Date),
-      })
-    );
+    expect(updateSet).not.toHaveBeenCalled();
   });
 
   it("assigns owner role when registering the admin email", async () => {

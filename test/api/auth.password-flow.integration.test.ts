@@ -138,6 +138,76 @@ describe("auth password flow (integration)", () => {
       })
     );
     expect(dup.status).toBe(409);
+  });
+
+  it("does not let register take over a passwordless legacy account", async () => {
+    const { db, users } = await import("@/lib/db");
+    const { POST: register } = await import("@/app/api/auth/register/route");
+    const { POST: forgot } = await import(
+      "@/app/api/auth/forgot-password/route"
+    );
+    const { POST: reset } = await import("@/app/api/auth/reset-password/route");
+    const { authorizeCredentials } = await import("@/lib/auth/credentials");
+
+    await db.insert(users).values({
+      id: "u-legacy",
+      email: "legacy@example.com",
+      name: "Legacy Cook",
+      role: "cook",
+      passwordHash: null,
+    });
+
+    const takeover = await register(
+      new Request("http://x/api/auth/register", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          email: "legacy@example.com",
+          password: "attacker-pass",
+        }),
+      })
+    );
+    expect(takeover.status).toBe(409);
+    await expect(
+      authorizeCredentials({
+        email: "legacy@example.com",
+        password: "attacker-pass",
+      })
+    ).resolves.toBeNull();
+
+    const forgotRes = await forgot(
+      new Request("http://x/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: "legacy@example.com" }),
+      })
+    );
+    expect(forgotRes.status).toBe(200);
+    expect(sendPasswordResetEmail).toHaveBeenCalledTimes(1);
+
+    const rawToken = new URL(
+      (sendPasswordResetEmail.mock.calls[0][0] as { url: string }).url
+    ).searchParams.get("token")!;
+
+    const resetRes = await reset(
+      new Request("http://x/api/auth/reset-password", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          email: "legacy@example.com",
+          token: rawToken,
+          password: "owner-pass-9",
+        }),
+      })
+    );
+    expect(resetRes.status).toBe(200);
+
+    await expect(
+      authorizeCredentials({
+        email: "legacy@example.com",
+        password: "owner-pass-9",
+      })
+    ).resolves.toMatchObject({ email: "legacy@example.com", role: "cook" });
 
     // Unknown email still gets generic forgot success
     const unknown = await forgot(

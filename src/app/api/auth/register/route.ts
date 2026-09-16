@@ -49,19 +49,15 @@ export async function POST(request: Request) {
   }
 
   const existing = await db
-    .select({
-      id: users.id,
-      passwordHash: users.passwordHash,
-    })
+    .select({ id: users.id })
     .from(users)
     .where(eq(users.email, email))
     .limit(1);
 
-  const row = existing[0] as
-    | { id: string; passwordHash: string | null }
-    | undefined;
-
-  if (row?.passwordHash) {
+  // Any existing row is already an account — including legacy magic-link users
+  // with a null passwordHash. Claiming those via register is account takeover;
+  // they must prove inbox access through Forgot password.
+  if (existing[0]) {
     return NextResponse.json(
       { error: "That email already has an account. Sign in instead." },
       { status: 409 }
@@ -70,22 +66,14 @@ export async function POST(request: Request) {
 
   const passwordHash = await hashPassword(parsed.data.password);
 
-  if (row) {
-    // Former magic-link account: attach a password so they can sign in.
-    await db
-      .update(users)
-      .set({ passwordHash, emailVerified: new Date() })
-      .where(eq(users.id, row.id));
-  } else {
-    await migrateBootstrapAdminToOwner();
-    const role: Role = isAdminEmail(email) ? "owner" : "viewer";
-    await db.insert(users).values({
-      email,
-      passwordHash,
-      role,
-      emailVerified: new Date(),
-    });
-  }
+  await migrateBootstrapAdminToOwner();
+  const role: Role = isAdminEmail(email) ? "owner" : "viewer";
+  await db.insert(users).values({
+    email,
+    passwordHash,
+    role,
+    emailVerified: new Date(),
+  });
 
   return NextResponse.json({ ok: true });
 }
