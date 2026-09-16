@@ -63,7 +63,10 @@ describe("/api/recipes", () => {
       mode: "local",
     });
     const mine = await GET(new Request("http://x/api/recipes?mine=1"));
-    expect(listRecipes).toHaveBeenCalledWith({ includePrivateForUserId: "u1" });
+    expect(listRecipes).toHaveBeenCalledWith({
+      includePrivateForUserId: "u1",
+      viewerRole: "cook",
+    });
     expect((await mine.json()).recipes).toHaveLength(1);
   });
 

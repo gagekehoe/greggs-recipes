@@ -9,6 +9,7 @@ export default async function HomePage() {
   const user = await getSessionUser();
   const { recipes, mode, error } = await listRecipes({
     includePrivateForUserId: user?.id ?? null,
+    viewerRole: user?.role ?? null,
   });
   const featured = recipes.find((r) => !r.isPrivate) ?? recipes[0];
 

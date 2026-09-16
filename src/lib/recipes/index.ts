@@ -1,4 +1,5 @@
 import { isDatabaseConfigured } from "@/lib/db";
+import type { Role } from "@/lib/db/schema";
 import {
   createDbRecipe,
   deleteDbRecipe,
@@ -17,6 +18,7 @@ import {
   updateLocalRecipe,
 } from "./local-store";
 import { getSanityClient, isSanityConfigured } from "./sanity";
+import { listSharedRecipeIdsForViewer } from "./shares";
 import { slugify } from "./slug";
 import type { Recipe, RecipeInput } from "./types";
 
@@ -155,14 +157,21 @@ function mapSanityRecipe(doc: SanityRecipeDoc): Recipe {
   };
 }
 
-/** Public recipes, plus the viewer's own private recipes when viewerId is set. */
+/**
+ * Public recipes, plus the viewer's own private recipes and any private
+ * recipes shared with them (by user id or role) when those ids are provided.
+ */
 export function filterRecipesForViewer(
   recipes: Recipe[],
-  viewerId?: string | null
+  viewerId?: string | null,
+  sharedRecipeIds?: ReadonlySet<string>
 ): Recipe[] {
-  return recipes.filter(
-    (recipe) => !recipe.isPrivate || recipe.authorId === viewerId
-  );
+  return recipes.filter((recipe) => {
+    if (!recipe.isPrivate) return true;
+    if (viewerId && recipe.authorId === viewerId) return true;
+    if (viewerId && sharedRecipeIds?.has(recipe.id)) return true;
+    return false;
+  });
 }
 
 /**
@@ -180,11 +189,14 @@ export function getContentMode(): ContentMode {
 
 export type ListRecipesOptions = {
   /**
-   * Include private recipes owned by this user id.
-   * Home passes the signed-in user so authors see their private dishes in Browse.
+   * Include private recipes owned by this user id, and private recipes
+   * shared with them (when a database is configured).
+   * Home passes the signed-in user so authors and sharees see those dishes in Browse.
    * Omit for the public catalog (sitemap, GET /api/recipes without mine).
    */
   includePrivateForUserId?: string | null;
+  /** Viewer role — enables role-based share grants in the catalog. */
+  viewerRole?: Role | null;
 };
 
 export async function listRecipes(options?: ListRecipesOptions): Promise<{
@@ -194,9 +206,13 @@ export async function listRecipes(options?: ListRecipesOptions): Promise<{
 }> {
   const mode = getContentMode();
   const viewerId = options?.includePrivateForUserId ?? null;
+  const sharedRecipeIds =
+    viewerId != null
+      ? await listSharedRecipeIdsForViewer(viewerId, options?.viewerRole)
+      : new Set<string>();
 
   const finalize = (recipes: Recipe[], resolvedMode: ContentMode, error?: string) => ({
-    recipes: filterRecipesForViewer(recipes, viewerId),
+    recipes: filterRecipesForViewer(recipes, viewerId, sharedRecipeIds),
     mode: resolvedMode,
     ...(error ? { error } : {}),
   });

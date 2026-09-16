@@ -19,6 +19,13 @@ vi.mock("@/lib/auth/session", () => ({
 vi.mock("@/lib/recipes", () => ({
   getRecipeById: (...a: unknown[]) => getRecipeById(...a),
 }));
+vi.mock("@/lib/recipes/shares", () => ({
+  getRecipeShareAccess: vi.fn().mockResolvedValue({
+    sharedWithUser: false,
+    viewerRole: null,
+    sharedRoles: [],
+  }),
+}));
 vi.mock("@/lib/reviews/store", () => ({
   listReviewsForRecipe: (...a: unknown[]) => listReviewsForRecipe(...a),
   getRatingSummary: (...a: unknown[]) => getRatingSummary(...a),
@@ -45,6 +52,11 @@ describe("GET/POST/DELETE /api/reviews", () => {
     expect(missing.status).toBe(400);
 
     getSessionUser.mockResolvedValue({ id: "u1", role: "viewer" });
+    getRecipeById.mockResolvedValue({
+      id: "recipe-1",
+      isPrivate: false,
+      authorId: "author",
+    });
     listReviewsForRecipe.mockResolvedValue([
       {
         id: "r1",

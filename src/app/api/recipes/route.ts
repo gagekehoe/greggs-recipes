@@ -35,11 +35,12 @@ export async function GET(request: Request) {
 
   const { recipes, mode, error } = await listRecipes({
     includePrivateForUserId: user.id,
+    viewerRole: user.role,
   });
 
   const filtered =
     hasKitchenStaffPowers(user.role)
-      ? recipes
+      ? recipes.filter((r) => !r.isPrivate || r.authorId === user.id)
       : recipes.filter((r) => r.authorId === user.id);
 
   return NextResponse.json({ recipes: filtered, mode, error });

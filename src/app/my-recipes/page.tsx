@@ -48,10 +48,15 @@ export default async function MyRecipesPage({ searchParams }: Props) {
 
   const { recipes } = await listRecipes({
     includePrivateForUserId: user.id,
+    viewerRole: user.role,
   });
+  // My recipes is a management surface: cooks see their own dishes only.
+  // Shared-with-me private recipes appear on Browse / detail, not here.
   const visible =
     hasKitchenStaffPowers(user.role)
-      ? recipes
+      ? recipes.filter(
+          (r) => !r.isPrivate || r.authorId === user.id
+        )
       : recipes.filter((r) => r.authorId === user.id);
 
   return (

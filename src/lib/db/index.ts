@@ -141,6 +141,19 @@ function createSqlite(): DbBundle {
       inspiredByUrl TEXT NOT NULL DEFAULT '',
       updatedAt INTEGER NOT NULL
     );
+    CREATE TABLE IF NOT EXISTS recipe_share (
+      id TEXT PRIMARY KEY NOT NULL,
+      recipeId TEXT NOT NULL,
+      userId TEXT,
+      role TEXT,
+      createdAt INTEGER NOT NULL,
+      FOREIGN KEY (recipeId) REFERENCES recipe(id) ON DELETE CASCADE,
+      FOREIGN KEY (userId) REFERENCES user(id) ON DELETE CASCADE
+    );
+    CREATE UNIQUE INDEX IF NOT EXISTS recipe_share_recipe_user_uidx
+      ON recipe_share (recipeId, userId);
+    CREATE UNIQUE INDEX IF NOT EXISTS recipe_share_recipe_role_uidx
+      ON recipe_share (recipeId, role);
   `);
 
   try {
@@ -266,6 +279,7 @@ export const recipeReviews = activeSchema.recipeReviews;
 export const recipeReviewImages = activeSchema.recipeReviewImages;
 export const recipeComments = activeSchema.recipeComments;
 export const recipes = activeSchema.recipes;
+export const recipeShares = activeSchema.recipeShares;
 
 /** SQLite schema module (tests / local helpers). Prefer named table exports above for app code. */
 export const schema = sqliteSchema;
@@ -278,4 +292,5 @@ export type {
   DbRecipeReviewImage,
   DbRecipeComment,
   DbRecipe,
+  DbRecipeShare,
 } from "./schema";
