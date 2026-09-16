@@ -79,6 +79,8 @@ type SanityRecipeDoc = {
   authorId?: string;
   authorName?: string;
   isPrivate?: boolean;
+  inspiredBy?: string;
+  inspiredByUrl?: string;
   _updatedAt?: string;
 };
 
@@ -98,6 +100,8 @@ const RECIPE_QUERY = `*[_type == "recipe"] | order(_updatedAt desc) {
   authorId,
   authorName,
   isPrivate,
+  inspiredBy,
+  inspiredByUrl,
   _updatedAt
 }`;
 
@@ -117,6 +121,8 @@ const RECIPE_BY_SLUG_QUERY = `*[_type == "recipe" && slug.current == $slug][0] {
   authorId,
   authorName,
   isPrivate,
+  inspiredBy,
+  inspiredByUrl,
   _updatedAt
 }`;
 
@@ -144,6 +150,8 @@ function mapSanityRecipe(doc: SanityRecipeDoc): Recipe {
     authorId: doc.authorId || "system",
     authorName: doc.authorName || "Gregg",
     isPrivate: Boolean(doc.isPrivate),
+    inspiredBy: doc.inspiredBy?.trim() || "",
+    inspiredByUrl: doc.inspiredByUrl?.trim() || "",
   };
 }
 
@@ -306,7 +314,7 @@ export async function getRecipeById(id: string): Promise<Recipe | null> {
         `*[_type == "recipe" && _id == $id][0]{
           _id, title, slug, summary, ingredients, steps, tags,
           prepMinutes, cookMinutes, servings, imageUrl, imageAlt,
-          authorId, authorName, isPrivate, _updatedAt
+          authorId, authorName, isPrivate, inspiredBy, inspiredByUrl, _updatedAt
         }`,
         { id }
       );
@@ -354,6 +362,8 @@ export async function createRecipe(input: RecipeInput): Promise<{
       authorId: input.authorId,
       authorName: input.authorName,
       isPrivate: Boolean(input.isPrivate),
+      inspiredBy: input.inspiredBy?.trim() || "",
+      inspiredByUrl: input.inspiredByUrl?.trim() || "",
     });
     return {
       recipe: mapSanityRecipe({
@@ -372,6 +382,8 @@ export async function createRecipe(input: RecipeInput): Promise<{
         authorId: input.authorId,
         authorName: input.authorName,
         isPrivate: Boolean(input.isPrivate),
+        inspiredBy: input.inspiredBy?.trim() || "",
+        inspiredByUrl: input.inspiredByUrl?.trim() || "",
         _updatedAt: doc._updatedAt,
       }),
       mode,
@@ -422,6 +434,14 @@ export async function updateRecipe(
               : undefined,
           isPrivate:
             input.isPrivate !== undefined ? Boolean(input.isPrivate) : undefined,
+          inspiredBy:
+            input.inspiredBy !== undefined
+              ? input.inspiredBy.trim() || ""
+              : undefined,
+          inspiredByUrl:
+            input.inspiredByUrl !== undefined
+              ? input.inspiredByUrl.trim() || ""
+              : undefined,
         })
         .commit();
       const recipe = await getRecipeById(id);

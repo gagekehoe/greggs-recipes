@@ -27,6 +27,7 @@ const grilledBase = {
   prepMinutes: 30,
   cookMinutes: 20,
   servings: 6,
+  rightsAttested: true as const,
 };
 
 describe("recipeInputSchema", () => {
@@ -50,6 +51,47 @@ describe("recipeInputSchema", () => {
     expect(
       recipeInputSchema.safeParse({ ...grilledBase, imageUrl: "" }).success
     ).toBe(true);
+  });
+
+  it("rejects publish/save without rights attestation", () => {
+    const { rightsAttested: _omit, ...without } = grilledBase;
+    const missing = recipeInputSchema.safeParse(without);
+    expect(missing.success).toBe(false);
+    if (missing.success) return;
+    expect(formatRecipeValidationError(missing.error.flatten())).toMatch(
+      /Rights confirmation/
+    );
+
+    const falsey = recipeInputSchema.safeParse({
+      ...grilledBase,
+      rightsAttested: false,
+    });
+    expect(falsey.success).toBe(false);
+  });
+
+  it("accepts optional Inspired by credit and https link", () => {
+    const parsed = recipeInputSchema.safeParse({
+      ...grilledBase,
+      inspiredBy: "Mom’s weeknight chicken",
+      inspiredByUrl: "https://example.com/chicken",
+    });
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(parsed.data.inspiredBy).toBe("Mom’s weeknight chicken");
+    expect(parsed.data.inspiredByUrl).toBe("https://example.com/chicken");
+  });
+
+  it("rejects non-http Inspired by links", () => {
+    const parsed = recipeInputSchema.safeParse({
+      ...grilledBase,
+      inspiredBy: "A blog",
+      inspiredByUrl: "ftp://example.com/recipe",
+    });
+    expect(parsed.success).toBe(false);
+    if (parsed.success) return;
+    expect(formatRecipeValidationError(parsed.error.flatten())).toMatch(
+      /Inspired by link/
+    );
   });
 
   it("rejects oversized summaries with a specific field message", () => {

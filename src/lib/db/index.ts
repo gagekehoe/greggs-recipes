@@ -136,6 +136,8 @@ function createSqlite(): DbBundle {
       authorId TEXT NOT NULL,
       authorName TEXT NOT NULL,
       isPrivate INTEGER NOT NULL DEFAULT 0,
+      inspiredBy TEXT NOT NULL DEFAULT '',
+      inspiredByUrl TEXT NOT NULL DEFAULT '',
       updatedAt INTEGER NOT NULL
     );
   `);
@@ -143,6 +145,22 @@ function createSqlite(): DbBundle {
   try {
     sqlite.exec(
       `ALTER TABLE recipe ADD COLUMN isPrivate INTEGER NOT NULL DEFAULT 0`
+    );
+  } catch {
+    // Column already present on existing local DBs.
+  }
+
+  try {
+    sqlite.exec(
+      `ALTER TABLE recipe ADD COLUMN inspiredBy TEXT NOT NULL DEFAULT ''`
+    );
+  } catch {
+    // Column already present on existing local DBs.
+  }
+
+  try {
+    sqlite.exec(
+      `ALTER TABLE recipe ADD COLUMN inspiredByUrl TEXT NOT NULL DEFAULT ''`
     );
   } catch {
     // Column already present on existing local DBs.

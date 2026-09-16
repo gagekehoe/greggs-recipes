@@ -7,6 +7,8 @@ export const RECIPE_FIELD_LIMITS = {
   summaryMax: 2000,
   imageUrlMax: 2000,
   imageAltMax: 200,
+  inspiredByMax: 160,
+  inspiredByUrlMax: 2000,
   prepMax: 600,
   cookMax: 600,
   servingsMax: 50,
@@ -26,6 +28,15 @@ export const imageUrlSchema = z
         "Photo URL must be an https link, a site path like /uploads/…, or blank",
     }
   )
+  .optional();
+
+/** Absolute http(s) attribution link, or empty. */
+export const inspiredByUrlSchema = z
+  .string()
+  .max(RECIPE_FIELD_LIMITS.inspiredByUrlMax)
+  .refine((v) => v === "" || /^https?:\/\//i.test(v), {
+    message: "Inspired by link must be an http(s) URL or blank",
+  })
   .optional();
 
 export const recipeInputSchema = z.object({
@@ -88,6 +99,23 @@ export const recipeInputSchema = z.object({
     )
     .optional(),
   isPrivate: z.boolean().optional().default(false),
+  inspiredBy: z
+    .string()
+    .trim()
+    .max(
+      RECIPE_FIELD_LIMITS.inspiredByMax,
+      `must be ${RECIPE_FIELD_LIMITS.inspiredByMax} characters or fewer`
+    )
+    .optional()
+    .default(""),
+  inspiredByUrl: inspiredByUrlSchema,
+  /** Ephemeral attestation — required to publish/save; never stored on the recipe. */
+  rightsAttested: z.literal(true, {
+    errorMap: () => ({
+      message:
+        "Confirm you wrote this recipe or have the right to share it",
+    }),
+  }),
 });
 
 export type RecipeInputPayload = z.infer<typeof recipeInputSchema>;
@@ -104,6 +132,9 @@ const FIELD_LABELS: Record<string, string> = {
   imageUrl: "Recipe photo",
   imageAlt: "Photo description",
   isPrivate: "Visibility",
+  inspiredBy: "Inspired by",
+  inspiredByUrl: "Inspired by link",
+  rightsAttested: "Rights confirmation",
 };
 
 type FlattenedRecipeErrors = {

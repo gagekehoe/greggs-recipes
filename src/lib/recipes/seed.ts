@@ -37,6 +37,8 @@ export const CAJUN_TUNA_BOWL_SEED: Recipe = {
   authorName: "Gregg",
   source: "local",
   isPrivate: false,
+  inspiredBy: "",
+  inspiredByUrl: "",
   updatedAt: "2026-09-14T20:00:00.000Z",
 };
 

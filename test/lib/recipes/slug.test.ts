@@ -22,6 +22,8 @@ function recipeStub(overrides: Partial<Recipe> = {}): Recipe {
     authorId: "user-1",
     authorName: "Cook",
     isPrivate: false,
+    inspiredBy: "",
+    inspiredByUrl: "",
     ...overrides,
   };
 }

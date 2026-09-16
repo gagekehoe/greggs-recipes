@@ -27,6 +27,7 @@ const validRecipe = {
   prepMinutes: 10,
   cookMinutes: 20,
   servings: 4,
+  rightsAttested: true as const,
 };
 
 describe("/api/recipes", () => {
