@@ -50,6 +50,8 @@ function mapRow(row: DbRecipe): Recipe {
     authorId: row.authorId,
     authorName: row.authorName,
     isPrivate: Boolean(row.isPrivate),
+    inspiredBy: row.inspiredBy?.trim() || "",
+    inspiredByUrl: row.inspiredByUrl?.trim() || "",
   };
 }
 
@@ -70,6 +72,8 @@ function rowValuesFromRecipe(recipe: Recipe) {
     authorId: recipe.authorId,
     authorName: recipe.authorName,
     isPrivate: recipe.isPrivate ?? false,
+    inspiredBy: recipe.inspiredBy?.trim() || "",
+    inspiredByUrl: recipe.inspiredByUrl?.trim() || "",
     updatedAt: new Date(recipe.updatedAt),
   };
 }
@@ -166,6 +170,8 @@ export async function createDbRecipe(input: RecipeInput): Promise<Recipe> {
     authorId: input.authorId,
     authorName: input.authorName,
     isPrivate: Boolean(input.isPrivate),
+    inspiredBy: input.inspiredBy?.trim() || "",
+    inspiredByUrl: input.inspiredByUrl?.trim() || "",
   };
 
   await db.insert(recipesTable).values(rowValuesFromRecipe(recipe));
@@ -204,6 +210,14 @@ export async function updateDbRecipe(
       input.isPrivate !== undefined
         ? Boolean(input.isPrivate)
         : current.isPrivate,
+    inspiredBy:
+      input.inspiredBy !== undefined
+        ? input.inspiredBy.trim()
+        : current.inspiredBy,
+    inspiredByUrl:
+      input.inspiredByUrl !== undefined
+        ? input.inspiredByUrl.trim()
+        : current.inspiredByUrl,
     source: "db",
     updatedAt: new Date().toISOString(),
   };

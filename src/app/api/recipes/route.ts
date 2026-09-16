@@ -65,13 +65,18 @@ export async function POST(request: Request) {
       );
     }
 
-    const data = parsed.data;
+    const { rightsAttested: _rightsAttested, ...data } = parsed.data;
     const { recipe, mode } = await createRecipe({
       ...data,
       imageUrl:
         typeof data.imageUrl === "string" ? data.imageUrl.trim() : undefined,
       tags: data.tags,
       isPrivate: Boolean(data.isPrivate),
+      inspiredBy: data.inspiredBy?.trim() || "",
+      inspiredByUrl:
+        typeof data.inspiredByUrl === "string"
+          ? data.inspiredByUrl.trim()
+          : "",
       authorId: user.id,
       authorName: publicAuthorLabel(user.name, user.email, {
         isSiteOwner: isSiteOwner(user),
@@ -119,13 +124,18 @@ export async function PATCH(request: Request) {
       );
     }
 
-    const data = parsed.data;
+    const { rightsAttested: _rightsAttested, ...data } = parsed.data;
     const result = await updateRecipe(id, {
       ...data,
       imageUrl:
         typeof data.imageUrl === "string" ? data.imageUrl.trim() : undefined,
       tags: data.tags,
       isPrivate: Boolean(data.isPrivate),
+      inspiredBy: data.inspiredBy?.trim() || "",
+      inspiredByUrl:
+        typeof data.inspiredByUrl === "string"
+          ? data.inspiredByUrl.trim()
+          : "",
     });
     if (!result) {
       return NextResponse.json({ error: "Recipe not found" }, { status: 404 });

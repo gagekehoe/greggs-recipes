@@ -19,6 +19,10 @@ export type Recipe = {
   authorName: string;
   /** Author-only when true; defaults false (public). */
   isPrivate: boolean;
+  /** Optional credit for a source that inspired the dish (detail page only). */
+  inspiredBy: string;
+  /** Optional link for the Inspired by credit. */
+  inspiredByUrl: string;
 };
 
 export type RecipeInput = {
@@ -36,4 +40,6 @@ export type RecipeInput = {
   authorName: string;
   /** Author-only when true; omit or false = public. */
   isPrivate?: boolean;
+  inspiredBy?: string;
+  inspiredByUrl?: string;
 };

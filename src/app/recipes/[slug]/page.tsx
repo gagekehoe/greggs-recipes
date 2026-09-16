@@ -160,6 +160,25 @@ export default async function RecipePage({ params }: Props) {
         <p className="mt-3 max-w-2xl text-base text-[var(--ink-muted)] md:text-lg">
           {recipe.summary}
         </p>
+        {recipe.inspiredBy.trim() ? (
+          <p className="mt-3 text-sm text-[var(--ink-soft)]">
+            Inspired by{" "}
+            {recipe.inspiredByUrl.trim() ? (
+              <a
+                href={recipe.inspiredByUrl.trim()}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-medium text-[var(--accent-deep)] underline-offset-4 hover:underline"
+              >
+                {recipe.inspiredBy.trim()}
+              </a>
+            ) : (
+              <span className="font-medium text-[var(--ink-muted)]">
+                {recipe.inspiredBy.trim()}
+              </span>
+            )}
+          </p>
+        ) : null}
         <RecipeAuthorCredit
           className="mt-4 text-sm"
           label={authorCredit.label}

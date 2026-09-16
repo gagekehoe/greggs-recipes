@@ -57,6 +57,8 @@ vi.mock("@/lib/recipes/local-store", () => ({
       authorId: "admin",
       authorName: "Gregg",
       isPrivate: false,
+      inspiredBy: "",
+      inspiredByUrl: "",
     },
   ],
   isLocalRecipeStoreWritable: () => true,
@@ -86,6 +88,8 @@ function recipe(partial: Partial<Recipe> = {}): Recipe {
     authorId: "u1",
     authorName: "Cook",
     isPrivate: false,
+    inspiredBy: "",
+    inspiredByUrl: "",
     ...partial,
   };
 }

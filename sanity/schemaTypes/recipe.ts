@@ -87,5 +87,18 @@ export const recipeType = defineType({
       description:
         "When true, only the author can see this recipe on Gregg's Recipes",
     }),
+    defineField({
+      name: "inspiredBy",
+      title: "Inspired by",
+      type: "string",
+      description:
+        "Optional credit shown on the recipe page (not on browse cards)",
+    }),
+    defineField({
+      name: "inspiredByUrl",
+      title: "Inspired by URL",
+      type: "url",
+      description: "Optional link for the Inspired by credit",
+    }),
   ],
 });

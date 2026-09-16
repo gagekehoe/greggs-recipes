@@ -91,6 +91,9 @@ export function RecipeEditor({
   const [servings, setServings] = useState(4);
   const [createPhotoFile, setCreatePhotoFile] = useState<File | null>(null);
   const [isPrivate, setIsPrivate] = useState(false);
+  const [inspiredBy, setInspiredBy] = useState("");
+  const [inspiredByUrl, setInspiredByUrl] = useState("");
+  const [rightsAttested, setRightsAttested] = useState(false);
   const [visibilitySavingId, setVisibilitySavingId] = useState<string | null>(
     null
   );
@@ -112,6 +115,9 @@ export function RecipeEditor({
     setCookMinutes(30);
     setServings(4);
     setIsPrivate(false);
+    setInspiredBy("");
+    setInspiredByUrl("");
+    setRightsAttested(false);
     setCreatePhotoFile(null);
     if (createPhotoRef.current) createPhotoRef.current.value = "";
   }
@@ -128,6 +134,9 @@ export function RecipeEditor({
     setCookMinutes(recipe.cookMinutes);
     setServings(recipe.servings);
     setIsPrivate(Boolean(recipe.isPrivate));
+    setInspiredBy(recipe.inspiredBy || "");
+    setInspiredByUrl(recipe.inspiredByUrl || "");
+    setRightsAttested(false);
     setCreatePhotoFile(null);
     if (createPhotoRef.current) createPhotoRef.current.value = "";
     setError(null);
@@ -161,6 +170,12 @@ export function RecipeEditor({
 
   async function saveRecipe(e: React.FormEvent) {
     e.preventDefault();
+    if (!rightsAttested) {
+      setError(
+        "Confirm you wrote this recipe or have the right to share it before saving."
+      );
+      return;
+    }
     setSaving(true);
     setError(null);
     setStatus(null);
@@ -193,6 +208,9 @@ export function RecipeEditor({
         imageUrl,
         imageAlt: imageUrl ? `${title.trim()} plated` : "",
         isPrivate,
+        inspiredBy: inspiredBy.trim(),
+        inspiredByUrl: inspiredByUrl.trim(),
+        rightsAttested: true as const,
       };
 
       const res = await fetch("/api/recipes", {
@@ -255,6 +273,9 @@ export function RecipeEditor({
           imageUrl: nextUrl,
           imageAlt: nextUrl ? `${recipe.title} plated` : "",
           isPrivate: recipe.isPrivate,
+          inspiredBy: recipe.inspiredBy || "",
+          inspiredByUrl: recipe.inspiredByUrl || "",
+          rightsAttested: true as const,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -321,6 +342,9 @@ export function RecipeEditor({
           imageUrl: recipe.imageUrl,
           imageAlt: recipe.imageAlt,
           isPrivate: nextPrivate,
+          inspiredBy: recipe.inspiredBy || "",
+          inspiredByUrl: recipe.inspiredByUrl || "",
+          rightsAttested: true as const,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -473,6 +497,30 @@ export function RecipeEditor({
             placeholder="soup, weeknight"
           />
         </div>
+        <div className="space-y-2 md:col-span-2">
+          <Label htmlFor="inspiredBy">Inspired by (optional)</Label>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Input
+              id="inspiredBy"
+              value={inspiredBy}
+              onChange={(e) => setInspiredBy(e.target.value)}
+              maxLength={RECIPE_FIELD_LIMITS.inspiredByMax}
+              placeholder="A cook, book, or site that sparked this dish"
+            />
+            <Input
+              id="inspiredByUrl"
+              type="url"
+              value={inspiredByUrl}
+              onChange={(e) => setInspiredByUrl(e.target.value)}
+              maxLength={RECIPE_FIELD_LIMITS.inspiredByUrlMax}
+              placeholder="https://… (optional link)"
+            />
+          </div>
+          <p className="text-xs text-[var(--ink-soft)]">
+            Shows on the recipe page only — not on browse cards. Credit a
+            source without claiming Gregg&apos;s Recipes cleared the original.
+          </p>
+        </div>
         <div className="space-y-2">
           <Label htmlFor="recipePhoto">
             {isEditing ? "Recipe photo" : "Recipe photo (optional)"}
@@ -603,6 +651,28 @@ export function RecipeEditor({
           </div>
         </div>
 
+        <div className="space-y-2 md:col-span-2">
+          <p className="text-sm text-[var(--ink-muted)]">
+            Cooks are responsible for what they post on Gregg&apos;s Recipes.
+            This is a shared kitchen — only share recipes and photos you wrote
+            or have the right to share.
+          </p>
+          <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[var(--line)] px-3 py-3 has-[:checked]:border-[var(--sage-deep)] has-[:checked]:bg-[var(--mist)]">
+            <input
+              id="rightsAttested"
+              type="checkbox"
+              className="mt-1"
+              checked={rightsAttested}
+              onChange={(e) => setRightsAttested(e.target.checked)}
+              required
+            />
+            <span className="text-sm text-[var(--ink)]">
+              I wrote this recipe or have the right to share it — it is not
+              copied verbatim from another site.
+            </span>
+          </label>
+        </div>
+
         {error ? (
           <p className="text-sm text-red-700 md:col-span-2" role="alert">
             {error}
@@ -619,7 +689,11 @@ export function RecipeEditor({
         ) : null}
 
         <div className="flex flex-wrap gap-3 md:col-span-2">
-          <Button type="submit" disabled={saving} className="min-w-40">
+          <Button
+            type="submit"
+            disabled={saving || !rightsAttested}
+            className="min-w-40"
+          >
             {saving
               ? isEditing
                 ? "Saving…"

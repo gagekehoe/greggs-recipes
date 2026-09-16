@@ -139,6 +139,10 @@ export const recipes = pgTable("recipe", {
   authorName: text("authorName").notNull(),
   /** When true, only the author (by authorId) may view or list this recipe. */
   isPrivate: boolean("isPrivate").notNull().default(false),
+  /** Optional attribution credit shown on the recipe detail page. */
+  inspiredBy: text("inspiredBy").notNull().default(""),
+  /** Optional https link for the Inspired by credit. */
+  inspiredByUrl: text("inspiredByUrl").notNull().default(""),
   updatedAt: timestamp("updatedAt", { mode: "date", withTimezone: true })
     .notNull()
     .$defaultFn(() => new Date()),
