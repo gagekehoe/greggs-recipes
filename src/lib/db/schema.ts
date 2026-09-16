@@ -18,6 +18,8 @@ export const users = sqliteTable("user", {
   email: text("email").notNull().unique(),
   emailVerified: integer("emailVerified", { mode: "timestamp_ms" }),
   image: text("image"),
+  /** bcrypt hash; null until the user sets a password (e.g. former magic-link accounts). */
+  passwordHash: text("passwordHash"),
   role: text("role", { enum: ROLES }).notNull().default("viewer"),
 });
 

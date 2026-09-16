@@ -59,7 +59,7 @@ See [hosting.md](./hosting.md) for the full env table.
 
 1. `npm run dev` → open a recipe
 2. As a guest: confirm reviews/comments are visible and CTAs link to `/signin`
-3. Sign in (magic link in the terminal if email keys are unset)
+3. Sign in with email + password (create an account on `/signin` if needed)
 4. Leave 1–5 stars, optional text, optional photos; edit/replace your one review
 5. Post a comment; delete your own
 6. As admin: delete someone else’s comment/review

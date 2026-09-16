@@ -1,17 +1,11 @@
 import { Suspense } from "react";
-import { SignInForm } from "@/components/auth/sign-in-form";
+import { ForgotPasswordForm } from "@/components/auth/forgot-password-form";
 
 export const metadata = {
-  title: "Sign in",
+  title: "Forgot password",
 };
 
-type Props = {
-  searchParams: Promise<{ error?: string; mode?: string }>;
-};
-
-export default async function SignInPage({ searchParams }: Props) {
-  const params = await searchParams;
-  const initialMode = params.mode === "register" ? "register" : "signin";
+export default function ForgotPasswordPage() {
   return (
     <div className="relative overflow-hidden">
       <div
@@ -22,7 +16,7 @@ export default async function SignInPage({ searchParams }: Props) {
         <p className="font-display text-2xl text-[var(--ink)]">Gregg&apos;s Recipes</p>
         <div className="mt-8">
           <Suspense fallback={<p className="text-[var(--ink-muted)]">Loading…</p>}>
-            <SignInForm error={params.error || null} initialMode={initialMode} />
+            <ForgotPasswordForm />
           </Suspense>
         </div>
       </div>

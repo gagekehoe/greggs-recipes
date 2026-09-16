@@ -9,7 +9,7 @@ How to put the site on a dedicated URL with Vercel and (optionally) a custom dom
 - A free [Neon](https://neon.tech) Postgres project (**required for production auth / reviews / recipes**)
 - Optional / legacy CMS: a free [Sanity](https://www.sanity.io/) project (Neon is preferred for the recipe catalog)
 - Optional: a domain you control
-- Email delivery for magic links in production: [Resend](https://resend.com) (or SMTP)
+- Email delivery for **password-reset** links in production: [Resend](https://resend.com)
 
 ## 2. Neon database (production Auth.js + reviews + recipes)
 
@@ -27,6 +27,7 @@ Local dev keeps using SQLite (`data/auth.sqlite`) when `DATABASE_URL` is unset. 
    - **Existing Neon DB** (auth already applied): run `drizzle/0001_recipe_catalog.sql` to add the `recipe` table + Cajun tuna bowl seed.
    - **Private recipes column:** run `drizzle/0002_recipe_privacy.sql` (or `npm run db:push`) so `recipe.isPrivate` exists. See [docs/private-recipes.md](./private-recipes.md).
    - **Owner role:** run `drizzle/0003_owner_role.sql` (or sign in once as `ADMIN_EMAIL`) so the bootstrap account moves from `admin` → `owner`. Other admins stay `admin`.
+   - **Password auth:** run `drizzle/0005_password_hash.sql` (or `npm run db:push`) so `user.passwordHash` exists. Existing magic-link users set a password via Forgot password.
 4. Set `DATABASE_URL` on Vercel (see env table below) and redeploy.
 
 Schema source for Postgres: `src/lib/db/schema.pg.ts` (Drizzle). Local SQLite schema remains in `src/lib/db/schema.ts`.
@@ -45,7 +46,7 @@ If `DATABASE_URL` is missing on Vercel, **public recipe pages still load** from 
 | `AUTH_SECRET` | Yes | Long random string (`openssl rand -base64 32`) |
 | `AUTH_URL` | Yes (prod) | Canonical site URL: `https://www.greggsrecipes.com` (must match Production host) |
 | `ADMIN_EMAIL` | Yes | Bootstrap admin — `gagekehoe17@gmail.com` |
-| `AUTH_RESEND_KEY` | Prod email | Resend API key so magic links are emailed |
+| `AUTH_RESEND_KEY` | Prod email | Resend API key so password-reset emails are sent |
 | `EMAIL_FROM` | With Resend | Prefer a verified sender on your domain, e.g. `Gregg's Recipes <noreply@greggsrecipes.com>` (avoid bare `onboarding@resend.dev` in production — mismatched From/link domains look phishing-like) |
 | `NEXT_PUBLIC_SANITY_PROJECT_ID` | For CMS | From Sanity project settings |
 | `NEXT_PUBLIC_SANITY_DATASET` | For CMS | Usually `production` |
@@ -71,7 +72,7 @@ EMAIL_FROM=Gregg's Recipes <noreply@greggsrecipes.com>
 
 Verify in Vercel that `AUTH_URL` is **`https://www.greggsrecipes.com`** — that is
 the Production host. Apex `greggsrecipes.com` should 308 → www (do not flip
-primary to apex). Magic links and Auth.js callbacks must match www. Blob uploads
+primary to apex). Password-reset links and Auth.js callbacks must match www. Blob uploads
 are host-agnostic (`*.blob.vercel-storage.com`); a blank External API target in
 logs usually means Blob was called with a missing/empty token URL rather than a
 www/apex mismatch.
@@ -120,7 +121,7 @@ Do **not** make apex primary. Metadata / sitemap / `AUTH_URL` all use www.
    - **www:** `CNAME` to `cname.vercel-dns.com`
    - **Apex:** `A` record to `76.76.21.21` (confirm in the Vercel UI)
 4. Wait for DNS propagation. Vercel issues HTTPS automatically.
-5. Set `AUTH_URL=https://www.greggsrecipes.com` and redeploy so magic links match Production.
+5. Set `AUTH_URL=https://www.greggsrecipes.com` and redeploy so password-reset links match Production.
 
 ## 5. Content after go-live
 

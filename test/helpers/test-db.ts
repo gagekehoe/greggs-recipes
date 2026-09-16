@@ -9,6 +9,7 @@ const SCHEMA_SQL = `
     email TEXT NOT NULL UNIQUE,
     emailVerified INTEGER,
     image TEXT,
+    passwordHash TEXT,
     role TEXT NOT NULL DEFAULT 'viewer'
   );
   CREATE TABLE IF NOT EXISTS account (

@@ -1,6 +1,6 @@
 import NextAuth from "next-auth";
 import { DrizzleAdapter } from "@auth/drizzle-adapter";
-import Nodemailer from "next-auth/providers/nodemailer";
+import Credentials from "next-auth/providers/credentials";
 import { eq } from "drizzle-orm";
 import {
   accounts,
@@ -16,59 +16,11 @@ import {
   ensureOwnerRole,
   migrateBootstrapAdminToOwner,
 } from "@/lib/auth/owner-bootstrap";
-import { toFriendlyMagicLinkUrl } from "@/lib/auth/friendly-magic-link";
+import {
+  normalizeEmail,
+  verifyPassword,
+} from "@/lib/auth/password";
 import { safeAuthRedirect } from "@/lib/auth/safe-auth-redirect";
-
-async function sendMagicLink({
-  identifier,
-  url,
-}: {
-  identifier: string;
-  url: string;
-  provider: { from?: string };
-}) {
-  // Prefer /signin/verify in email so Safe Browsing doesn't see the Auth.js API path.
-  const magicLink = toFriendlyMagicLinkUrl(url);
-  const from =
-    process.env.EMAIL_FROM || "Gregg's Recipes <onboarding@resend.dev>";
-  const resendKey = process.env.AUTH_RESEND_KEY || process.env.RESEND_API_KEY;
-
-  if (resendKey) {
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${resendKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from,
-        to: identifier,
-        subject: "Sign in to Gregg's Recipes",
-        html: `
-          <p>This is your sign-in link for <strong>Gregg's Recipes</strong>
-          (<a href="https://greggsrecipes.com">greggsrecipes.com</a>) —
-          a shared recipe site for cooks.</p>
-          <p><a href="${magicLink}">Continue signing in to Gregg's Recipes</a></p>
-          <p style="color:#555;font-size:14px;">Or paste this URL into your browser:<br/>${magicLink}</p>
-          <p>No password. Nothing to download. The link expires soon.
-          If you didn't request this, you can ignore this email.</p>
-        `,
-        text: `Sign in to Gregg's Recipes (greggsrecipes.com)\n\nContinue: ${magicLink}\n\nNo password. Nothing to download. If you didn't request this, ignore this email.\n`,
-      }),
-    });
-    if (!res.ok) {
-      const body = await res.text();
-      throw new Error(`Resend failed: ${res.status} ${body}`);
-    }
-    return;
-  }
-
-  // Local / no provider: print the magic link so demos still work.
-  console.log("\n========================================");
-  console.log(`[auth] Magic link for ${identifier}`);
-  console.log(magicLink);
-  console.log("========================================\n");
-}
 
 const databaseReady = isDatabaseConfigured();
 
@@ -81,69 +33,146 @@ if (!databaseReady) {
 export const { handlers, auth, signIn, signOut } = NextAuth({
   adapter: databaseReady
     ? DrizzleAdapter(db, {
-        // Active dialect tables (SQLite locally, Postgres when DATABASE_URL is set).
         usersTable: users as never,
         accountsTable: accounts as never,
         sessionsTable: sessions as never,
         verificationTokensTable: verificationTokens as never,
       })
     : undefined,
+  // Credentials requires JWT sessions (Auth.js). Role/name stay fresh via DB lookup below.
   session: {
-    // Database sessions when Drizzle/Neon (or local SQLite) is available.
-    // JWT avoids crashing /api/auth/session on Vercel before DATABASE_URL is set.
-    strategy: databaseReady ? "database" : "jwt",
+    strategy: "jwt",
   },
   providers: [
-    Nodemailer({
-      // Unused when sendVerificationRequest is custom; required by the provider type.
-      server: process.env.EMAIL_SERVER || "smtp://127.0.0.1:1025",
-      from: process.env.EMAIL_FROM || "Gregg's Recipes <noreply@greggsrecipes.local>",
-      sendVerificationRequest: async ({ identifier, url, provider }) => {
+    Credentials({
+      id: "credentials",
+      name: "Email and password",
+      credentials: {
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
+      },
+      async authorize(credentials) {
         if (!isDatabaseConfigured()) {
-          console.error(
-            `[auth] Refusing magic link for ${identifier}: DATABASE_URL is not configured.`
-          );
-          throw new Error(
-            "Sign-in is temporarily unavailable. The site database is not configured."
-          );
+          throw new Error("Sign-in is temporarily unavailable.");
         }
-        await sendMagicLink({ identifier, url, provider });
+
+        const emailRaw =
+          typeof credentials?.email === "string" ? credentials.email : "";
+        const password =
+          typeof credentials?.password === "string" ? credentials.password : "";
+        const email = normalizeEmail(emailRaw);
+
+        if (!email || !password) {
+          return null;
+        }
+
+        const rows = await db
+          .select({
+            id: users.id,
+            name: users.name,
+            email: users.email,
+            image: users.image,
+            role: users.role,
+            passwordHash: users.passwordHash,
+          })
+          .from(users)
+          .where(eq(users.email, email))
+          .limit(1);
+
+        const row = rows[0] as
+          | {
+              id: string;
+              name: string | null;
+              email: string;
+              image: string | null;
+              role: Role;
+              passwordHash: string | null;
+            }
+          | undefined;
+
+        if (!row?.passwordHash) {
+          // No account, or legacy magic-link account without a password yet.
+          return null;
+        }
+
+        const ok = await verifyPassword(password, row.passwordHash);
+        if (!ok) return null;
+
+        const role: Role = isAdminEmail(row.email) ? "owner" : row.role;
+        return {
+          id: row.id,
+          name: row.name,
+          email: row.email,
+          image: row.image,
+          role,
+        };
       },
     }),
   ],
   pages: {
     signIn: "/signin",
-    verifyRequest: "/signin?sent=1",
     error: "/signin",
   },
   callbacks: {
-    // Required for Safe Browsing / GSC "deceptive pages": never open-redirect
-    // off-site via callbackUrl after magic-link or OAuth-style flows.
     async redirect({ url, baseUrl }) {
       return safeAuthRedirect(url, baseUrl);
     },
-    async session({ session, user, token }) {
-      if (session.user) {
-        const id = user?.id || (token?.sub as string | undefined);
-        if (id) session.user.id = id;
-        const role = ((user as { role?: Role } | undefined)?.role ||
-          (token?.role as Role | undefined) ||
-          "viewer") as Role;
-        const email = user?.email ?? session.user.email;
-        // Bootstrap overlay: ADMIN_EMAIL is always treated as owner in-session.
-        session.user.role = isAdminEmail(email) ? "owner" : role;
+    async jwt({ token, user }) {
+      if (user) {
+        token.sub = user.id;
+        token.role = (user as { role?: Role }).role || "viewer";
+        token.email = user.email;
+        token.name = user.name;
       }
+      return token;
+    },
+    async session({ session, token }) {
+      if (!session.user) return session;
+
+      const id = (token.sub as string | undefined) || undefined;
+      if (id) session.user.id = id;
+
+      if (id && isDatabaseConfigured()) {
+        try {
+          const rows = await db
+            .select({
+              name: users.name,
+              email: users.email,
+              role: users.role,
+              image: users.image,
+            })
+            .from(users)
+            .where(eq(users.id, id))
+            .limit(1);
+          const row = rows[0] as
+            | {
+                name: string | null;
+                email: string;
+                role: Role;
+                image: string | null;
+              }
+            | undefined;
+          if (row) {
+            session.user.name = row.name;
+            session.user.email = row.email;
+            session.user.image = row.image;
+            session.user.role = isAdminEmail(row.email) ? "owner" : row.role;
+            return session;
+          }
+        } catch (error) {
+          console.error("[auth] session DB refresh failed:", error);
+        }
+      }
+
+      const role = (token.role as Role | undefined) || "viewer";
+      const email = (token.email as string | undefined) ?? session.user.email;
+      session.user.role = isAdminEmail(email) ? "owner" : role;
       return session;
     },
   },
   events: {
-    async createUser({ user }) {
-      if (!user.id || !isDatabaseConfigured()) return;
-      await migrateBootstrapAdminToOwner();
-      const role: Role = isAdminEmail(user.email) ? "owner" : "viewer";
-      await db.update(users).set({ role }).where(eq(users.id, user.id));
-    },
     async signIn({ user }) {
+      if (!isDatabaseConfigured()) return;
       await migrateBootstrapAdminToOwner();
       if (user.id) {
         await ensureOwnerRole(user.id, user.email);
