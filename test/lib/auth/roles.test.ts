@@ -12,6 +12,7 @@ import {
   isAdminEmail,
   isRole,
   isSiteOwner,
+  roleWithVerifiedOwnerBootstrap,
 } from "@/lib/auth/roles";
 
 describe("isRole", () => {
@@ -171,6 +172,26 @@ describe("admin email bootstrap helpers", () => {
     expect(isAdminEmail("Admin@Example.com")).toBe(true);
     expect(isAdminEmail(" other@example.com ")).toBe(false);
     expect(isAdminEmail(null)).toBe(false);
+  });
+
+  it("promotes ADMIN_EMAIL to owner only when emailVerified is set", () => {
+    process.env.ADMIN_EMAIL = "owner@example.com";
+    expect(
+      roleWithVerifiedOwnerBootstrap("owner@example.com", "viewer", null)
+    ).toBe("viewer");
+    expect(
+      roleWithVerifiedOwnerBootstrap(
+        "owner@example.com",
+        "viewer",
+        new Date()
+      )
+    ).toBe("owner");
+    expect(
+      roleWithVerifiedOwnerBootstrap("cook@example.com", "cook", new Date())
+    ).toBe("cook");
+    expect(
+      roleWithVerifiedOwnerBootstrap("anyone@example.com", "owner", null)
+    ).toBe("owner");
   });
 });
 

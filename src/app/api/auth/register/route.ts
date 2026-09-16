@@ -7,12 +7,8 @@ import {
   normalizeEmail,
   validatePassword,
 } from "@/lib/auth/password";
-import { isAdminEmail } from "@/lib/auth/roles";
-import {
-  migrateBootstrapAdminToOwner,
-} from "@/lib/auth/owner-bootstrap";
+import { migrateBootstrapAdminToOwner } from "@/lib/auth/owner-bootstrap";
 import { db, isDatabaseConfigured, users } from "@/lib/db";
-import type { Role } from "@/lib/db/schema";
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -67,12 +63,12 @@ export async function POST(request: Request) {
   const passwordHash = await hashPassword(parsed.data.password);
 
   await migrateBootstrapAdminToOwner();
-  const role: Role = isAdminEmail(email) ? "owner" : "viewer";
+  // Never grant Owner at signup, and never mark emailVerified until the inbox
+  // is proven (forgot/reset). ADMIN_EMAIL is promoted only after verification.
   await db.insert(users).values({
     email,
     passwordHash,
-    role,
-    emailVerified: new Date(),
+    role: "viewer",
   });
 
   return NextResponse.json({ ok: true });

@@ -109,7 +109,7 @@ describe("authorizeCredentials", () => {
     await expect(authorizeCredentials(undefined)).resolves.toBeNull();
   });
 
-  it("promotes the bootstrap admin email to owner on success", async () => {
+  it("does not promote unverified ADMIN_EMAIL to owner on password login", async () => {
     const { db, users } = await import("@/lib/db");
     const { authorizeCredentials } = await import("@/lib/auth/credentials");
     const passwordHash = await hashPassword("password123");
@@ -120,6 +120,32 @@ describe("authorizeCredentials", () => {
       name: "Gage",
       role: "viewer",
       passwordHash,
+      emailVerified: null,
+    });
+
+    await expect(
+      authorizeCredentials({
+        email: "owner@example.com",
+        password: "password123",
+      })
+    ).resolves.toMatchObject({
+      id: "u-owner",
+      role: "viewer",
+    });
+  });
+
+  it("promotes verified ADMIN_EMAIL to owner on password login", async () => {
+    const { db, users } = await import("@/lib/db");
+    const { authorizeCredentials } = await import("@/lib/auth/credentials");
+    const passwordHash = await hashPassword("password123");
+
+    await db.insert(users).values({
+      id: "u-owner",
+      email: "owner@example.com",
+      name: "Gage",
+      role: "viewer",
+      passwordHash,
+      emailVerified: new Date(),
     });
 
     await expect(

@@ -108,6 +108,8 @@ describe("POST /api/auth/register", () => {
         passwordHash: expect.any(String),
       })
     );
+    const inserted = insertValues.mock.calls[0][0] as Record<string, unknown>;
+    expect(inserted.emailVerified).toBeUndefined();
   });
 
   it("rejects a duplicate email that already has a password", async () => {
@@ -142,7 +144,7 @@ describe("POST /api/auth/register", () => {
     expect(updateSet).not.toHaveBeenCalled();
   });
 
-  it("assigns owner role when registering the admin email", async () => {
+  it("registers ADMIN_EMAIL as viewer without emailVerified or Owner", async () => {
     const { POST } = await import("@/app/api/auth/register/route");
     selectLimit.mockResolvedValue([]);
 
@@ -153,8 +155,12 @@ describe("POST /api/auth/register", () => {
     expect(insertValues).toHaveBeenCalledWith(
       expect.objectContaining({
         email: "owner@example.com",
-        role: "owner",
+        role: "viewer",
+        passwordHash: expect.any(String),
       })
     );
+    const inserted = insertValues.mock.calls[0][0] as Record<string, unknown>;
+    expect(inserted.emailVerified).toBeUndefined();
+    expect(inserted.role).not.toBe("owner");
   });
 });

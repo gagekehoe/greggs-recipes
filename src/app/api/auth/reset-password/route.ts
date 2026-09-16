@@ -8,6 +8,7 @@ import {
   validatePassword,
 } from "@/lib/auth/password";
 import { consumePasswordResetToken } from "@/lib/auth/password-reset";
+import { ensureOwnerRole } from "@/lib/auth/owner-bootstrap";
 import { db, isDatabaseConfigured, users } from "@/lib/db";
 
 const schema = z.object({
@@ -59,7 +60,7 @@ export async function POST(request: Request) {
   }
 
   const existing = await db
-    .select({ id: users.id })
+    .select({ id: users.id, email: users.email })
     .from(users)
     .where(eq(users.email, email))
     .limit(1);
@@ -76,6 +77,9 @@ export async function POST(request: Request) {
     .update(users)
     .set({ passwordHash, emailVerified: new Date() })
     .where(eq(users.id, existing[0].id));
+
+  // Inbox proven via reset token — promote ADMIN_EMAIL to Owner if applicable.
+  await ensureOwnerRole(existing[0].id, existing[0].email);
 
   return NextResponse.json({ ok: true });
 }

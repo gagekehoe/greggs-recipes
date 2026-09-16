@@ -24,13 +24,28 @@ export async function migrateBootstrapAdminToOwner(): Promise<void> {
   }
 }
 
-/** Ensure ADMIN_EMAIL always holds the owner role (bootstrap + sign-in). */
+/**
+ * Promote ADMIN_EMAIL to owner only after the inbox is proven (`emailVerified`).
+ * Unverified signup with that address must remain a normal viewer.
+ */
 export async function ensureOwnerRole(
   userId: string,
   email: string | null | undefined
 ): Promise<void> {
   if (!isAdminEmail(email) || !isDatabaseConfigured()) return;
   try {
+    const rows = await db
+      .select({
+        emailVerified: users.emailVerified,
+        role: users.role,
+      })
+      .from(users)
+      .where(eq(users.id, userId))
+      .limit(1);
+    const row = rows[0] as
+      | { emailVerified: Date | null; role: string }
+      | undefined;
+    if (!row?.emailVerified || row.role === "owner") return;
     await db.update(users).set({ role: "owner" }).where(eq(users.id, userId));
   } catch (error) {
     console.error("[auth] ensureOwnerRole failed:", error);
