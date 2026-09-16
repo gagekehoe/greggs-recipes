@@ -3,11 +3,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const selectLimit = vi.fn();
 const updateSet = vi.fn();
 const consumePasswordResetToken = vi.fn();
+const ensureOwnerRole = vi.fn();
 let databaseConfigured = true;
 
 vi.mock("@/lib/auth/password-reset", () => ({
   consumePasswordResetToken: (...a: unknown[]) =>
     consumePasswordResetToken(...a),
+}));
+
+vi.mock("@/lib/auth/owner-bootstrap", () => ({
+  ensureOwnerRole: (...a: unknown[]) => ensureOwnerRole(...a),
 }));
 
 vi.mock("@/lib/db", async () => {
@@ -48,7 +53,8 @@ describe("POST /api/auth/reset-password", () => {
     vi.clearAllMocks();
     databaseConfigured = true;
     consumePasswordResetToken.mockResolvedValue(true);
-    selectLimit.mockResolvedValue([{ id: "u1" }]);
+    ensureOwnerRole.mockResolvedValue(undefined);
+    selectLimit.mockResolvedValue([{ id: "u1", email: "cook@example.com" }]);
   });
 
   it("returns 503 when the database is unavailable", async () => {
@@ -133,7 +139,9 @@ describe("POST /api/auth/reset-password", () => {
   it("sets a new password with a valid token", async () => {
     const { POST } = await import("@/app/api/auth/reset-password/route");
     consumePasswordResetToken.mockResolvedValue(true);
-    selectLimit.mockResolvedValue([{ id: "u1" }]);
+    selectLimit.mockResolvedValue([
+      { id: "u1", email: "cook@example.com" },
+    ]);
 
     const res = await POST(
       post({
@@ -154,5 +162,6 @@ describe("POST /api/auth/reset-password", () => {
         emailVerified: expect.any(Date),
       })
     );
+    expect(ensureOwnerRole).toHaveBeenCalledWith("u1", "cook@example.com");
   });
 });

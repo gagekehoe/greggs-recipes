@@ -11,7 +11,7 @@ import {
   verificationTokens,
 } from "@/lib/db";
 import type { Role } from "@/lib/db/schema";
-import { getAdminEmail, isAdminEmail } from "@/lib/auth/roles";
+import { getAdminEmail, roleWithVerifiedOwnerBootstrap } from "@/lib/auth/roles";
 import {
   ensureOwnerRole,
   migrateBootstrapAdminToOwner,
@@ -84,6 +84,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               email: users.email,
               role: users.role,
               image: users.image,
+              emailVerified: users.emailVerified,
             })
             .from(users)
             .where(eq(users.id, id))
@@ -94,13 +95,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 email: string;
                 role: Role;
                 image: string | null;
+                emailVerified: Date | null;
               }
             | undefined;
           if (row) {
             session.user.name = row.name;
             session.user.email = row.email;
             session.user.image = row.image;
-            session.user.role = isAdminEmail(row.email) ? "owner" : row.role;
+            session.user.role = roleWithVerifiedOwnerBootstrap(
+              row.email,
+              row.role,
+              row.emailVerified
+            );
             return session;
           }
         } catch (error) {
@@ -108,9 +114,9 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         }
       }
 
+      // Fallback without a fresh DB row: trust token role only (never email alone).
       const role = (token.role as Role | undefined) || "viewer";
-      const email = (token.email as string | undefined) ?? session.user.email;
-      session.user.role = isAdminEmail(email) ? "owner" : role;
+      session.user.role = role;
       return session;
     },
   },

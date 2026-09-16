@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { eq } from "drizzle-orm";
 
 const sendPasswordResetEmail = vi.fn();
 
@@ -219,5 +220,90 @@ describe("auth password flow (integration)", () => {
     );
     expect(unknown.status).toBe(200);
     expect(sendPasswordResetEmail).toHaveBeenCalledTimes(1);
+  });
+
+  it("registers ADMIN_EMAIL as viewer until reset proves the inbox", async () => {
+    const { db, users } = await import("@/lib/db");
+    const { POST: register } = await import("@/app/api/auth/register/route");
+    const { POST: forgot } = await import(
+      "@/app/api/auth/forgot-password/route"
+    );
+    const { POST: reset } = await import("@/app/api/auth/reset-password/route");
+    const { authorizeCredentials } = await import("@/lib/auth/credentials");
+
+    const registerRes = await register(
+      new Request("http://x/api/auth/register", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          email: "owner@example.com",
+          password: "first-pass-1",
+        }),
+      })
+    );
+    expect(registerRes.status).toBe(200);
+
+    const rows = await db
+      .select({
+        role: users.role,
+        emailVerified: users.emailVerified,
+      })
+      .from(users)
+      .where(eq(users.email, "owner@example.com"))
+      .limit(1);
+    expect(rows[0]).toMatchObject({
+      role: "viewer",
+      emailVerified: null,
+    });
+
+    await expect(
+      authorizeCredentials({
+        email: "owner@example.com",
+        password: "first-pass-1",
+      })
+    ).resolves.toMatchObject({ role: "viewer" });
+
+    const forgotRes = await forgot(
+      new Request("http://x/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: "owner@example.com" }),
+      })
+    );
+    expect(forgotRes.status).toBe(200);
+    const rawToken = new URL(
+      (sendPasswordResetEmail.mock.calls[0][0] as { url: string }).url
+    ).searchParams.get("token")!;
+
+    const resetRes = await reset(
+      new Request("http://x/api/auth/reset-password", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          email: "owner@example.com",
+          token: rawToken,
+          password: "verified-pass-2",
+        }),
+      })
+    );
+    expect(resetRes.status).toBe(200);
+
+    const after = await db
+      .select({
+        role: users.role,
+        emailVerified: users.emailVerified,
+      })
+      .from(users)
+      .where(eq(users.email, "owner@example.com"))
+      .limit(1);
+    expect(after[0]?.emailVerified).toBeTruthy();
+    expect(after[0]?.role).toBe("owner");
+
+    await expect(
+      authorizeCredentials({
+        email: "owner@example.com",
+        password: "verified-pass-2",
+      })
+    ).resolves.toMatchObject({ role: "owner" });
   });
 });

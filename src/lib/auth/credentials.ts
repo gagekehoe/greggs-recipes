@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db, isDatabaseConfigured, users } from "@/lib/db";
 import type { Role } from "@/lib/db/schema";
-import { isAdminEmail } from "@/lib/auth/roles";
+import { roleWithVerifiedOwnerBootstrap } from "@/lib/auth/roles";
 import { normalizeEmail, verifyPassword } from "@/lib/auth/password";
 
 export type CredentialsUser = {
@@ -44,6 +44,7 @@ export async function authorizeCredentials(
       image: users.image,
       role: users.role,
       passwordHash: users.passwordHash,
+      emailVerified: users.emailVerified,
     })
     .from(users)
     .where(eq(users.email, email))
@@ -57,6 +58,7 @@ export async function authorizeCredentials(
         image: string | null;
         role: Role;
         passwordHash: string | null;
+        emailVerified: Date | null;
       }
     | undefined;
 
@@ -68,7 +70,11 @@ export async function authorizeCredentials(
   const ok = await verifyPassword(password, row.passwordHash);
   if (!ok) return null;
 
-  const role: Role = isAdminEmail(row.email) ? "owner" : row.role;
+  const role: Role = roleWithVerifiedOwnerBootstrap(
+    row.email,
+    row.role,
+    row.emailVerified
+  );
   return {
     id: row.id,
     name: row.name,

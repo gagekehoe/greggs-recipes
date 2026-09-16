@@ -114,6 +114,21 @@ export function isAdminEmail(email: string | null | undefined): boolean {
   return email.trim().toLowerCase() === getAdminEmail();
 }
 
+/**
+ * ADMIN_EMAIL may become Owner only after the inbox is proven (`emailVerified`).
+ * Existing `owner` rows stay owner. Unverified ADMIN_EMAIL keeps the stored role
+ * (register always inserts `viewer`).
+ */
+export function roleWithVerifiedOwnerBootstrap(
+  email: string | null | undefined,
+  role: Role,
+  emailVerified: Date | null | undefined
+): Role {
+  if (role === "owner") return "owner";
+  if (isAdminEmail(email) && emailVerified) return "owner";
+  return role;
+}
+
 /** Site owner role (Gregg). Badge and public name — not email heuristics. */
 export function isSiteOwner(user: { role?: string | null }): boolean {
   return user.role === "owner";
