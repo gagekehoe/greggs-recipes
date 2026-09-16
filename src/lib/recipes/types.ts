@@ -17,6 +17,8 @@ export type Recipe = {
   updatedAt: string;
   authorId: string;
   authorName: string;
+  /** Author-only when true; defaults false (public). */
+  isPrivate: boolean;
 };
 
 export type RecipeInput = {
@@ -32,4 +34,6 @@ export type RecipeInput = {
   imageAlt?: string;
   authorId: string;
   authorName: string;
+  /** Author-only when true; omit or false = public. */
+  isPrivate?: boolean;
 };

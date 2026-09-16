@@ -6,6 +6,7 @@ import { RecipeCommentsSection } from "@/components/recipes/recipe-comments";
 import { RecipePhoto } from "@/components/recipes/recipe-photo";
 import { RecipeReviewsSection } from "@/components/recipes/recipe-reviews";
 import { isDisplayNameSet } from "@/lib/auth/profile";
+import { canViewRecipe } from "@/lib/auth/roles";
 import { getSessionUser } from "@/lib/auth/session";
 import { getRecipe, totalMinutes } from "@/lib/recipes";
 import {
@@ -24,7 +25,8 @@ type Props = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const { recipe } = await getRecipe(slug);
-  if (!recipe) {
+  const user = await getSessionUser();
+  if (!recipe || !canViewRecipe(recipe, user?.id)) {
     return {
       title: "Recipe not found",
       robots: { index: false, follow: false },
@@ -38,6 +40,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: recipe.title,
     description: recipe.summary,
+    robots: recipe.isPrivate
+      ? { index: false, follow: false }
+      : undefined,
     alternates: {
       canonical: canonicalPath,
     },
@@ -66,6 +71,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 export default async function RecipePage({ params }: Props) {
   const { slug } = await params;
   const { recipe, error } = await getRecipe(slug);
+  const user = await getSessionUser();
 
   if (!recipe) {
     if (error) {
@@ -87,8 +93,11 @@ export default async function RecipePage({ params }: Props) {
     notFound();
   }
 
+  if (!canViewRecipe(recipe, user?.id)) {
+    notFound();
+  }
+
   const minutes = totalMinutes(recipe);
-  const user = await getSessionUser();
   const [reviews, summary, comments] = await Promise.all([
     listReviewsForRecipe(recipe.id),
     getRatingSummary(recipe.id),

@@ -139,6 +139,8 @@ export const recipes = sqliteTable("recipe", {
   imageAlt: text("imageAlt").notNull().default(""),
   authorId: text("authorId").notNull(),
   authorName: text("authorName").notNull(),
+  /** When true, only the author (by authorId) may view or list this recipe. */
+  isPrivate: integer("isPrivate", { mode: "boolean" }).notNull().default(false),
   updatedAt: integer("updatedAt", { mode: "timestamp_ms" })
     .notNull()
     .$defaultFn(() => new Date()),

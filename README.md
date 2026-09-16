@@ -40,13 +40,13 @@ Leave `AUTH_RESEND_KEY` unset. Request a magic link on `/signin`, then copy the 
 | `cook` | Add / edit / delete **own** recipes; reviews & comments |
 | `admin` | Manage **any** recipe + `/people` roles; moderate reviews/comments |
 
-Reviews & comments details: [docs/reviews-comments.md](./docs/reviews-comments.md). Testing notes: [docs/testing.md](./docs/testing.md). Recipe photo placeholders: [docs/recipe-photo-fallbacks.md](./docs/recipe-photo-fallbacks.md). Recipe photo uploads (Vercel Blob): see `.env.example` (`BLOB_READ_WRITE_TOKEN`).
+Reviews & comments details: [docs/reviews-comments.md](./docs/reviews-comments.md). Testing notes: [docs/testing.md](./docs/testing.md). Recipe photo placeholders: [docs/recipe-photo-fallbacks.md](./docs/recipe-photo-fallbacks.md). Recipe photo uploads (Vercel Blob): see `.env.example` (`BLOB_READ_WRITE_TOKEN`). Private recipes (author-only): [docs/private-recipes.md](./docs/private-recipes.md).
 
 ## How content works
 
 ### Production path (Neon / SQLite)
 
-When a database is configured (`DATABASE_URL` on Vercel, or local SQLite), recipes live in the `recipe` table. Browse Recipes and `/api/recipes` read from the DB. Cooks/admins publish via `/my-recipes` without a redeploy.
+When a database is configured (`DATABASE_URL` on Vercel, or local SQLite), recipes live in the `recipe` table. Browse Recipes and `/api/recipes` read from the DB. Cooks/admins publish via `/my-recipes` without a redeploy. Recipes marked **Private (only me)** stay off the public catalog and return 404 for everyone except the author.
 
 A fresh database is seeded with **Extra-Saucy Late-Night Cajun Tuna Bowl** (photo + author Gregg). See [docs/production-recipes.md](./docs/production-recipes.md).
 

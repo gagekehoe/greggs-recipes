@@ -36,7 +36,9 @@ export default async function MyRecipesPage() {
     );
   }
 
-  const { recipes } = await listRecipes();
+  const { recipes } = await listRecipes({
+    includePrivateForUserId: user.id,
+  });
   const visible =
     user.role === "admin"
       ? recipes

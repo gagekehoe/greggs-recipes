@@ -49,6 +49,7 @@ function mapRow(row: DbRecipe): Recipe {
     updatedAt: toIso(row.updatedAt),
     authorId: row.authorId,
     authorName: row.authorName,
+    isPrivate: Boolean(row.isPrivate),
   };
 }
 
@@ -68,6 +69,7 @@ function rowValuesFromRecipe(recipe: Recipe) {
     imageAlt: recipe.imageAlt,
     authorId: recipe.authorId,
     authorName: recipe.authorName,
+    isPrivate: recipe.isPrivate ?? false,
     updatedAt: new Date(recipe.updatedAt),
   };
 }
@@ -163,6 +165,7 @@ export async function createDbRecipe(input: RecipeInput): Promise<Recipe> {
     updatedAt: new Date().toISOString(),
     authorId: input.authorId,
     authorName: input.authorName,
+    isPrivate: Boolean(input.isPrivate),
   };
 
   await db.insert(recipesTable).values(rowValuesFromRecipe(recipe));
@@ -197,6 +200,10 @@ export async function updateDbRecipe(
       (input.imageUrl?.trim() || current.imageUrl
         ? `${input.title.trim()} plated`
         : ""),
+    isPrivate:
+      input.isPrivate !== undefined
+        ? Boolean(input.isPrivate)
+        : current.isPrivate,
     source: "db",
     updatedAt: new Date().toISOString(),
   };

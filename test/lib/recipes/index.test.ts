@@ -56,6 +56,7 @@ vi.mock("@/lib/recipes/local-store", () => ({
       updatedAt: "2026-09-14T20:00:00.000Z",
       authorId: "admin",
       authorName: "Gregg",
+      isPrivate: false,
     },
   ],
   isLocalRecipeStoreWritable: () => true,
@@ -84,6 +85,7 @@ function recipe(partial: Partial<Recipe> = {}): Recipe {
     updatedAt: "2026-01-01T00:00:00.000Z",
     authorId: "u1",
     authorName: "Cook",
+    isPrivate: false,
     ...partial,
   };
 }
@@ -120,6 +122,32 @@ describe("recipes facade", () => {
       recipes: [recipe({ source: "db", id: "db-1" })],
       mode: "db",
     });
+  });
+
+  it("hides private recipes from the public catalog and shows them to the author", async () => {
+    isSanityConfigured.mockReturnValue(false);
+    listLocalRecipes.mockResolvedValue([
+      recipe({ id: "pub", title: "Public soup" }),
+      recipe({
+        id: "priv",
+        title: "Secret stew",
+        isPrivate: true,
+        authorId: "u1",
+      }),
+      recipe({
+        id: "other-priv",
+        title: "Someone else",
+        isPrivate: true,
+        authorId: "other",
+      }),
+    ]);
+    const { listRecipes } = await import("@/lib/recipes");
+
+    const publicList = await listRecipes();
+    expect(publicList.recipes.map((r) => r.id)).toEqual(["pub"]);
+
+    const mine = await listRecipes({ includePrivateForUserId: "u1" });
+    expect(mine.recipes.map((r) => r.id).sort()).toEqual(["priv", "pub"]);
   });
 
   it("lists local recipes when DB and Sanity are off", async () => {

@@ -2,6 +2,8 @@ import { afterEach, describe, expect, it } from "vitest";
 import {
   canEditRecipe,
   canManagePeople,
+  canManageRecipe,
+  canViewRecipe,
   canWriteRecipes,
   getAdminEmail,
   isAdminEmail,
@@ -67,6 +69,54 @@ describe("canEditRecipe", () => {
     expect(canEditRecipe("cook", author, null)).toBe(false);
     expect(canEditRecipe(null, author, author)).toBe(false);
     expect(canEditRecipe(undefined, author, author)).toBe(false);
+  });
+});
+
+describe("canViewRecipe / canManageRecipe", () => {
+  const author = "user-author";
+  const other = "user-other";
+
+  it("allows anyone to view public recipes", () => {
+    expect(canViewRecipe({ isPrivate: false, authorId: author }, null)).toBe(
+      true
+    );
+    expect(canViewRecipe({ authorId: author }, other)).toBe(true);
+  });
+
+  it("limits private recipes to the author", () => {
+    expect(
+      canViewRecipe({ isPrivate: true, authorId: author }, author)
+    ).toBe(true);
+    expect(
+      canViewRecipe({ isPrivate: true, authorId: author }, other)
+    ).toBe(false);
+    expect(
+      canViewRecipe({ isPrivate: true, authorId: author }, null)
+    ).toBe(false);
+  });
+
+  it("keeps private recipe management author-only even for admins", () => {
+    expect(
+      canManageRecipe(
+        "admin",
+        { isPrivate: true, authorId: author },
+        other
+      )
+    ).toBe(false);
+    expect(
+      canManageRecipe(
+        "admin",
+        { isPrivate: true, authorId: author },
+        author
+      )
+    ).toBe(true);
+    expect(
+      canManageRecipe(
+        "admin",
+        { isPrivate: false, authorId: author },
+        other
+      )
+    ).toBe(true);
   });
 });
 

@@ -90,6 +90,22 @@ describe("local recipe store", () => {
     expect(created.tags).toEqual(["soup"]);
     expect(created.authorId).toBe("user-1");
     expect(created.imageUrl).toBe("");
+    expect(created.isPrivate).toBe(false);
+
+    const privateRecipe = await store.createLocalRecipe({
+      title: "Hidden Chili",
+      summary: "A private bowl that should stay off the public catalog.",
+      ingredients: ["beans"],
+      steps: ["simmer"],
+      tags: [],
+      prepMinutes: 5,
+      cookMinutes: 20,
+      servings: 2,
+      authorId: "user-1",
+      authorName: "Maya",
+      isPrivate: true,
+    });
+    expect(privateRecipe.isPrivate).toBe(true);
 
     const bySlug = await store.getLocalRecipe("test-soup");
     expect(bySlug?.id).toBe(created.id);
@@ -105,7 +121,9 @@ describe("local recipe store", () => {
       prepMinutes: 6,
       cookMinutes: 25,
       servings: 3,
+      isPrivate: true,
     });
+    expect(updated?.isPrivate).toBe(true);
     expect(updated?.title).toBe("Test Soup Updated");
     expect(updated?.servings).toBe(3);
 

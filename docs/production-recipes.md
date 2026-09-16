@@ -13,6 +13,8 @@ npm run db:push
 
 Or paste `drizzle/0001_recipe_catalog.sql` into the Neon SQL Editor (creates `recipe` + inserts the Cajun tuna bowl if missing).
 
+For author-only drafts, also apply `drizzle/0002_recipe_privacy.sql` (adds `isPrivate`, default public). Details: [private-recipes.md](./private-recipes.md).
+
 Confirm Vercel already has `DATABASE_URL` (same Neon DB used for auth/reviews). Redeploy after merge; no Sanity setup is required.
 
 ## Behavior

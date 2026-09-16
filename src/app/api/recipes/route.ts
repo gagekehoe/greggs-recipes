@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import {
-  canEditRecipe,
+  canManageRecipe,
   canWriteRecipes,
 } from "@/lib/auth/roles";
 import { getSessionUser } from "@/lib/auth/session";
@@ -19,9 +19,9 @@ import {
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const mine = searchParams.get("mine") === "1";
-  const { recipes, mode, error } = await listRecipes();
 
   if (!mine) {
+    const { recipes, mode, error } = await listRecipes();
     return NextResponse.json({ recipes, mode, error });
   }
 
@@ -29,6 +29,10 @@ export async function GET(request: Request) {
   if (!user) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
+
+  const { recipes, mode, error } = await listRecipes({
+    includePrivateForUserId: user.id,
+  });
 
   const filtered =
     user.role === "admin"
@@ -64,6 +68,7 @@ export async function POST(request: Request) {
       imageUrl:
         typeof data.imageUrl === "string" ? data.imageUrl.trim() : undefined,
       tags: data.tags,
+      isPrivate: Boolean(data.isPrivate),
       authorId: user.id,
       authorName: user.name || user.email || "Cook",
     });
@@ -93,7 +98,7 @@ export async function PATCH(request: Request) {
     if (!existing) {
       return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
     }
-    if (!canEditRecipe(user.role, existing.authorId, user.id)) {
+    if (!canManageRecipe(user.role, existing, user.id)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
@@ -115,6 +120,7 @@ export async function PATCH(request: Request) {
       imageUrl:
         typeof data.imageUrl === "string" ? data.imageUrl.trim() : undefined,
       tags: data.tags,
+      isPrivate: Boolean(data.isPrivate),
     });
     if (!result) {
       return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
@@ -144,7 +150,7 @@ export async function DELETE(request: Request) {
     if (!existing) {
       return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
     }
-    if (!canEditRecipe(user.role, existing.authorId, user.id)) {
+    if (!canManageRecipe(user.role, existing, user.id)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
