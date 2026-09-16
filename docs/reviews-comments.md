@@ -9,6 +9,7 @@ Signed-in members (viewer, cook, admin) can leave **one star review per recipe**
 - `/profile` lets signed-in users edit it later (header shows the name).
 - Reviews and comments **prefer display name**; posting is blocked until a name is set (API `403` + UI prompt).
 - Public labels never fall back to email. Site owner posts as **Gregg**.
+- Recipe cards and detail show the same **Owner** / **Authorized cook** chips next to **By {name}** (looked up by `authorId`), because display names are not unique.
 
 ## Privilege badges
 
