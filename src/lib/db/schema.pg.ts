@@ -1,5 +1,6 @@
 import type { AdapterAccountType } from "@auth/core/adapters";
 import {
+  boolean,
   integer,
   pgTable,
   primaryKey,
@@ -136,6 +137,8 @@ export const recipes = pgTable("recipe", {
   imageAlt: text("imageAlt").notNull().default(""),
   authorId: text("authorId").notNull(),
   authorName: text("authorName").notNull(),
+  /** When true, only the author (by authorId) may view or list this recipe. */
+  isPrivate: boolean("isPrivate").notNull().default(false),
   updatedAt: timestamp("updatedAt", { mode: "date", withTimezone: true })
     .notNull()
     .$defaultFn(() => new Date()),

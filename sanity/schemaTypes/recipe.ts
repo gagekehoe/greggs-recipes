@@ -79,5 +79,13 @@ export const recipeType = defineType({
       title: "Author name",
       type: "string",
     }),
+    defineField({
+      name: "isPrivate",
+      title: "Private (only author)",
+      type: "boolean",
+      initialValue: false,
+      description:
+        "When true, only the author can see this recipe on Gregg's Recipes",
+    }),
   ],
 });

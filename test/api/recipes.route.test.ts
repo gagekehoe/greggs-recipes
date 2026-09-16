@@ -46,6 +46,7 @@ describe("/api/recipes", () => {
     const all = await GET(new Request("http://x/api/recipes"));
     expect(all.status).toBe(200);
     expect((await all.json()).recipes).toHaveLength(2);
+    expect(listRecipes).toHaveBeenCalledWith();
 
     getSessionUser.mockResolvedValue(null);
     expect(
@@ -53,8 +54,44 @@ describe("/api/recipes", () => {
     ).toBe(401);
 
     getSessionUser.mockResolvedValue({ id: "u1", role: "cook", name: "Maya" });
+    listRecipes.mockResolvedValue({
+      recipes: [
+        { id: "local-1", authorId: "u1", title: "Mine", isPrivate: true },
+        { id: "local-2", authorId: "other", title: "Theirs", isPrivate: false },
+      ],
+      mode: "local",
+    });
     const mine = await GET(new Request("http://x/api/recipes?mine=1"));
+    expect(listRecipes).toHaveBeenCalledWith({ includePrivateForUserId: "u1" });
     expect((await mine.json()).recipes).toHaveLength(1);
+  });
+
+  it("POST stores isPrivate from the payload", async () => {
+    const { POST } = await import("@/app/api/recipes/route");
+    getSessionUser.mockResolvedValue({
+      id: "u1",
+      role: "cook",
+      name: "Maya",
+      email: "m@example.com",
+    });
+    createRecipe.mockResolvedValue({
+      recipe: { id: "local-priv", ...validRecipe, isPrivate: true },
+      mode: "local",
+    });
+    const created = await POST(
+      new Request("http://x/api/recipes", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ ...validRecipe, isPrivate: true }),
+      })
+    );
+    expect(created.status).toBe(201);
+    expect(createRecipe).toHaveBeenCalledWith(
+      expect.objectContaining({
+        isPrivate: true,
+        authorId: "u1",
+      })
+    );
   });
 
   it("POST requires cook/admin and validates", async () => {
@@ -200,6 +237,44 @@ describe("/api/recipes", () => {
         )
       ).status
     ).toBe(200);
+
+    getRecipeById.mockResolvedValue({
+      id: "local-priv",
+      authorId: "other",
+      isPrivate: true,
+    });
+    expect(
+      (
+        await PATCH(
+          new Request("http://x/api/recipes", {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              id: "local-priv",
+              ...validRecipe,
+              isPrivate: false,
+            }),
+          })
+        )
+      ).status
+    ).toBe(403);
+
+    getSessionUser.mockResolvedValue({ id: "admin", role: "admin", name: "Gregg" });
+    expect(
+      (
+        await PATCH(
+          new Request("http://x/api/recipes", {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              id: "local-priv",
+              ...validRecipe,
+              isPrivate: false,
+            }),
+          })
+        )
+      ).status
+    ).toBe(403);
 
     expect(
       (await DELETE(new Request("http://x/api/recipes"))).status

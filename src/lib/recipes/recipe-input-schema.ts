@@ -87,6 +87,7 @@ export const recipeInputSchema = z.object({
       `must be ${RECIPE_FIELD_LIMITS.imageAltMax} characters or fewer`
     )
     .optional(),
+  isPrivate: z.boolean().optional().default(false),
 });
 
 export type RecipeInputPayload = z.infer<typeof recipeInputSchema>;
@@ -102,6 +103,7 @@ const FIELD_LABELS: Record<string, string> = {
   servings: "Servings",
   imageUrl: "Recipe photo",
   imageAlt: "Photo description",
+  isPrivate: "Visibility",
 };
 
 type FlattenedRecipeErrors = {

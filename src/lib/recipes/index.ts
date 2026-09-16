@@ -78,6 +78,7 @@ type SanityRecipeDoc = {
   imageAlt?: string;
   authorId?: string;
   authorName?: string;
+  isPrivate?: boolean;
   _updatedAt?: string;
 };
 
@@ -96,6 +97,7 @@ const RECIPE_QUERY = `*[_type == "recipe"] | order(_updatedAt desc) {
   imageAlt,
   authorId,
   authorName,
+  isPrivate,
   _updatedAt
 }`;
 
@@ -114,6 +116,7 @@ const RECIPE_BY_SLUG_QUERY = `*[_type == "recipe" && slug.current == $slug][0] {
   imageAlt,
   authorId,
   authorName,
+  isPrivate,
   _updatedAt
 }`;
 
@@ -140,7 +143,18 @@ function mapSanityRecipe(doc: SanityRecipeDoc): Recipe {
     updatedAt: doc._updatedAt || new Date().toISOString(),
     authorId: doc.authorId || "system",
     authorName: doc.authorName || "Gregg",
+    isPrivate: Boolean(doc.isPrivate),
   };
+}
+
+/** Public recipes, plus the viewer's own private recipes when viewerId is set. */
+export function filterRecipesForViewer(
+  recipes: Recipe[],
+  viewerId?: string | null
+): Recipe[] {
+  return recipes.filter(
+    (recipe) => !recipe.isPrivate || recipe.authorId === viewerId
+  );
 }
 
 /**
@@ -156,22 +170,37 @@ export function getContentMode(): ContentMode {
   return "local";
 }
 
-export async function listRecipes(): Promise<{
+export type ListRecipesOptions = {
+  /**
+   * Include private recipes owned by this user id.
+   * Omit for public catalog (home, sitemap, GET /api/recipes).
+   */
+  includePrivateForUserId?: string | null;
+};
+
+export async function listRecipes(options?: ListRecipesOptions): Promise<{
   recipes: Recipe[];
   mode: ContentMode;
   error?: string;
 }> {
   const mode = getContentMode();
+  const viewerId = options?.includePrivateForUserId ?? null;
+
+  const finalize = (recipes: Recipe[], resolvedMode: ContentMode, error?: string) => ({
+    recipes: filterRecipesForViewer(recipes, viewerId),
+    mode: resolvedMode,
+    ...(error ? { error } : {}),
+  });
 
   if (mode === "db") {
     try {
       const recipes = await listDbRecipes();
-      return { recipes, mode };
+      return finalize(recipes, mode);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to load recipes from database";
       const local = await localRecipesOrSeed();
-      return { recipes: local, mode: "local", error: message };
+      return finalize(local, "local", message);
     }
   }
 
@@ -182,24 +211,24 @@ export async function listRecipes(): Promise<{
       const docs = await client.fetch<SanityRecipeDoc[]>(RECIPE_QUERY);
       if (!docs?.length) {
         const local = await localRecipesOrSeed();
-        return { recipes: local, mode: "local" };
+        return finalize(local, "local");
       }
-      return { recipes: docs.map(mapSanityRecipe), mode };
+      return finalize(docs.map(mapSanityRecipe), mode);
     } catch (err) {
       const message =
         err instanceof Error ? err.message : "Failed to load recipes from Sanity";
       const local = await localRecipesOrSeed();
-      return { recipes: local, mode: "local", error: message };
+      return finalize(local, "local", message);
     }
   }
 
   try {
     const recipes = await localRecipesOrSeed();
-    return { recipes, mode };
+    return finalize(recipes, mode);
   } catch (err) {
     const message =
       err instanceof Error ? err.message : "Failed to load local recipes";
-    return { recipes: getSeedRecipes(), mode, error: message };
+    return finalize(getSeedRecipes(), mode, message);
   }
 }
 
@@ -276,7 +305,7 @@ export async function getRecipeById(id: string): Promise<Recipe | null> {
         `*[_type == "recipe" && _id == $id][0]{
           _id, title, slug, summary, ingredients, steps, tags,
           prepMinutes, cookMinutes, servings, imageUrl, imageAlt,
-          authorId, authorName, _updatedAt
+          authorId, authorName, isPrivate, _updatedAt
         }`,
         { id }
       );
@@ -323,6 +352,7 @@ export async function createRecipe(input: RecipeInput): Promise<{
         (input.imageUrl?.trim() ? `${input.title.trim()} plated` : ""),
       authorId: input.authorId,
       authorName: input.authorName,
+      isPrivate: Boolean(input.isPrivate),
     });
     return {
       recipe: mapSanityRecipe({
@@ -340,6 +370,7 @@ export async function createRecipe(input: RecipeInput): Promise<{
         imageAlt: input.imageAlt,
         authorId: input.authorId,
         authorName: input.authorName,
+        isPrivate: Boolean(input.isPrivate),
         _updatedAt: doc._updatedAt,
       }),
       mode,
@@ -388,6 +419,8 @@ export async function updateRecipe(
             input.imageAlt !== undefined
               ? input.imageAlt.trim() || ""
               : undefined,
+          isPrivate:
+            input.isPrivate !== undefined ? Boolean(input.isPrivate) : undefined,
         })
         .commit();
       const recipe = await getRecipeById(id);

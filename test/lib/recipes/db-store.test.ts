@@ -60,6 +60,22 @@ describe("db recipe store", () => {
     });
     expect(created.source).toBe("db");
     expect(created.slug).toBe("desk-chili");
+    expect(created.isPrivate).toBe(false);
+
+    const privateRecipe = await store.createDbRecipe({
+      title: "Secret Chili",
+      summary: "A private test bowl that should stay author-only in SQLite.",
+      ingredients: ["beans"],
+      steps: ["simmer"],
+      tags: ["test"],
+      prepMinutes: 5,
+      cookMinutes: 20,
+      servings: 2,
+      authorId: "cook-1",
+      authorName: "Gregg",
+      isPrivate: true,
+    });
+    expect(privateRecipe.isPrivate).toBe(true);
 
     const updated = await store.updateDbRecipe(created.id, {
       title: "Desk Chili Hot",
@@ -70,9 +86,11 @@ describe("db recipe store", () => {
       prepMinutes: 6,
       cookMinutes: 25,
       servings: 3,
+      isPrivate: true,
     });
     expect(updated?.title).toBe("Desk Chili Hot");
     expect(updated?.servings).toBe(3);
+    expect(updated?.isPrivate).toBe(true);
 
     expect(await store.getDbRecipe("desk-chili")).toMatchObject({
       id: created.id,

@@ -80,6 +80,10 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
   const [cookMinutes, setCookMinutes] = useState(30);
   const [servings, setServings] = useState(4);
   const [createPhotoFile, setCreatePhotoFile] = useState<File | null>(null);
+  const [isPrivate, setIsPrivate] = useState(false);
+  const [visibilitySavingId, setVisibilitySavingId] = useState<string | null>(
+    null
+  );
 
   async function saveRecipe(e: React.FormEvent) {
     e.preventDefault();
@@ -115,6 +119,7 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
           servings: Number(servings),
           imageUrl,
           imageAlt: imageUrl ? `${title.trim()} plated` : undefined,
+          isPrivate,
         }),
       });
       const data = await res.json();
@@ -122,12 +127,17 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
         setError(recipeApiErrorMessage(data, "Could not save recipe"));
         return;
       }
-      setStatus(`Published “${data.recipe.title}” (${data.mode}).`);
+      setStatus(
+        data.recipe.isPrivate
+          ? `Saved “${data.recipe.title}” as private (${data.mode}) — only you can see it.`
+          : `Published “${data.recipe.title}” (${data.mode}).`
+      );
       setTitle("");
       setSummary("");
       setIngredients("");
       setSteps("");
       setTags("");
+      setIsPrivate(false);
       setCreatePhotoFile(null);
       if (createPhotoRef.current) createPhotoRef.current.value = "";
       router.refresh();
@@ -160,6 +170,7 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
           servings: recipe.servings,
           imageUrl: nextUrl,
           imageAlt: nextUrl ? `${recipe.title} plated` : "",
+          isPrivate: recipe.isPrivate,
         }),
       });
       const data = await res.json().catch(() => ({}));
@@ -202,6 +213,47 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
         err instanceof Error ? err.message : "Could not upload recipe photo"
       );
       setSavingPhotoId(null);
+    }
+  }
+
+  async function setRecipeVisibility(recipe: Recipe, nextPrivate: boolean) {
+    setVisibilitySavingId(recipe.id);
+    setError(null);
+    setStatus(null);
+    try {
+      const res = await fetch("/api/recipes", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: recipe.id,
+          title: recipe.title,
+          summary: recipe.summary,
+          ingredients: recipe.ingredients,
+          steps: recipe.steps,
+          tags: recipe.tags,
+          prepMinutes: recipe.prepMinutes,
+          cookMinutes: recipe.cookMinutes,
+          servings: recipe.servings,
+          imageUrl: recipe.imageUrl,
+          imageAlt: recipe.imageAlt,
+          isPrivate: nextPrivate,
+        }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(recipeApiErrorMessage(data, "Could not update visibility"));
+        return;
+      }
+      setStatus(
+        nextPrivate
+          ? `“${recipe.title}” is now private — only you can see it.`
+          : `“${recipe.title}” is now public on Gregg’s Recipes.`
+      );
+      router.refresh();
+    } catch {
+      setError("Network error while updating visibility.");
+    } finally {
+      setVisibilitySavingId(null);
     }
   }
 
@@ -369,6 +421,50 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
           </div>
         </div>
 
+        <div className="space-y-2 md:col-span-2">
+          <Label id="visibility-label">Visibility</Label>
+          <div
+            role="radiogroup"
+            aria-labelledby="visibility-label"
+            className="flex flex-col gap-2 sm:flex-row sm:gap-4"
+          >
+            <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-[var(--line)] px-3 py-2.5 has-[:checked]:border-[var(--sage-deep)] has-[:checked]:bg-[var(--mist)]">
+              <input
+                type="radio"
+                name="visibility"
+                className="mt-1"
+                checked={!isPrivate}
+                onChange={() => setIsPrivate(false)}
+              />
+              <span>
+                <span className="block text-sm font-medium text-[var(--ink)]">
+                  Public
+                </span>
+                <span className="block text-xs text-[var(--ink-soft)]">
+                  Listed on Gregg&apos;s Recipes for everyone
+                </span>
+              </span>
+            </label>
+            <label className="flex cursor-pointer items-start gap-2 rounded-lg border border-[var(--line)] px-3 py-2.5 has-[:checked]:border-[var(--sage-deep)] has-[:checked]:bg-[var(--mist)]">
+              <input
+                type="radio"
+                name="visibility"
+                className="mt-1"
+                checked={isPrivate}
+                onChange={() => setIsPrivate(true)}
+              />
+              <span>
+                <span className="block text-sm font-medium text-[var(--ink)]">
+                  Private (only me)
+                </span>
+                <span className="block text-xs text-[var(--ink-soft)]">
+                  Hidden from Browse Recipes and direct links for others
+                </span>
+              </span>
+            </label>
+          </div>
+        </div>
+
         {error ? (
           <p className="text-sm text-red-700 md:col-span-2" role="alert">
             {error}
@@ -386,7 +482,13 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
 
         <div className="md:col-span-2">
           <Button type="submit" disabled={saving} className="min-w-40">
-            {saving ? "Publishing…" : "Publish recipe"}
+            {saving
+              ? isPrivate
+                ? "Saving…"
+                : "Publishing…"
+              : isPrivate
+                ? "Save private recipe"
+                : "Publish recipe"}
           </Button>
         </div>
       </form>
@@ -411,19 +513,41 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
                     <div>
                       <p className="font-medium text-[var(--ink)]">
                         {recipe.title}
+                        {recipe.isPrivate ? (
+                          <span className="ml-2 text-xs font-normal text-[var(--ink-soft)]">
+                            · Private
+                          </span>
+                        ) : null}
                       </p>
                       <p className="text-xs text-[var(--ink-soft)]">
                         {recipe.authorName} · {recipe.source}
                         {hasPhoto ? " · photo set" : " · using placeholder"}
+                        {recipe.isPrivate
+                          ? " · only you can open this"
+                          : " · public"}
                       </p>
                     </div>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <Link
                         href={`/recipes/${recipe.slug}`}
                         className="inline-flex h-11 items-center rounded-lg border border-[var(--line)] px-3 text-[0.8rem] font-medium text-[var(--ink)] transition-colors hover:bg-[var(--mist)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[var(--sage-deep)] md:h-7 md:px-2.5"
                       >
                         View
                       </Link>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={visibilitySavingId === recipe.id}
+                        onClick={() =>
+                          setRecipeVisibility(recipe, !recipe.isPrivate)
+                        }
+                      >
+                        {visibilitySavingId === recipe.id
+                          ? "Updating…"
+                          : recipe.isPrivate
+                            ? "Make public"
+                            : "Make private"}
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"

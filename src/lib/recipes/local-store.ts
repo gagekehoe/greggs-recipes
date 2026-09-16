@@ -45,6 +45,7 @@ function normalizeRecipe(raw: Partial<Recipe> & Pick<Recipe, "id" | "slug" | "ti
     updatedAt: raw.updatedAt || new Date().toISOString(),
     authorId: raw.authorId || SYSTEM_AUTHOR.authorId,
     authorName: raw.authorName || SYSTEM_AUTHOR.authorName,
+    isPrivate: Boolean(raw.isPrivate),
   };
 }
 
@@ -150,6 +151,7 @@ export async function createLocalRecipe(input: RecipeInput): Promise<Recipe> {
     updatedAt: new Date().toISOString(),
     authorId: input.authorId,
     authorName: input.authorName,
+    isPrivate: Boolean(input.isPrivate),
   };
 
   recipes.unshift(recipe);
@@ -186,6 +188,10 @@ export async function updateLocalRecipe(
       (input.imageUrl?.trim() || current.imageUrl
         ? `${input.title.trim()} plated`
         : ""),
+    isPrivate:
+      input.isPrivate !== undefined
+        ? Boolean(input.isPrivate)
+        : current.isPrivate,
     updatedAt: new Date().toISOString(),
   };
 

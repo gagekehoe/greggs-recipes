@@ -135,9 +135,18 @@ function createSqlite(): DbBundle {
       imageAlt TEXT NOT NULL DEFAULT '',
       authorId TEXT NOT NULL,
       authorName TEXT NOT NULL,
+      isPrivate INTEGER NOT NULL DEFAULT 0,
       updatedAt INTEGER NOT NULL
     );
   `);
+
+  try {
+    sqlite.exec(
+      `ALTER TABLE recipe ADD COLUMN isPrivate INTEGER NOT NULL DEFAULT 0`
+    );
+  } catch {
+    // Column already present on existing local DBs.
+  }
 
   return {
     db: drizzle(sqlite, { schema: sqliteSchema }),

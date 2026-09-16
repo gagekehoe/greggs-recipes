@@ -26,6 +26,34 @@ export function canEditRecipe(
   return false;
 }
 
+/** Public recipes are visible to everyone; private ones only to the author (by user id). */
+export function canViewRecipe(
+  recipe: { isPrivate?: boolean; authorId: string },
+  userId: string | undefined | null
+): boolean {
+  if (!recipe.isPrivate) return true;
+  return Boolean(userId && recipe.authorId === userId);
+}
+
+/**
+ * Edit/delete: admins may manage public recipes from anyone, but private recipes
+ * stay author-only (same identity as My recipes ownership).
+ */
+export function canManageRecipe(
+  role: Role | undefined | null,
+  recipe: { isPrivate?: boolean; authorId: string },
+  userId: string | undefined | null
+): boolean {
+  if (recipe.isPrivate) {
+    return Boolean(
+      userId &&
+        recipe.authorId === userId &&
+        canWriteRecipes(role)
+    );
+  }
+  return canEditRecipe(role, recipe.authorId, userId);
+}
+
 export function getAdminEmail(): string {
   return (process.env.ADMIN_EMAIL || "gagekehoe17@gmail.com").trim().toLowerCase();
 }
