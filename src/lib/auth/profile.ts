@@ -23,17 +23,32 @@ export function needsProfileSetup(name: string | null | undefined): boolean {
   return !isDisplayNameSet(name);
 }
 
+/** Reject values that look like email addresses so public UI never shows accounts. */
+function looksLikeEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
 /**
- * Safe public label for reviews/comments.
+ * Safe public label for reviews/comments/recipe credits.
  * Prefers display name; never invents a name from email (avoids leaking account identity).
+ * Site owner always publishes as Gregg.
  */
 export function publicAuthorLabel(
   name: string | null | undefined,
-  _email?: string | null | undefined
+  _email?: string | null | undefined,
+  options?: { isSiteOwner?: boolean }
 ): string {
+  if (options?.isSiteOwner) return "Gregg";
   const display = normalizeDisplayName(name);
-  if (display) return display;
+  if (display && !looksLikeEmail(display)) return display;
   return "Cook";
+}
+
+/** Recipe card/detail credit from the stored authorName snapshot. */
+export function recipeAuthorLabel(
+  authorName: string | null | undefined
+): string {
+  return publicAuthorLabel(authorName);
 }
 
 export function validateDisplayNameInput(value: unknown): {

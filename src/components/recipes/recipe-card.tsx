@@ -1,9 +1,15 @@
 import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { EmptyRecipes } from "@/components/recipes/empty-recipes";
+import { RecipeAuthorCredit } from "@/components/recipes/recipe-author-credit";
 import { RecipePhoto } from "@/components/recipes/recipe-photo";
+import {
+  getAuthorPrivilegesByUserIds,
+  resolveRecipeAuthorCredit,
+} from "@/lib/auth/author-credits";
 import { getSessionUser } from "@/lib/auth/session";
 import { totalMinutes, type Recipe } from "@/lib/recipes";
+import type { AuthorPrivilege } from "@/lib/auth/roles";
 import type { RatingSummary } from "@/lib/reviews/rating";
 import { getRatingSummaries } from "@/lib/reviews/store";
 
@@ -11,10 +17,14 @@ export function RecipeCard({
   recipe,
   index = 0,
   rating,
+  authorLabel,
+  authorPrivilege,
 }: {
   recipe: Recipe;
   index?: number;
   rating?: RatingSummary;
+  authorLabel: string;
+  authorPrivilege: AuthorPrivilege;
 }) {
   const minutes = totalMinutes(recipe);
   return (
@@ -34,7 +44,15 @@ export function RecipeCard({
           />
           <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[var(--ink)]/55 via-transparent to-transparent opacity-80" />
           <div className="absolute bottom-3 left-3 right-3 flex flex-wrap gap-2">
-            {recipe.tags.slice(0, 2).map((tag) => (
+            {recipe.isPrivate ? (
+              <Badge
+                variant="secondary"
+                className="border border-[var(--accent-deep)]/45 bg-[var(--paper)]/95 text-[var(--accent-deep)] backdrop-blur-sm"
+              >
+                Private
+              </Badge>
+            ) : null}
+            {recipe.tags.slice(0, recipe.isPrivate ? 1 : 2).map((tag) => (
               <Badge
                 key={tag}
                 variant="secondary"
@@ -58,6 +76,11 @@ export function RecipeCard({
               ? ` · ${rating.average}★ (${rating.count})`
               : ""}
           </p>
+          <RecipeAuthorCredit
+            className="mt-1.5"
+            label={authorLabel}
+            privilege={authorPrivilege}
+          />
         </div>
       </Link>
     </article>
@@ -70,18 +93,26 @@ export async function RecipeGrid({ recipes }: { recipes: Recipe[] }) {
     return <EmptyRecipes user={user} />;
   }
 
-  const ratings = await getRatingSummaries(recipes.map((r) => r.id));
+  const [ratings, privilegeByUserId] = await Promise.all([
+    getRatingSummaries(recipes.map((r) => r.id)),
+    getAuthorPrivilegesByUserIds(recipes.map((r) => r.authorId)),
+  ]);
 
   return (
     <div className="grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
-      {recipes.map((recipe, index) => (
-        <RecipeCard
-          key={recipe.id}
-          recipe={recipe}
-          index={index}
-          rating={ratings[recipe.id]}
-        />
-      ))}
+      {recipes.map((recipe, index) => {
+        const credit = resolveRecipeAuthorCredit(recipe, privilegeByUserId);
+        return (
+          <RecipeCard
+            key={recipe.id}
+            recipe={recipe}
+            index={index}
+            rating={ratings[recipe.id]}
+            authorLabel={credit.label}
+            authorPrivilege={credit.privilege}
+          />
+        );
+      })}
     </div>
   );
 }

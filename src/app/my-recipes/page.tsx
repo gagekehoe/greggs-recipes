@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { RecipeEditor } from "@/components/recipes/recipe-editor";
-import { canWriteRecipes } from "@/lib/auth/roles";
+import { canWriteRecipes, hasKitchenStaffPowers } from "@/lib/auth/roles";
 import { getSessionUser } from "@/lib/auth/session";
 import { getContentMode, listRecipes } from "@/lib/recipes";
 
@@ -40,7 +40,7 @@ export default async function MyRecipesPage() {
     includePrivateForUserId: user.id,
   });
   const visible =
-    user.role === "admin"
+    hasKitchenStaffPowers(user.role)
       ? recipes
       : recipes.filter((r) => r.authorId === user.id);
 
@@ -49,7 +49,7 @@ export default async function MyRecipesPage() {
       <RecipeEditor
         contentMode={getContentMode()}
         recipes={visible}
-        canManageAll={user.role === "admin"}
+        canManageAll={hasKitchenStaffPowers(user.role)}
       />
     </div>
   );

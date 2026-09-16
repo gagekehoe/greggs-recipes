@@ -57,7 +57,7 @@ describe("EmptyRecipes", () => {
       role: "viewer",
     };
     render(<EmptyRecipes user={user} />);
-    expect(screen.getByText(/cooks and admins add dishes/i)).toBeTruthy();
+    expect(screen.getByText(/cooks, admins, and the owner add dishes/i)).toBeTruthy();
     expect(screen.getByRole("link", { name: /your profile/i })).toHaveAttribute(
       "href",
       "/profile"

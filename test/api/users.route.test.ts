@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const getSessionUser = vi.fn();
 const selectAll = vi.fn();
+const selectLimit = vi.fn();
 const updateReturning = vi.fn();
 
 vi.mock("@/lib/auth/session", () => ({
@@ -17,6 +18,9 @@ vi.mock("@/lib/db", async () => {
       select: () => ({
         from: () => ({
           orderBy: (...a: unknown[]) => selectAll(...a),
+          where: () => ({
+            limit: (...a: unknown[]) => selectLimit(...a),
+          }),
         }),
       }),
       update: () => ({
@@ -35,7 +39,7 @@ describe("/api/users", () => {
     vi.clearAllMocks();
   });
 
-  it("requires admin for GET/PATCH", async () => {
+  it("requires owner/admin for GET/PATCH", async () => {
     const { GET, PATCH } = await import("@/app/api/users/route");
     getSessionUser.mockResolvedValue({ id: "u1", role: "cook" });
     expect((await GET()).status).toBe(401);
@@ -51,11 +55,11 @@ describe("/api/users", () => {
     ).toBe(401);
   });
 
-  it("lists users and updates roles with guards", async () => {
+  it("lists users and updates roles with owner assignment guards", async () => {
     const { GET, PATCH } = await import("@/app/api/users/route");
-    getSessionUser.mockResolvedValue({ id: "admin", role: "admin" });
+    getSessionUser.mockResolvedValue({ id: "owner", role: "owner" });
     selectAll.mockResolvedValue([
-      { id: "admin", email: "a@x.com", role: "admin", name: "A", image: null },
+      { id: "owner", email: "a@x.com", role: "owner", name: "A", image: null },
       { id: "u2", email: "b@x.com", role: "weird", name: "B", image: null },
     ]);
     const listed = await GET();
@@ -72,16 +76,17 @@ describe("/api/users", () => {
     );
     expect(invalid.status).toBe(400);
 
+    selectLimit.mockResolvedValue([{ id: "owner", role: "owner" }]);
     const demoteSelf = await PATCH(
       new Request("http://x/api/users", {
         method: "PATCH",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ userId: "admin", role: "viewer" }),
+        body: JSON.stringify({ userId: "owner", role: "viewer" }),
       })
     );
     expect(demoteSelf.status).toBe(400);
 
-    updateReturning.mockResolvedValue([]);
+    selectLimit.mockResolvedValue([]);
     const missing = await PATCH(
       new Request("http://x/api/users", {
         method: "PATCH",
@@ -91,6 +96,7 @@ describe("/api/users", () => {
     );
     expect(missing.status).toBe(404);
 
+    selectLimit.mockResolvedValue([{ id: "u2", role: "viewer" }]);
     updateReturning.mockResolvedValue([
       { id: "u2", email: "b@x.com", role: "cook", name: "B" },
     ]);
@@ -102,5 +108,16 @@ describe("/api/users", () => {
       })
     );
     expect(ok.status).toBe(200);
+
+    getSessionUser.mockResolvedValue({ id: "staff", role: "admin" });
+    selectLimit.mockResolvedValue([{ id: "u2", role: "cook" }]);
+    const forbiddenOwner = await PATCH(
+      new Request("http://x/api/users", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ userId: "u2", role: "owner" }),
+      })
+    );
+    expect(forbiddenOwner.status).toBe(403);
   });
 });

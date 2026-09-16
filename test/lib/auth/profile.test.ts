@@ -56,6 +56,24 @@ describe("publicAuthorLabel", () => {
   it("uses Cook when nothing is available", () => {
     expect(publicAuthorLabel(null, null)).toBe("Cook");
   });
+
+  it("never shows an email-shaped display name", () => {
+    expect(publicAuthorLabel("gage@example.com")).toBe("Cook");
+  });
+
+  it("forces Gregg for the site owner", () => {
+    expect(
+      publicAuthorLabel("Gage", "gage@example.com", { isSiteOwner: true })
+    ).toBe("Gregg");
+  });
+});
+
+describe("recipeAuthorLabel", () => {
+  it("returns a safe public credit", async () => {
+    const { recipeAuthorLabel } = await import("@/lib/auth/profile");
+    expect(recipeAuthorLabel("Mom")).toBe("Mom");
+    expect(recipeAuthorLabel("secret@example.com")).toBe("Cook");
+  });
 });
 
 describe("validateDisplayNameInput", () => {

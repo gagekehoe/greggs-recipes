@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { hasKitchenStaffPowers } from "@/lib/auth/roles";
 import { getSessionUser, getUserDisplayName } from "@/lib/auth/session";
 import { getRecipeById } from "@/lib/recipes";
 import {
@@ -207,8 +208,8 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "Review not found" }, { status: 404 });
     }
 
-    const isOwner = canEditOwnReview(user.role, existing.userId, user.id);
-    if (!isOwner && user.role !== "admin") {
+    const isReviewAuthor = canEditOwnReview(user.role, existing.userId, user.id);
+    if (!isReviewAuthor && !hasKitchenStaffPowers(user.role)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 

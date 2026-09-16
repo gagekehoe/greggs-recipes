@@ -1,5 +1,6 @@
 import { and, asc, desc, eq, inArray } from "drizzle-orm";
 import { publicAuthorLabel } from "@/lib/auth/profile";
+import { authorPrivilege, type AuthorPrivilege } from "@/lib/auth/roles";
 import {
   db,
   isDatabaseConfigured,
@@ -27,6 +28,8 @@ export type ReviewWithAuthor = {
   createdAt: Date;
   updatedAt: Date;
   authorName: string | null;
+  /** owner | admin | authorized_cook — from user.role; email never exposed. */
+  authorPrivilege: AuthorPrivilege;
   images: ReviewImage[];
 };
 
@@ -38,6 +41,7 @@ export type CommentWithAuthor = {
   body: string;
   createdAt: Date;
   authorName: string | null;
+  authorPrivilege: AuthorPrivilege;
 };
 
 export async function getRatingSummary(
@@ -106,6 +110,7 @@ export async function listReviewsForRecipe(
         createdAt: recipeReviews.createdAt,
         updatedAt: recipeReviews.updatedAt,
         authorName: users.name,
+        authorRole: users.role,
       })
       .from(recipeReviews)
       .leftJoin(users, eq(recipeReviews.userId, users.id))
@@ -138,17 +143,24 @@ export async function listReviewsForRecipe(
         createdAt: Date;
         updatedAt: Date;
         authorName: string | null;
-      }) => ({
-      id: row.id,
-      recipeId: row.recipeId,
-      userId: row.userId,
-      rating: row.rating,
-      body: row.body,
-      createdAt: row.createdAt,
-      updatedAt: row.updatedAt,
-      authorName: publicAuthorLabel(row.authorName),
-      images: imagesByReview.get(row.id) ?? [],
-    })
+        authorRole: string | null;
+      }) => {
+        const privilege = authorPrivilege({ role: row.authorRole });
+        return {
+          id: row.id,
+          recipeId: row.recipeId,
+          userId: row.userId,
+          rating: row.rating,
+          body: row.body,
+          createdAt: row.createdAt,
+          updatedAt: row.updatedAt,
+          authorName: publicAuthorLabel(row.authorName, undefined, {
+            isSiteOwner: privilege === "owner",
+          }),
+          authorPrivilege: privilege,
+          images: imagesByReview.get(row.id) ?? [],
+        };
+      }
     );
   } catch (error) {
     console.error("[reviews] listReviewsForRecipe failed:", error);
@@ -303,6 +315,7 @@ export async function listCommentsForRecipe(
         body: recipeComments.body,
         createdAt: recipeComments.createdAt,
         authorName: users.name,
+        authorRole: users.role,
       })
       .from(recipeComments)
       .leftJoin(users, eq(recipeComments.userId, users.id))
@@ -317,14 +330,21 @@ export async function listCommentsForRecipe(
         body: string;
         createdAt: Date;
         authorName: string | null;
-      }) => ({
-      id: row.id,
-      recipeId: row.recipeId,
-      userId: row.userId,
-      body: row.body,
-      createdAt: row.createdAt,
-      authorName: publicAuthorLabel(row.authorName),
-    })
+        authorRole: string | null;
+      }) => {
+        const privilege = authorPrivilege({ role: row.authorRole });
+        return {
+          id: row.id,
+          recipeId: row.recipeId,
+          userId: row.userId,
+          body: row.body,
+          createdAt: row.createdAt,
+          authorName: publicAuthorLabel(row.authorName, undefined, {
+            isSiteOwner: privilege === "owner",
+          }),
+          authorPrivilege: privilege,
+        };
+      }
     );
   } catch (error) {
     console.error("[reviews] listCommentsForRecipe failed:", error);

@@ -1,6 +1,6 @@
 # Reviews & comments
 
-Signed-in members (viewer, cook, admin) can leave **one star review per recipe** (optional text + up to 4 photos) and post **comments**. Guests can read everything and see a clear sign-in CTA — **no anonymous posting**.
+Signed-in members (viewer, cook, admin, owner) can leave **one star review per recipe** (optional text + up to 4 photos) and post **comments**. Guests can read everything and see a clear sign-in CTA — **no anonymous posting**.
 
 ## Account / display name
 
@@ -8,6 +8,18 @@ Signed-in members (viewer, cook, admin) can leave **one star review per recipe**
 - After first sign-in, `/welcome` asks for a **display name** (stored on Auth.js `user.name` in SQLite).
 - `/profile` lets signed-in users edit it later (header shows the name).
 - Reviews and comments **prefer display name**; posting is blocked until a name is set (API `403` + UI prompt).
+- Public labels never fall back to email. Site **owner** role posts as **Gregg**.
+- Recipe cards and detail show the same privilege chips next to **By {name}** (from `user.role` via `authorId`), because display names are not unique.
+
+## Privilege badges (role-based)
+
+| Badge | Role | How |
+|-------|------|-----|
+| **Owner** | `owner` | Bootstrap via `ADMIN_EMAIL` on sign-in; only an existing owner can assign Owner on `/people`. Public name forced to Gregg. |
+| **Admin** | `admin` | Grant on `/people` (owner or admin). Same kitchen powers as owner except assigning Owner. |
+| **Authorized cook** | `cook` | Grant/revoke on `/people`. |
+
+Viewers have no privilege badge. Badges appear on reviews, comments, and recipe author credits. Email is never shown in the badge.
 
 ## Auth rules
 
@@ -51,6 +63,7 @@ See [hosting.md](./hosting.md) for the full env table.
 4. Leave 1–5 stars, optional text, optional photos; edit/replace your one review
 5. Post a comment; delete your own
 6. As admin: delete someone else’s comment/review
+7. As admin on `/people`: promote a cook and confirm the Authorized cook badge on their posts
 
 ```bash
 npm test
@@ -58,7 +71,3 @@ npm run test:coverage
 ```
 
 Coverage focuses on `src/lib`, API routes (authz + validation), and the review/comment/profile/sign-in client components. shadcn primitives and Auth.js wiring are excluded from the gate.
-
-## Out of scope (next workstream)
-
-Missing **recipe** photo fallbacks — not part of this feature.

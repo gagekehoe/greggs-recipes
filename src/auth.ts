@@ -12,14 +12,12 @@ import {
 } from "@/lib/db";
 import type { Role } from "@/lib/db/schema";
 import { getAdminEmail, isAdminEmail } from "@/lib/auth/roles";
+import {
+  ensureOwnerRole,
+  migrateBootstrapAdminToOwner,
+} from "@/lib/auth/owner-bootstrap";
 import { toFriendlyMagicLinkUrl } from "@/lib/auth/friendly-magic-link";
 import { safeAuthRedirect } from "@/lib/auth/safe-auth-redirect";
-
-async function ensureAdminRole(userId: string, email: string | null | undefined) {
-  if (!isAdminEmail(email)) return;
-  if (!isDatabaseConfigured()) return;
-  await db.update(users).set({ role: "admin" }).where(eq(users.id, userId));
-}
 
 async function sendMagicLink({
   identifier,
@@ -132,7 +130,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           (token?.role as Role | undefined) ||
           "viewer") as Role;
         const email = user?.email ?? session.user.email;
-        session.user.role = isAdminEmail(email) ? "admin" : role;
+        // Bootstrap overlay: ADMIN_EMAIL is always treated as owner in-session.
+        session.user.role = isAdminEmail(email) ? "owner" : role;
       }
       return session;
     },
@@ -140,12 +139,14 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   events: {
     async createUser({ user }) {
       if (!user.id || !isDatabaseConfigured()) return;
-      const role: Role = isAdminEmail(user.email) ? "admin" : "viewer";
+      await migrateBootstrapAdminToOwner();
+      const role: Role = isAdminEmail(user.email) ? "owner" : "viewer";
       await db.update(users).set({ role }).where(eq(users.id, user.id));
     },
     async signIn({ user }) {
+      await migrateBootstrapAdminToOwner();
       if (user.id) {
-        await ensureAdminRole(user.id, user.email);
+        await ensureOwnerRole(user.id, user.email);
       }
     },
   },

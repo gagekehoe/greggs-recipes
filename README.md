@@ -21,8 +21,8 @@ Open [http://127.0.0.1:43127](http://127.0.0.1:43127).
 | `/signin` | Email magic-link sign-in (creates account on first use) |
 | `/welcome` | First-time display name setup |
 | `/profile` | Edit display name |
-| `/my-recipes` | Create/manage recipes (cook + admin) |
-| `/people` | Promote/demote roles (admin only) |
+| `/my-recipes` | Create/manage recipes (cook + admin + owner) |
+| `/people` | Promote/demote roles (admin + owner) |
 
 ### Auth without email keys
 
@@ -30,15 +30,18 @@ Leave `AUTH_RESEND_KEY` unset. Request a magic link on `/signin`, then copy the 
 
 ### Admin bootstrap
 
-`ADMIN_EMAIL` (default in `.env.example`: `gagekehoe17@gmail.com`) is promoted to **admin** on sign-in. You can change it in `.env.local` / Vercel env if needed.
+`ADMIN_EMAIL` (default in `.env.example`: `gagekehoe17@gmail.com`) is promoted to **owner** on sign-in (Gregg). You can change it in `.env.local` / Vercel env if needed.
 
 ### Roles
 
 | Role | Can do |
 |------|--------|
 | `viewer` | Default for new signups — browse; leave reviews & comments |
-| `cook` | Add / edit / delete **own** recipes; reviews & comments |
-| `admin` | Manage **any** recipe + `/people` roles; moderate reviews/comments |
+| `cook` | Add / edit / delete **own** recipes; **Authorized cook** badge |
+| `admin` | Manage public recipes + People (not Owner); **Admin** badge |
+| `owner` | Same powers as admin; **Owner** badge (Gregg); only an owner can assign Owner |
+
+Recipe cards and detail show **By {display name}** plus the role badge when relevant (never email). Private recipes appear in Browse for the signed-in author only, with a Private label.
 
 Reviews & comments details: [docs/reviews-comments.md](./docs/reviews-comments.md). Testing notes: [docs/testing.md](./docs/testing.md). Recipe photo placeholders: [docs/recipe-photo-fallbacks.md](./docs/recipe-photo-fallbacks.md). Recipe photo uploads (Vercel Blob): see `.env.example` (`BLOB_READ_WRITE_TOKEN`). Private recipes (author-only): [docs/private-recipes.md](./docs/private-recipes.md).
 
@@ -46,7 +49,7 @@ Reviews & comments details: [docs/reviews-comments.md](./docs/reviews-comments.m
 
 ### Production path (Neon / SQLite)
 
-When a database is configured (`DATABASE_URL` on Vercel, or local SQLite), recipes live in the `recipe` table. Browse Recipes and `/api/recipes` read from the DB. Cooks/admins publish via `/my-recipes` without a redeploy. Recipes marked **Private (only me)** stay off the public catalog and return 404 for everyone except the author.
+When a database is configured (`DATABASE_URL` on Vercel, or local SQLite), recipes live in the `recipe` table. Browse Recipes and `/api/recipes` read from the DB. Cooks/admins publish via `/my-recipes` without a redeploy. Recipes marked **Private (only me)** stay off the public API and sitemap; the signed-in author still sees them on home Browse with a Private label, and everyone else gets 404 on the direct URL.
 
 A fresh database is seeded with **Extra-Saucy Late-Night Cajun Tuna Bowl** (photo + author Gregg). See [docs/production-recipes.md](./docs/production-recipes.md).
 

@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useMemo, useState, useTransition } from "react";
+import { AuthorPrivilegeBadge } from "@/components/auth/author-privilege-badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import type { RatingSummary } from "@/lib/reviews/rating";
@@ -327,8 +328,9 @@ export function RecipeReviewsSection({
             >
               <div className="flex flex-wrap items-center justify-between gap-2">
                 <div>
-                  <p className="font-medium text-[var(--ink)]">
-                    {review.authorName || "Cook"}
+                  <p className="flex flex-wrap items-center gap-2 font-medium text-[var(--ink)]">
+                    <span>{review.authorName || "Cook"}</span>
+                    <AuthorPrivilegeBadge privilege={review.authorPrivilege} />
                   </p>
                   <p className="text-xs uppercase tracking-[0.12em] text-[var(--ink-soft)]">
                     {formatWhen(review.updatedAt)}

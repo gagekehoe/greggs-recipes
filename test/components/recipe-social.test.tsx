@@ -97,6 +97,7 @@ describe("RecipeReviewsSection", () => {
           rating: 5,
           body: "Delicious",
           images: [],
+          authorPrivilege: null,
         },
         reviews: [
           {
@@ -105,6 +106,7 @@ describe("RecipeReviewsSection", () => {
             rating: 5,
             body: "Delicious",
             authorName: "Maya",
+            authorPrivilege: null,
             images: [],
             updatedAt: new Date("2026-01-01"),
           },
@@ -143,6 +145,67 @@ describe("RecipeReviewsSection", () => {
     });
     expect(await screen.findByText("Maya")).toBeInTheDocument();
     expect(screen.getByText(/5 average · 1 review/i)).toBeInTheDocument();
+  });
+  it("shows Owner, Admin, and Authorized cook badges on reviews", async () => {
+    const { RecipeReviewsSection } = await import(
+      "@/components/recipes/recipe-reviews"
+    );
+    render(
+      <RecipeReviewsSection
+        recipeId="r1"
+        initialReviews={[
+          {
+            id: "rev-owner",
+            recipeId: "r1",
+            userId: "owner",
+            rating: 5,
+            body: "From the kitchen",
+            createdAt: new Date("2026-01-01"),
+            updatedAt: new Date("2026-01-01"),
+            authorName: "Gregg",
+            authorPrivilege: "owner",
+            images: [],
+          },
+          {
+            id: "rev-admin",
+            recipeId: "r1",
+            userId: "admin",
+            rating: 4,
+            body: "Staff note",
+            createdAt: new Date("2026-01-02"),
+            updatedAt: new Date("2026-01-02"),
+            authorName: "Pat",
+            authorPrivilege: "admin",
+            images: [],
+          },
+          {
+            id: "rev-cook",
+            recipeId: "r1",
+            userId: "cook",
+            rating: 4,
+            body: "Mom’s tip",
+            createdAt: new Date("2026-01-03"),
+            updatedAt: new Date("2026-01-03"),
+            authorName: "Mom",
+            authorPrivilege: "authorized_cook",
+            images: [],
+          },
+        ]}
+        initialSummary={{ average: 4.3, count: 3 }}
+        signedIn={false}
+        hasDisplayName={false}
+        currentUserId={null}
+        isAdmin={false}
+        signInHref="/signin"
+        profileHref="/profile"
+      />
+    );
+    expect(screen.getByText("Gregg")).toBeInTheDocument();
+    expect(screen.getByText("Owner")).toBeInTheDocument();
+    expect(screen.getByText("Pat")).toBeInTheDocument();
+    expect(screen.getByText("Admin")).toBeInTheDocument();
+    expect(screen.getByText("Mom")).toBeInTheDocument();
+    expect(screen.getByText("Authorized cook")).toBeInTheDocument();
   });
 });
 
@@ -186,6 +249,7 @@ describe("RecipeCommentsSection", () => {
             userId: "u1",
             body: "Loved it",
             authorName: "Maya",
+            authorPrivilege: null,
             createdAt: new Date("2026-01-01"),
           },
         ],

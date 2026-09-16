@@ -26,6 +26,7 @@ Local dev keeps using SQLite (`data/auth.sqlite`) when `DATABASE_URL` is unset. 
    - **Or** paste / run `drizzle/0000_neon_init.sql` in the Neon SQL Editor (full init).
    - **Existing Neon DB** (auth already applied): run `drizzle/0001_recipe_catalog.sql` to add the `recipe` table + Cajun tuna bowl seed.
    - **Private recipes column:** run `drizzle/0002_recipe_privacy.sql` (or `npm run db:push`) so `recipe.isPrivate` exists. See [docs/private-recipes.md](./private-recipes.md).
+   - **Owner role:** run `drizzle/0003_owner_role.sql` (or sign in once as `ADMIN_EMAIL`) so the bootstrap account moves from `admin` → `owner`. Other admins stay `admin`.
 4. Set `DATABASE_URL` on Vercel (see env table below) and redeploy.
 
 Schema source for Postgres: `src/lib/db/schema.pg.ts` (Drizzle). Local SQLite schema remains in `src/lib/db/schema.ts`.

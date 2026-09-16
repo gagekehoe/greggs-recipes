@@ -41,14 +41,19 @@ describe("reviews store", () => {
     `);
   });
 
-  async function seedUser(id = "user-1", name = "Maya") {
+  async function seedUser(
+    id = "user-1",
+    name = "Maya",
+    role: "viewer" | "cook" | "admin" | "owner" = "viewer",
+    email = `${id}@example.com`
+  ) {
     const { db } = await import("@/lib/db");
     const { users } = await import("@/lib/db/schema");
     await db.insert(users).values({
       id,
-      email: `${id}@example.com`,
+      email,
       name,
-      role: "viewer",
+      role,
     });
   }
 
@@ -143,6 +148,74 @@ describe("reviews store", () => {
     expect(comments).toHaveLength(1);
     expect(comments[0]).not.toHaveProperty("authorEmail");
     expect(JSON.stringify(comments)).not.toContain("@example.com");
+  });
+
+  it("attaches owner, admin, and authorized cook privilege badges from role", async () => {
+    await seedUser("cook-1", "Mom", "cook");
+    await seedUser("owner-1", "Gage", "owner", "owner@example.com");
+    await seedUser("admin-1", "Pat", "admin", "staff@example.com");
+
+    const store = await import("@/lib/reviews/store");
+    await store.upsertReview({
+      recipeId: "badge-recipe",
+      userId: "cook-1",
+      rating: 5,
+      body: "Family favorite",
+    });
+    await store.upsertReview({
+      recipeId: "badge-recipe",
+      userId: "owner-1",
+      rating: 4,
+      body: "Approved",
+    });
+    await store.upsertReview({
+      recipeId: "badge-recipe",
+      userId: "admin-1",
+      rating: 3,
+      body: "Noted",
+    });
+    await store.createComment({
+      recipeId: "badge-recipe",
+      userId: "cook-1",
+      body: "Tip from Mom",
+    });
+    await store.createComment({
+      recipeId: "badge-recipe",
+      userId: "owner-1",
+      body: "From the kitchen",
+    });
+    await store.createComment({
+      recipeId: "badge-recipe",
+      userId: "admin-1",
+      body: "Staff note",
+    });
+
+    const reviews = await store.listReviewsForRecipe("badge-recipe");
+    expect(reviews.find((r) => r.userId === "cook-1")).toMatchObject({
+      authorName: "Mom",
+      authorPrivilege: "authorized_cook",
+    });
+    expect(reviews.find((r) => r.userId === "owner-1")).toMatchObject({
+      authorName: "Gregg",
+      authorPrivilege: "owner",
+    });
+    expect(reviews.find((r) => r.userId === "admin-1")).toMatchObject({
+      authorName: "Pat",
+      authorPrivilege: "admin",
+    });
+    expect(JSON.stringify(reviews)).not.toMatch(/Gage|owner@|staff@/);
+
+    const comments = await store.listCommentsForRecipe("badge-recipe");
+    expect(comments.find((c) => c.userId === "cook-1")).toMatchObject({
+      authorPrivilege: "authorized_cook",
+    });
+    expect(comments.find((c) => c.userId === "owner-1")).toMatchObject({
+      authorName: "Gregg",
+      authorPrivilege: "owner",
+    });
+    expect(comments.find((c) => c.userId === "admin-1")).toMatchObject({
+      authorPrivilege: "admin",
+    });
   });
 
   it("deletes reviews, images, and comments", async () => {

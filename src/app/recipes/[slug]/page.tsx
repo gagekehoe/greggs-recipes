@@ -2,11 +2,16 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
+import { RecipeAuthorCredit } from "@/components/recipes/recipe-author-credit";
 import { RecipeCommentsSection } from "@/components/recipes/recipe-comments";
 import { RecipePhoto } from "@/components/recipes/recipe-photo";
 import { RecipeReviewsSection } from "@/components/recipes/recipe-reviews";
+import {
+  getAuthorPrivilegesByUserIds,
+  resolveRecipeAuthorCredit,
+} from "@/lib/auth/author-credits";
 import { isDisplayNameSet } from "@/lib/auth/profile";
-import { canViewRecipe } from "@/lib/auth/roles";
+import { canViewRecipe, hasKitchenStaffPowers } from "@/lib/auth/roles";
 import { getSessionUser } from "@/lib/auth/session";
 import { getRecipe, totalMinutes } from "@/lib/recipes";
 import {
@@ -98,11 +103,13 @@ export default async function RecipePage({ params }: Props) {
   }
 
   const minutes = totalMinutes(recipe);
-  const [reviews, summary, comments] = await Promise.all([
+  const [reviews, summary, comments, privilegeByUserId] = await Promise.all([
     listReviewsForRecipe(recipe.id),
     getRatingSummary(recipe.id),
     listCommentsForRecipe(recipe.id),
+    getAuthorPrivilegesByUserIds([recipe.authorId]),
   ]);
+  const authorCredit = resolveRecipeAuthorCredit(recipe, privilegeByUserId);
   const signInHref = `/signin?callbackUrl=${encodeURIComponent(`/recipes/${recipe.slug}`)}`;
   const profileHref = `/welcome?next=${encodeURIComponent(`/recipes/${recipe.slug}`)}`;
   const hasDisplayName = isDisplayNameSet(user?.name);
@@ -123,6 +130,14 @@ export default async function RecipePage({ params }: Props) {
 
       <div className="mx-auto max-w-4xl px-5 pt-10 md:px-8 md:pt-14">
         <div className="flex flex-wrap gap-2">
+          {recipe.isPrivate ? (
+            <Badge
+              variant="secondary"
+              className="border border-[var(--accent-deep)]/45 bg-[var(--mist)] text-[var(--accent-deep)]"
+            >
+              Private
+            </Badge>
+          ) : null}
           {recipe.tags.map((tag) => (
             <Badge
               key={tag}
@@ -139,6 +154,18 @@ export default async function RecipePage({ params }: Props) {
         <p className="mt-3 max-w-2xl text-base text-[var(--ink-muted)] md:text-lg">
           {recipe.summary}
         </p>
+        <RecipeAuthorCredit
+          className="mt-4 text-sm"
+          label={authorCredit.label}
+          privilege={authorCredit.privilege}
+          trailing={
+            recipe.isPrivate ? (
+              <span className="text-[var(--ink-soft)]">
+                · only you can see this
+              </span>
+            ) : null
+          }
+        />
         <p className="mt-5 flex flex-wrap gap-x-3 gap-y-2 text-sm leading-relaxed text-[var(--ink-soft)] md:mt-4 md:gap-x-4 md:text-xs md:uppercase md:tracking-[0.14em]">
           <span>{recipe.prepMinutes} prep</span>
           <span aria-hidden className="text-[var(--line)]">
@@ -205,7 +232,7 @@ export default async function RecipePage({ params }: Props) {
           signedIn={Boolean(user)}
           hasDisplayName={hasDisplayName}
           currentUserId={user?.id ?? null}
-          isAdmin={user?.role === "admin"}
+          isAdmin={hasKitchenStaffPowers(user?.role)}
           signInHref={signInHref}
           profileHref={profileHref}
         />
@@ -215,7 +242,7 @@ export default async function RecipePage({ params }: Props) {
           signedIn={Boolean(user)}
           hasDisplayName={hasDisplayName}
           currentUserId={user?.id ?? null}
-          isAdmin={user?.role === "admin"}
+          isAdmin={hasKitchenStaffPowers(user?.role)}
           signInHref={signInHref}
           profileHref={profileHref}
         />
