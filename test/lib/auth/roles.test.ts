@@ -101,7 +101,7 @@ describe("canEditRecipe / canManageRecipe", () => {
 
 describe("canViewRecipe", () => {
   const author = "author-1";
-  it("hides private recipes from non-authors", () => {
+  it("hides private recipes from non-authors without shares", () => {
     expect(canViewRecipe({ isPrivate: false, authorId: author }, null)).toBe(
       true
     );
@@ -110,6 +110,37 @@ describe("canViewRecipe", () => {
     ).toBe(true);
     expect(
       canViewRecipe({ isPrivate: true, authorId: author }, "other")
+    ).toBe(false);
+  });
+
+  it("allows selective user and role share recipients", () => {
+    expect(
+      canViewRecipe(
+        { isPrivate: true, authorId: author },
+        "friend-1",
+        { sharedWithUser: true }
+      )
+    ).toBe(true);
+    expect(
+      canViewRecipe(
+        { isPrivate: true, authorId: author },
+        "admin-1",
+        { viewerRole: "admin", sharedRoles: ["admin"] }
+      )
+    ).toBe(true);
+    expect(
+      canViewRecipe(
+        { isPrivate: true, authorId: author },
+        "cook-1",
+        { viewerRole: "cook", sharedRoles: ["admin"] }
+      )
+    ).toBe(false);
+    expect(
+      canViewRecipe(
+        { isPrivate: true, authorId: author },
+        null,
+        { sharedWithUser: true }
+      )
     ).toBe(false);
   });
 });

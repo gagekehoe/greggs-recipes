@@ -12,6 +12,7 @@ import { hasRecipeImage } from "@/lib/recipes/image";
 import { RECIPE_FIELD_LIMITS } from "@/lib/recipes/recipe-input-schema";
 import type { Recipe } from "@/lib/recipes/types";
 import { IMAGE_UPLOAD_LIMITS } from "@/lib/uploads/limits";
+import { RecipeShareManager } from "@/components/recipes/recipe-share-manager";
 
 type Props = {
   contentMode: "db" | "sanity" | "local";
@@ -641,15 +642,28 @@ export function RecipeEditor({
               />
               <span>
                 <span className="block text-sm font-medium text-[var(--ink)]">
-                  Private (only me)
+                  Private
                 </span>
                 <span className="block text-xs text-[var(--ink-soft)]">
-                  Hidden from Browse Recipes and direct links for others
+                  Hidden from the public catalog; share with people or roles
+                  after saving
                 </span>
               </span>
             </label>
           </div>
         </div>
+
+        {isEditing && isPrivate && editingId ? (
+          <div className="md:col-span-2">
+            <RecipeShareManager
+              recipeId={editingId}
+              recipeTitle={title.trim() || "this recipe"}
+              authorId={
+                recipes.find((r) => r.id === editingId)?.authorId ?? ""
+              }
+            />
+          </div>
+        ) : null}
 
         <div className="space-y-2 md:col-span-2">
           <p className="text-sm text-[var(--ink-muted)]">
@@ -749,7 +763,7 @@ export function RecipeEditor({
                         {recipe.authorName} · {recipe.source}
                         {hasPhoto ? " · photo set" : " · using placeholder"}
                         {recipe.isPrivate
-                          ? " · only you can open this"
+                          ? " · private (selective share)"
                           : " · public"}
                       </p>
                     </div>
@@ -793,6 +807,14 @@ export function RecipeEditor({
                       </Button>
                     </div>
                   </div>
+                  {recipe.isPrivate ? (
+                    <RecipeShareManager
+                      recipeId={recipe.id}
+                      recipeTitle={recipe.title}
+                      authorId={recipe.authorId}
+                      compact
+                    />
+                  ) : null}
                   <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
                     <div className="min-w-0 flex-1 space-y-1">
                       <Label

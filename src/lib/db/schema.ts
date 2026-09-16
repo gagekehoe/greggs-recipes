@@ -141,7 +141,10 @@ export const recipes = sqliteTable("recipe", {
   imageAlt: text("imageAlt").notNull().default(""),
   authorId: text("authorId").notNull(),
   authorName: text("authorName").notNull(),
-  /** When true, only the author (by authorId) may view or list this recipe. */
+  /**
+   * When true, only the author and selective share recipients may view.
+   * Public catalog / sitemap still omit private recipes.
+   */
   isPrivate: integer("isPrivate", { mode: "boolean" }).notNull().default(false),
   /** Optional attribution credit shown on the recipe detail page. */
   inspiredBy: text("inspiredBy").notNull().default(""),
@@ -152,7 +155,34 @@ export const recipes = sqliteTable("recipe", {
     .$defaultFn(() => new Date()),
 });
 
+/**
+ * Selective share grants for private recipes.
+ * Exactly one of `userId` or `role` is set per row (user share XOR role share).
+ * There is no “share with everyone” grant — use public visibility instead.
+ */
+export const recipeShares = sqliteTable(
+  "recipe_share",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => crypto.randomUUID()),
+    recipeId: text("recipeId")
+      .notNull()
+      .references(() => recipes.id, { onDelete: "cascade" }),
+    userId: text("userId").references(() => users.id, { onDelete: "cascade" }),
+    role: text("role", { enum: ROLES }),
+    createdAt: integer("createdAt", { mode: "timestamp_ms" })
+      .notNull()
+      .$defaultFn(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("recipe_share_recipe_user_uidx").on(table.recipeId, table.userId),
+    uniqueIndex("recipe_share_recipe_role_uidx").on(table.recipeId, table.role),
+  ]
+);
+
 export type DbRecipeReview = typeof recipeReviews.$inferSelect;
 export type DbRecipeReviewImage = typeof recipeReviewImages.$inferSelect;
 export type DbRecipeComment = typeof recipeComments.$inferSelect;
 export type DbRecipe = typeof recipes.$inferSelect;
+export type DbRecipeShare = typeof recipeShares.$inferSelect;

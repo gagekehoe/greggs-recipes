@@ -51,13 +51,38 @@ export function canEditRecipe(
   return false;
 }
 
-/** Public recipes are visible to everyone; private ones only to the author (by user id). */
+/**
+ * Optional share context for private recipes.
+ * User grants set `sharedWithUser`; role grants match `viewerRole` against `sharedRoles`.
+ * There is no “everyone” grant — public visibility remains the only global option.
+ */
+export type RecipeViewAccess = {
+  sharedWithUser?: boolean;
+  viewerRole?: Role | null;
+  sharedRoles?: readonly Role[];
+};
+
+/**
+ * Public recipes are visible to everyone.
+ * Private recipes are visible to the author and selective share recipients
+ * (named users and/or roles). Staff do not get an automatic private override.
+ */
 export function canViewRecipe(
   recipe: { isPrivate?: boolean; authorId: string },
-  userId: string | undefined | null
+  userId: string | undefined | null,
+  access?: RecipeViewAccess
 ): boolean {
   if (!recipe.isPrivate) return true;
-  return Boolean(userId && recipe.authorId === userId);
+  if (userId && recipe.authorId === userId) return true;
+  if (!userId) return false;
+  if (access?.sharedWithUser) return true;
+  if (
+    access?.viewerRole &&
+    access.sharedRoles?.includes(access.viewerRole)
+  ) {
+    return true;
+  }
+  return false;
 }
 
 /**

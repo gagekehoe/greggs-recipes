@@ -13,6 +13,13 @@ vi.mock("@/lib/auth/session", () => ({
 vi.mock("@/lib/recipes", () => ({
   getRecipeById: (...a: unknown[]) => getRecipeById(...a),
 }));
+vi.mock("@/lib/recipes/shares", () => ({
+  getRecipeShareAccess: vi.fn().mockResolvedValue({
+    sharedWithUser: false,
+    viewerRole: null,
+    sharedRoles: [],
+  }),
+}));
 vi.mock("@/lib/reviews/store", () => ({
   listCommentsForRecipe: (...a: unknown[]) => listCommentsForRecipe(...a),
   createComment: (...a: unknown[]) => createComment(...a),
@@ -30,6 +37,11 @@ describe("/api/comments", () => {
     const { GET } = await import("@/app/api/comments/route");
     expect((await GET(new Request("http://x/api/comments"))).status).toBe(400);
     getSessionUser.mockResolvedValue(null);
+    getRecipeById.mockResolvedValue({
+      id: "r1",
+      isPrivate: false,
+      authorId: "author",
+    });
     listCommentsForRecipe.mockResolvedValue([
       {
         id: "c1",

@@ -6,6 +6,7 @@ import { RecipeAuthorCredit } from "@/components/recipes/recipe-author-credit";
 import { RecipeCommentsSection } from "@/components/recipes/recipe-comments";
 import { RecipePhoto } from "@/components/recipes/recipe-photo";
 import { RecipeReviewsSection } from "@/components/recipes/recipe-reviews";
+import { RecipeShareManager } from "@/components/recipes/recipe-share-manager";
 import {
   getAuthorPrivilegesByUserIds,
   resolveRecipeAuthorCredit,
@@ -17,7 +18,9 @@ import {
   hasKitchenStaffPowers,
 } from "@/lib/auth/roles";
 import { getSessionUser } from "@/lib/auth/session";
+import type { Role } from "@/lib/db/schema";
 import { getRecipe, totalMinutes } from "@/lib/recipes";
+import { getRecipeShareAccess } from "@/lib/recipes/shares";
 import {
   getRatingSummary,
   listCommentsForRecipe,
@@ -31,11 +34,21 @@ type Props = {
   params: Promise<{ slug: string }>;
 };
 
+async function resolveViewAccess(
+  recipe: { id: string; isPrivate: boolean; authorId: string },
+  user: { id: string; role: Role } | null
+) {
+  if (!recipe.isPrivate || !user) return undefined;
+  if (recipe.authorId === user.id) return undefined;
+  return getRecipeShareAccess(recipe.id, user.id, user.role);
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const { recipe } = await getRecipe(slug);
   const user = await getSessionUser();
-  if (!recipe || !canViewRecipe(recipe, user?.id)) {
+  const access = recipe ? await resolveViewAccess(recipe, user) : undefined;
+  if (!recipe || !canViewRecipe(recipe, user?.id, access)) {
     return {
       title: "Recipe not found",
       robots: { index: false, follow: false },
@@ -102,7 +115,8 @@ export default async function RecipePage({ params }: Props) {
     notFound();
   }
 
-  if (!canViewRecipe(recipe, user?.id)) {
+  const access = await resolveViewAccess(recipe, user);
+  if (!canViewRecipe(recipe, user?.id, access)) {
     notFound();
   }
 
@@ -116,9 +130,18 @@ export default async function RecipePage({ params }: Props) {
   const authorCredit = resolveRecipeAuthorCredit(recipe, privilegeByUserId);
   const canEdit =
     user != null && canManageRecipe(user.role, recipe, user.id);
+  const isAuthor = Boolean(user && recipe.authorId === user.id);
   const signInHref = `/signin?callbackUrl=${encodeURIComponent(`/recipes/${recipe.slug}`)}`;
   const profileHref = `/welcome?next=${encodeURIComponent(`/recipes/${recipe.slug}`)}`;
   const hasDisplayName = isDisplayNameSet(user?.name);
+
+  const privateTrailing = recipe.isPrivate ? (
+    <span className="text-[var(--ink-soft)]">
+      {isAuthor
+        ? "· private — you control who can see this"
+        : "· shared with you"}
+    </span>
+  ) : null;
 
   return (
     <article>
@@ -183,13 +206,7 @@ export default async function RecipePage({ params }: Props) {
           className="mt-4 text-sm"
           label={authorCredit.label}
           privilege={authorCredit.privilege}
-          trailing={
-            recipe.isPrivate ? (
-              <span className="text-[var(--ink-soft)]">
-                · only you can see this
-              </span>
-            ) : null
-          }
+          trailing={privateTrailing}
         />
         <p className="mt-5 flex flex-wrap gap-x-3 gap-y-2 text-sm leading-relaxed text-[var(--ink-soft)] md:mt-4 md:gap-x-4 md:text-xs md:uppercase md:tracking-[0.14em]">
           <span>{recipe.prepMinutes} prep</span>
@@ -217,14 +234,23 @@ export default async function RecipePage({ params }: Props) {
           ) : null}
         </p>
         {canEdit ? (
-          <p className="mt-6">
-            <Link
-              href={`/my-recipes?edit=${encodeURIComponent(recipe.id)}`}
-              className="inline-flex min-h-11 items-center rounded-lg border border-[var(--line)] bg-[var(--paper)] px-4 text-sm font-medium text-[var(--ink)] transition-colors hover:bg-[var(--mist)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[var(--sage-deep)]"
-            >
-              Edit recipe
-            </Link>
-          </p>
+          <div className="mt-6 space-y-4">
+            <p>
+              <Link
+                href={`/my-recipes?edit=${encodeURIComponent(recipe.id)}`}
+                className="inline-flex min-h-11 items-center rounded-lg border border-[var(--line)] bg-[var(--paper)] px-4 text-sm font-medium text-[var(--ink)] transition-colors hover:bg-[var(--mist)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[var(--sage-deep)]"
+              >
+                Edit recipe
+              </Link>
+            </p>
+            {recipe.isPrivate ? (
+              <RecipeShareManager
+                recipeId={recipe.id}
+                recipeTitle={recipe.title}
+                authorId={recipe.authorId}
+              />
+            ) : null}
+          </div>
         ) : null}
       </div>
 

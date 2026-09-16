@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { hasKitchenStaffPowers } from "@/lib/auth/roles";
+import {
+  canViewRecipe,
+  hasKitchenStaffPowers,
+} from "@/lib/auth/roles";
 import { getSessionUser, getUserDisplayName } from "@/lib/auth/session";
 import { getRecipeById } from "@/lib/recipes";
+import { getRecipeShareAccess } from "@/lib/recipes/shares";
 import {
   canEditOwnReview,
   canLeaveReview,
@@ -57,12 +61,25 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Missing recipeId" }, { status: 400 });
   }
 
+  const recipe = await getRecipeById(recipeId);
+  if (!recipe) {
+    return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
+  }
+
+  const user = await getSessionUser();
+  const access =
+    recipe.isPrivate && user
+      ? await getRecipeShareAccess(recipe.id, user.id, user.role)
+      : undefined;
+  if (!canViewRecipe(recipe, user?.id, access)) {
+    return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
+  }
+
   const [reviews, summary] = await Promise.all([
     listReviewsForRecipe(recipeId),
     getRatingSummary(recipeId),
   ]);
 
-  const user = await getSessionUser();
   const mine = user
     ? reviews.find((r) => r.userId === user.id) ?? null
     : null;
@@ -103,6 +120,12 @@ export async function POST(request: Request) {
 
       const recipe = await getRecipeById(recipeId);
       if (!recipe) {
+        return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
+      }
+      const access = recipe.isPrivate
+        ? await getRecipeShareAccess(recipe.id, user.id, user.role)
+        : undefined;
+      if (!canViewRecipe(recipe, user.id, access)) {
         return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
       }
 
@@ -159,6 +182,12 @@ export async function POST(request: Request) {
 
     const recipe = await getRecipeById(parsed.data.recipeId);
     if (!recipe) {
+      return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
+    }
+    const access = recipe.isPrivate
+      ? await getRecipeShareAccess(recipe.id, user.id, user.role)
+      : undefined;
+    if (!canViewRecipe(recipe, user.id, access)) {
       return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
     }
 

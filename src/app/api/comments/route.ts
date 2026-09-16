@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { canViewRecipe } from "@/lib/auth/roles";
 import { getSessionUser } from "@/lib/auth/session";
 import { getRecipeById } from "@/lib/recipes";
+import { getRecipeShareAccess } from "@/lib/recipes/shares";
 import {
   canDeleteComment,
   canPostComment,
@@ -18,6 +20,26 @@ const createSchema = z.object({
   body: z.string().trim().min(1).max(2000),
 });
 
+async function assertCanViewRecipeId(recipeId: string) {
+  const recipe = await getRecipeById(recipeId);
+  if (!recipe) {
+    return {
+      error: NextResponse.json({ error: "Recipe not found" }, { status: 404 }),
+    } as const;
+  }
+  const user = await getSessionUser();
+  const access =
+    recipe.isPrivate && user
+      ? await getRecipeShareAccess(recipe.id, user.id, user.role)
+      : undefined;
+  if (!canViewRecipe(recipe, user?.id, access)) {
+    return {
+      error: NextResponse.json({ error: "Recipe not found" }, { status: 404 }),
+    } as const;
+  }
+  return { recipe, user } as const;
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const recipeId = searchParams.get("recipeId");
@@ -25,11 +47,13 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: "Missing recipeId" }, { status: 400 });
   }
 
+  const gate = await assertCanViewRecipeId(recipeId);
+  if ("error" in gate) return gate.error;
+
   const comments = await listCommentsForRecipe(recipeId);
-  const user = await getSessionUser();
   return NextResponse.json({
     comments,
-    signedIn: Boolean(user),
+    signedIn: Boolean(gate.user),
   });
 }
 
@@ -53,10 +77,8 @@ export async function POST(request: Request) {
       );
     }
 
-    const recipe = await getRecipeById(parsed.data.recipeId);
-    if (!recipe) {
-      return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
-    }
+    const viewGate = await assertCanViewRecipeId(parsed.data.recipeId);
+    if ("error" in viewGate) return viewGate.error;
 
     const comment = await createComment({
       recipeId: parsed.data.recipeId,

@@ -69,6 +69,39 @@ const SCHEMA_SQL = `
   );
   CREATE INDEX IF NOT EXISTS recipe_comment_recipe_idx
     ON recipe_comment (recipeId);
+  CREATE TABLE IF NOT EXISTS recipe (
+    id TEXT PRIMARY KEY NOT NULL,
+    slug TEXT NOT NULL UNIQUE,
+    title TEXT NOT NULL,
+    summary TEXT NOT NULL DEFAULT '',
+    ingredients TEXT NOT NULL DEFAULT '[]',
+    steps TEXT NOT NULL DEFAULT '[]',
+    tags TEXT NOT NULL DEFAULT '[]',
+    prepMinutes INTEGER NOT NULL DEFAULT 0,
+    cookMinutes INTEGER NOT NULL DEFAULT 0,
+    servings INTEGER NOT NULL DEFAULT 1,
+    imageUrl TEXT NOT NULL DEFAULT '',
+    imageAlt TEXT NOT NULL DEFAULT '',
+    authorId TEXT NOT NULL,
+    authorName TEXT NOT NULL,
+    isPrivate INTEGER NOT NULL DEFAULT 0,
+    inspiredBy TEXT NOT NULL DEFAULT '',
+    inspiredByUrl TEXT NOT NULL DEFAULT '',
+    updatedAt INTEGER NOT NULL
+  );
+  CREATE TABLE IF NOT EXISTS recipe_share (
+    id TEXT PRIMARY KEY NOT NULL,
+    recipeId TEXT NOT NULL,
+    userId TEXT,
+    role TEXT,
+    createdAt INTEGER NOT NULL,
+    FOREIGN KEY (recipeId) REFERENCES recipe(id) ON DELETE CASCADE,
+    FOREIGN KEY (userId) REFERENCES user(id) ON DELETE CASCADE
+  );
+  CREATE UNIQUE INDEX IF NOT EXISTS recipe_share_recipe_user_uidx
+    ON recipe_share (recipeId, userId);
+  CREATE UNIQUE INDEX IF NOT EXISTS recipe_share_recipe_role_uidx
+    ON recipe_share (recipeId, role);
 `;
 
 export function createTestDb() {

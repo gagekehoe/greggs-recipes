@@ -17,8 +17,15 @@ const createDbRecipe = vi.fn();
 const updateDbRecipe = vi.fn();
 const deleteDbRecipe = vi.fn();
 
+const listSharedRecipeIdsForViewer = vi.fn();
+
 vi.mock("@/lib/db", () => ({
   isDatabaseConfigured: (...args: unknown[]) => isDatabaseConfigured(...args),
+}));
+
+vi.mock("@/lib/recipes/shares", () => ({
+  listSharedRecipeIdsForViewer: (...args: unknown[]) =>
+    listSharedRecipeIdsForViewer(...args),
 }));
 
 vi.mock("@/lib/recipes/db-store", () => ({
@@ -112,6 +119,8 @@ describe("recipes facade", () => {
     createDbRecipe.mockReset();
     updateDbRecipe.mockReset();
     deleteDbRecipe.mockReset();
+    listSharedRecipeIdsForViewer.mockReset();
+    listSharedRecipeIdsForViewer.mockResolvedValue(new Set());
     delete process.env.SANITY_API_WRITE_TOKEN;
     isDatabaseConfigured.mockReturnValue(false);
   });
@@ -152,6 +161,28 @@ describe("recipes facade", () => {
 
     const mine = await listRecipes({ includePrivateForUserId: "u1" });
     expect(mine.recipes.map((r) => r.id).sort()).toEqual(["priv", "pub"]);
+  });
+
+  it("includes private recipes shared with the viewer", async () => {
+    isSanityConfigured.mockReturnValue(false);
+    listLocalRecipes.mockResolvedValue([
+      recipe({ id: "pub", title: "Public soup" }),
+      recipe({
+        id: "shared",
+        title: "Shared private",
+        isPrivate: true,
+        authorId: "author",
+      }),
+    ]);
+    listSharedRecipeIdsForViewer.mockResolvedValue(new Set(["shared"]));
+    const { listRecipes } = await import("@/lib/recipes");
+
+    const listed = await listRecipes({
+      includePrivateForUserId: "friend",
+      viewerRole: "cook",
+    });
+    expect(listSharedRecipeIdsForViewer).toHaveBeenCalledWith("friend", "cook");
+    expect(listed.recipes.map((r) => r.id).sort()).toEqual(["pub", "shared"]);
   });
 
   it("lists local recipes when DB and Sanity are off", async () => {
