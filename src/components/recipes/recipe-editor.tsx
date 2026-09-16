@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -17,6 +17,8 @@ type Props = {
   contentMode: "db" | "sanity" | "local";
   recipes: Recipe[];
   canManageAll: boolean;
+  /** Prefill the form for this recipe id (from `/my-recipes?edit=`). */
+  initialEditId?: string | null;
 };
 
 const PHOTO_ACCEPT = "image/jpeg,image/png,image/webp,image/gif";
@@ -61,8 +63,14 @@ async function uploadRecipePhoto(file: File): Promise<string> {
   return data.url;
 }
 
-export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
+export function RecipeEditor({
+  contentMode,
+  recipes,
+  canManageAll,
+  initialEditId = null,
+}: Props) {
   const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
   const createPhotoRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -71,6 +79,8 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
   const [photoFiles, setPhotoFiles] = useState<Record<string, File | null>>({});
   const [savingPhotoId, setSavingPhotoId] = useState<string | null>(null);
 
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [existingImageUrl, setExistingImageUrl] = useState("");
   const [title, setTitle] = useState("");
   const [summary, setSummary] = useState("");
   const [ingredients, setIngredients] = useState("");
@@ -85,6 +95,70 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
     null
   );
 
+  const editingRecipe = editingId
+    ? recipes.find((r) => r.id === editingId) ?? null
+    : null;
+  const isEditing = Boolean(editingId);
+
+  function resetCreateForm() {
+    setEditingId(null);
+    setExistingImageUrl("");
+    setTitle("");
+    setSummary("");
+    setIngredients("");
+    setSteps("");
+    setTags("");
+    setPrepMinutes(15);
+    setCookMinutes(30);
+    setServings(4);
+    setIsPrivate(false);
+    setCreatePhotoFile(null);
+    if (createPhotoRef.current) createPhotoRef.current.value = "";
+  }
+
+  function loadRecipeIntoForm(recipe: Recipe, syncUrl = true) {
+    setEditingId(recipe.id);
+    setExistingImageUrl(recipe.imageUrl || "");
+    setTitle(recipe.title);
+    setSummary(recipe.summary);
+    setIngredients(recipe.ingredients.join("\n"));
+    setSteps(recipe.steps.join("\n"));
+    setTags(recipe.tags.join(", "));
+    setPrepMinutes(recipe.prepMinutes);
+    setCookMinutes(recipe.cookMinutes);
+    setServings(recipe.servings);
+    setIsPrivate(Boolean(recipe.isPrivate));
+    setCreatePhotoFile(null);
+    if (createPhotoRef.current) createPhotoRef.current.value = "";
+    setError(null);
+    setStatus(null);
+    if (syncUrl) {
+      router.replace(`/my-recipes?edit=${encodeURIComponent(recipe.id)}`, {
+        scroll: false,
+      });
+    }
+    requestAnimationFrame(() => {
+      formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }
+
+  function cancelEdit() {
+    resetCreateForm();
+    router.replace("/my-recipes", { scroll: false });
+  }
+
+  useEffect(() => {
+    if (!initialEditId) return;
+    const recipe = recipes.find((r) => r.id === initialEditId);
+    if (!recipe) {
+      setError("That recipe isn’t in your list — it may have been deleted.");
+      return;
+    }
+    loadRecipeIntoForm(recipe, false);
+    // Prefill once from the URL; later Edit clicks call loadRecipeIntoForm directly.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional mount/URL hydrate
+  }, [initialEditId]);
+
   async function saveRecipe(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -94,52 +168,62 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
       let imageUrl: string | undefined;
       if (createPhotoFile) {
         imageUrl = await uploadRecipePhoto(createPhotoFile);
+      } else if (isEditing) {
+        imageUrl = existingImageUrl;
       }
 
+      const payload = {
+        title,
+        summary,
+        ingredients: ingredients
+          .split("\n")
+          .map((s) => s.trim())
+          .filter(Boolean),
+        steps: steps
+          .split("\n")
+          .map((s) => s.trim())
+          .filter(Boolean),
+        tags: tags
+          .split(",")
+          .map((s) => s.trim())
+          .filter(Boolean),
+        prepMinutes: Number(prepMinutes),
+        cookMinutes: Number(cookMinutes),
+        servings: Number(servings),
+        imageUrl,
+        imageAlt: imageUrl ? `${title.trim()} plated` : "",
+        isPrivate,
+      };
+
       const res = await fetch("/api/recipes", {
-        method: "POST",
+        method: isEditing ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title,
-          summary,
-          ingredients: ingredients
-            .split("\n")
-            .map((s) => s.trim())
-            .filter(Boolean),
-          steps: steps
-            .split("\n")
-            .map((s) => s.trim())
-            .filter(Boolean),
-          tags: tags
-            .split(",")
-            .map((s) => s.trim())
-            .filter(Boolean),
-          prepMinutes: Number(prepMinutes),
-          cookMinutes: Number(cookMinutes),
-          servings: Number(servings),
-          imageUrl,
-          imageAlt: imageUrl ? `${title.trim()} plated` : undefined,
-          isPrivate,
-        }),
+        body: JSON.stringify(
+          isEditing ? { id: editingId, ...payload } : payload
+        ),
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(recipeApiErrorMessage(data, "Could not save recipe"));
+        setError(
+          recipeApiErrorMessage(
+            data,
+            isEditing ? "Could not update recipe" : "Could not save recipe"
+          )
+        );
         return;
       }
+      const saved = data.recipe as Recipe;
       setStatus(
-        data.recipe.isPrivate
-          ? `Saved “${data.recipe.title}” as private (${data.mode}) — only you can see it.`
-          : `Published “${data.recipe.title}” (${data.mode}).`
+        isEditing
+          ? saved.isPrivate
+            ? `Updated “${saved.title}” (still private).`
+            : `Updated “${saved.title}”.`
+          : saved.isPrivate
+            ? `Saved “${saved.title}” as private (${data.mode}) — only you can see it.`
+            : `Published “${saved.title}” (${data.mode}).`
       );
-      setTitle("");
-      setSummary("");
-      setIngredients("");
-      setSteps("");
-      setTags("");
-      setIsPrivate(false);
-      setCreatePhotoFile(null);
-      if (createPhotoRef.current) createPhotoRef.current.value = "";
+      resetCreateForm();
+      router.replace("/my-recipes", { scroll: false });
       router.refresh();
     } catch (err) {
       setError(
@@ -270,6 +354,10 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
         setError(data.error || "Could not delete");
         return;
       }
+      if (editingId === id) {
+        resetCreateForm();
+        router.replace("/my-recipes", { scroll: false });
+      }
       setStatus(`Deleted “${recipeTitle}”.`);
       router.refresh();
     } catch {
@@ -287,8 +375,8 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
         </h1>
         <p className="mt-3 max-w-2xl text-[var(--ink-muted)]">
           {canManageAll
-            ? "You’re an admin — add dishes and manage any recipe on the site."
-            : "Add and manage recipes you published. Viewers can browse; only cooks and admins can write."}{" "}
+            ? "You’re an admin — add dishes, edit any public recipe, and manage the kitchen."
+            : "Add, edit, and manage recipes you published. Viewers can browse; only cooks and admins can write."}{" "}
           Saving to{" "}
           <span className="font-medium text-[var(--ink)]">
             {contentMode === "db"
@@ -301,7 +389,27 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
         </p>
       </div>
 
-      <form onSubmit={saveRecipe} className="grid gap-6 md:grid-cols-2">
+      <form
+        ref={formRef}
+        id="recipe-form"
+        onSubmit={saveRecipe}
+        className="grid scroll-mt-28 gap-6 md:grid-cols-2"
+      >
+        <div className="space-y-2 md:col-span-2">
+          <h2 className="font-display text-3xl text-[var(--ink)]">
+            {isEditing ? "Edit recipe" : "Add a recipe"}
+          </h2>
+          {isEditing && editingRecipe ? (
+            <p className="text-sm text-[var(--ink-muted)]">
+              Updating{" "}
+              <span className="font-medium text-[var(--ink)]">
+                {editingRecipe.title}
+              </span>
+              . Save keeps the same URL slug.
+            </p>
+          ) : null}
+        </div>
+
         <div className="space-y-5 md:col-span-2">
           <div className="space-y-2">
             <Label htmlFor="title">Title</Label>
@@ -366,7 +474,9 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="recipePhoto">Recipe photo (optional)</Label>
+          <Label htmlFor="recipePhoto">
+            {isEditing ? "Recipe photo" : "Recipe photo (optional)"}
+          </Label>
           <input
             ref={createPhotoRef}
             id="recipePhoto"
@@ -377,14 +487,42 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
           />
           <p className="text-xs text-[var(--ink-soft)]">
             JPEG, PNG, WebP, or GIF up to {PHOTO_MAX_MB}MB. Phone photos over the
-            limit need a quick compress first. Leave blank for a sage kitchen
-            placeholder with the dish initials. Review photos are separate and
-            stay on the recipe page.
+            limit need a quick compress first.
+            {isEditing
+              ? hasRecipeImage(existingImageUrl)
+                ? " Leave blank to keep the current photo."
+                : " Leave blank to keep the sage placeholder."
+              : " Leave blank for a sage kitchen placeholder with the dish initials."}{" "}
+            Review photos are separate and stay on the recipe page.
           </p>
+          {isEditing && hasRecipeImage(existingImageUrl) && !createPhotoFile ? (
+            <p className="text-xs text-[var(--ink-muted)]">
+              Current photo is set
+              {existingImageUrl.startsWith("http") ||
+              existingImageUrl.startsWith("/")
+                ? " — choose a file only if you want to replace it."
+                : "."}
+            </p>
+          ) : null}
           {createPhotoFile ? (
             <p className="text-xs text-[var(--ink-muted)]">
               Selected: {createPhotoFile.name}
             </p>
+          ) : null}
+          {isEditing && hasRecipeImage(existingImageUrl) ? (
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="mt-1"
+              onClick={() => {
+                setExistingImageUrl("");
+                setCreatePhotoFile(null);
+                if (createPhotoRef.current) createPhotoRef.current.value = "";
+              }}
+            >
+              Clear photo
+            </Button>
           ) : null}
         </div>
 
@@ -480,16 +618,30 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
           </p>
         ) : null}
 
-        <div className="md:col-span-2">
+        <div className="flex flex-wrap gap-3 md:col-span-2">
           <Button type="submit" disabled={saving} className="min-w-40">
             {saving
-              ? isPrivate
+              ? isEditing
                 ? "Saving…"
-                : "Publishing…"
-              : isPrivate
-                ? "Save private recipe"
-                : "Publish recipe"}
+                : isPrivate
+                  ? "Saving…"
+                  : "Publishing…"
+              : isEditing
+                ? "Save changes"
+                : isPrivate
+                  ? "Save private recipe"
+                  : "Publish recipe"}
           </Button>
+          {isEditing ? (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={saving}
+              onClick={cancelEdit}
+            >
+              Cancel edit
+            </Button>
+          ) : null}
         </div>
       </form>
 
@@ -534,6 +686,15 @@ export function RecipeEditor({ contentMode, recipes, canManageAll }: Props) {
                       >
                         View
                       </Link>
+                      <Button
+                        variant={
+                          editingId === recipe.id ? "secondary" : "outline"
+                        }
+                        size="sm"
+                        onClick={() => loadRecipeIntoForm(recipe)}
+                      >
+                        {editingId === recipe.id ? "Editing…" : "Edit"}
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
