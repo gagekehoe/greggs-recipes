@@ -11,7 +11,11 @@ import {
   resolveRecipeAuthorCredit,
 } from "@/lib/auth/author-credits";
 import { isDisplayNameSet } from "@/lib/auth/profile";
-import { canViewRecipe, hasKitchenStaffPowers } from "@/lib/auth/roles";
+import {
+  canManageRecipe,
+  canViewRecipe,
+  hasKitchenStaffPowers,
+} from "@/lib/auth/roles";
 import { getSessionUser } from "@/lib/auth/session";
 import { getRecipe, totalMinutes } from "@/lib/recipes";
 import {
@@ -110,6 +114,8 @@ export default async function RecipePage({ params }: Props) {
     getAuthorPrivilegesByUserIds([recipe.authorId]),
   ]);
   const authorCredit = resolveRecipeAuthorCredit(recipe, privilegeByUserId);
+  const canEdit =
+    user != null && canManageRecipe(user.role, recipe, user.id);
   const signInHref = `/signin?callbackUrl=${encodeURIComponent(`/recipes/${recipe.slug}`)}`;
   const profileHref = `/welcome?next=${encodeURIComponent(`/recipes/${recipe.slug}`)}`;
   const hasDisplayName = isDisplayNameSet(user?.name);
@@ -191,6 +197,16 @@ export default async function RecipePage({ params }: Props) {
             </>
           ) : null}
         </p>
+        {canEdit ? (
+          <p className="mt-6">
+            <Link
+              href={`/my-recipes?edit=${encodeURIComponent(recipe.id)}`}
+              className="inline-flex min-h-11 items-center rounded-lg border border-[var(--line)] bg-[var(--paper)] px-4 text-sm font-medium text-[var(--ink)] transition-colors hover:bg-[var(--mist)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[var(--sage-deep)]"
+            >
+              Edit recipe
+            </Link>
+          </p>
+        ) : null}
       </div>
 
       <div className="mx-auto grid max-w-4xl gap-12 px-5 py-12 md:grid-cols-[0.9fr_1.1fr] md:px-8 md:py-16">

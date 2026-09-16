@@ -11,7 +11,11 @@ export const metadata = {
 
 export const dynamic = "force-dynamic";
 
-export default async function MyRecipesPage() {
+type Props = {
+  searchParams: Promise<{ edit?: string }>;
+};
+
+export default async function MyRecipesPage({ searchParams }: Props) {
   const user = await getSessionUser();
   if (!user) {
     redirect("/signin?callbackUrl=/my-recipes");
@@ -36,6 +40,12 @@ export default async function MyRecipesPage() {
     );
   }
 
+  const params = await searchParams;
+  const initialEditId =
+    typeof params.edit === "string" && params.edit.trim()
+      ? params.edit.trim()
+      : null;
+
   const { recipes } = await listRecipes({
     includePrivateForUserId: user.id,
   });
@@ -50,6 +60,7 @@ export default async function MyRecipesPage() {
         contentMode={getContentMode()}
         recipes={visible}
         canManageAll={hasKitchenStaffPowers(user.role)}
+        initialEditId={initialEditId}
       />
     </div>
   );
