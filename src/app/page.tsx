@@ -10,8 +10,8 @@ export default async function HomePage() {
 
   return (
     <>
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0">
+      <section className="relative">
+        <div className="absolute inset-0 overflow-hidden" aria-hidden>
           {featured ? (
             <RecipePhoto
               title={featured.title}
@@ -36,9 +36,9 @@ export default async function HomePage() {
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_18%_30%,rgba(184,137,45,0.2),transparent_48%)]" />
         </div>
 
-        <div className="relative z-10 px-5 pb-8 pt-[5.75rem] md:px-8 md:pb-10 md:pt-28">
+        <div className="relative z-10 px-5 pb-9 pt-48 md:px-8 md:pb-10 md:pt-28">
           <div className="hero-copy mx-auto w-full max-w-6xl">
-            <p className="font-display text-4xl leading-none text-[#f3f0e8] drop-shadow-sm sm:text-5xl md:text-6xl">
+            <p className="font-display text-[2rem] leading-snug text-[#f3f0e8] drop-shadow-sm sm:text-5xl sm:leading-tight md:text-6xl">
               Gregg&apos;s Recipes
             </p>
             <h1 className="mt-3 max-w-2xl text-base font-medium leading-snug text-[#e8ebe3] md:mt-4 md:text-lg">
