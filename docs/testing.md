@@ -7,6 +7,19 @@ npm test
 npm run test:coverage
 ```
 
+Coverage reporters write to `coverage/` (gitignored). Overall totals and the HTML report land there after `npm run test:coverage`.
+
+## CI (GitHub Actions)
+
+PRs and pushes to `main` run [`.github/workflows/ci.yml`](../.github/workflows/ci.yml):
+
+1. `npm ci` + `npm run test:coverage`
+2. Vitest enforces gates from `vitest.config.ts` (lines/statements/functions ≥ 75%, branches ≥ 65%)
+3. A coverage table is printed to the job log and the Actions **Summary** tab
+4. `coverage/` is uploaded as a workflow artifact (HTML + `coverage-summary.json`)
+
+**Vercel does not run Vitest.** Use the PR’s **Checks → Unit tests + coverage** job (and its Summary) for numbers on GitHub.
+
 ## What’s covered
 
 | Area | Approach |
