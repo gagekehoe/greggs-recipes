@@ -12,10 +12,11 @@ const replace = vi.fn();
 const update = vi.fn();
 const getSession = vi.fn();
 const signIn = vi.fn();
+let searchParams = new URLSearchParams();
 
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ refresh, replace, push: vi.fn() }),
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => searchParams,
 }));
 
 vi.mock("next-auth/react", () => ({
@@ -49,6 +50,7 @@ vi.mock("next/link", () => ({
 describe("ProfileForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    searchParams = new URLSearchParams();
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue({
@@ -97,6 +99,7 @@ describe("ProfileForm", () => {
 describe("SignInForm", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    searchParams = new URLSearchParams();
     getSession.mockResolvedValue(null);
     Object.defineProperty(window, "location", {
       value: { href: "" },
@@ -147,7 +150,7 @@ describe("SignInForm", () => {
     await user.click(screen.getByRole("tab", { name: /new here/i }));
     await user.type(screen.getByLabelText(/^email$/i), "new@example.com");
     await user.type(screen.getByLabelText(/^password$/i), "password123");
-    await user.type(screen.getByLabelText(/confirm password/i), "password123");
+    await user.type(screen.getByLabelText(/^confirm password$/i), "password123");
     await user.click(screen.getByRole("button", { name: /^create account$/i }));
 
     await waitFor(() => {
@@ -173,5 +176,64 @@ describe("SignInForm", () => {
     const links = screen.getAllByRole("link", { name: /forgot password/i });
     expect(links.length).toBeGreaterThan(0);
     expect(links[0]).toHaveAttribute("href", "/forgot-password");
+  });
+
+  it("toggles password visibility with View / Hide", async () => {
+    const { SignInForm } = await import("@/components/auth/sign-in-form");
+    const user = userEvent.setup();
+    render(<SignInForm />);
+
+    const password = screen.getByLabelText(/^password$/i);
+    expect(password).toHaveAttribute("type", "password");
+
+    const view = screen.getByRole("button", { name: /view password/i });
+    expect(view).toHaveAttribute("aria-pressed", "false");
+    await user.click(view);
+
+    expect(password).toHaveAttribute("type", "text");
+    const hide = screen.getByRole("button", { name: /hide password/i });
+    expect(hide).toHaveAttribute("aria-pressed", "true");
+    await user.click(hide);
+    expect(password).toHaveAttribute("type", "password");
+  });
+});
+
+describe("ResetPasswordForm", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    searchParams = new URLSearchParams("email=cook%40example.com&token=abc");
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => ({ ok: true }),
+      })
+    );
+    Object.defineProperty(window, "location", {
+      value: { href: "" },
+      writable: true,
+    });
+  });
+
+  it("toggles new and confirm password visibility", async () => {
+    const { ResetPasswordForm } = await import(
+      "@/components/auth/reset-password-form"
+    );
+    const user = userEvent.setup();
+    render(<ResetPasswordForm />);
+
+    const newPassword = screen.getByLabelText(/^new password$/i);
+    const confirm = screen.getByLabelText(/^confirm password$/i);
+    expect(newPassword).toHaveAttribute("type", "password");
+    expect(confirm).toHaveAttribute("type", "password");
+
+    await user.click(screen.getByRole("button", { name: /^view new password$/i }));
+    expect(newPassword).toHaveAttribute("type", "text");
+    expect(confirm).toHaveAttribute("type", "password");
+
+    await user.click(
+      screen.getByRole("button", { name: /^view confirm password$/i })
+    );
+    expect(confirm).toHaveAttribute("type", "text");
   });
 });

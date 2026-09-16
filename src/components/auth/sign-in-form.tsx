@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useState } from "react";
 import { signIn } from "next-auth/react";
+import { PasswordField } from "@/components/auth/password-field";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -164,29 +165,29 @@ export function SignInForm({ error, initialMode = "signin" }: Props) {
 
       <div className="space-y-2">
         <Label htmlFor="password">Password</Label>
-        <Input
+        <PasswordField
           id="password"
-          type="password"
           autoComplete={mode === "signin" ? "current-password" : "new-password"}
           required
           minLength={MIN_PASSWORD_LENGTH}
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           placeholder={`At least ${MIN_PASSWORD_LENGTH} characters`}
+          toggleLabel="password"
         />
       </div>
 
       {mode === "register" ? (
         <div className="space-y-2">
           <Label htmlFor="confirm">Confirm password</Label>
-          <Input
+          <PasswordField
             id="confirm"
-            type="password"
             autoComplete="new-password"
             required
             minLength={MIN_PASSWORD_LENGTH}
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
+            toggleLabel="confirm password"
           />
         </div>
       ) : null}
