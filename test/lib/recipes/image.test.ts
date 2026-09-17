@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   hasRecipeImage,
+  isAllowedNextImageSrc,
   recipeImageInitials,
   recipePlaceholderTone,
   resolveRecipeImageUrl,
@@ -16,11 +17,29 @@ describe("recipe image helpers", () => {
     expect(resolveRecipeImageUrl("  ")).toBeNull();
   });
 
-  it("returns trimmed real image URLs", () => {
-    const url = "https://cdn.example.com/dish.jpg";
-    expect(hasRecipeImage(url)).toBe(true);
-    expect(hasRecipeImage(`  ${url}  `)).toBe(true);
-    expect(resolveRecipeImageUrl(`  ${url}  `)).toBe(url);
+  it("returns trimmed Next-safe image URLs and drops hosts that would 500", () => {
+    const blob =
+      "https://abc123.public.blob.vercel-storage.com/recipes/uuid.jpg";
+    expect(hasRecipeImage(blob)).toBe(true);
+    expect(resolveRecipeImageUrl(`  ${blob}  `)).toBe(blob);
+    expect(resolveRecipeImageUrl("/uploads/recipes/bowl.jpg")).toBe(
+      "/uploads/recipes/bowl.jpg"
+    );
+    expect(
+      resolveRecipeImageUrl("https://images.unsplash.com/photo-1")
+    ).toBe("https://images.unsplash.com/photo-1");
+    expect(resolveRecipeImageUrl("https://cdn.sanity.io/images/x.jpg")).toBe(
+      "https://cdn.sanity.io/images/x.jpg"
+    );
+
+    // Stored from the old free-text photo URL field — next/image throws
+    // on unconfigured hosts and would 500 home / recipe pages.
+    expect(resolveRecipeImageUrl("https://cdn.example.com/dish.jpg")).toBeNull();
+    expect(resolveRecipeImageUrl("https://i.imgur.com/abc.jpg")).toBeNull();
+    expect(resolveRecipeImageUrl("http://images.unsplash.com/x")).toBeNull();
+    expect(resolveRecipeImageUrl("//cdn.sanity.io/x.jpg")).toBeNull();
+    expect(isAllowedNextImageSrc("/recipes/cajun-tuna-bowl.jpg")).toBe(true);
+    expect(isAllowedNextImageSrc("https://i.imgur.com/abc.jpg")).toBe(false);
   });
 
   it("builds monogram initials from the title", () => {

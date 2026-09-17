@@ -7,6 +7,7 @@ import { useMemo, useState, useTransition } from "react";
 import { AuthorPrivilegeBadge } from "@/components/auth/author-privilege-badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { isAllowedNextImageSrc } from "@/lib/recipes/image";
 import type { RatingSummary } from "@/lib/reviews/rating";
 import { REVIEW_IMAGE_LIMITS } from "@/lib/reviews/rating";
 import type { ReviewWithAuthor } from "@/lib/reviews/store";
@@ -343,22 +344,24 @@ export function RecipeReviewsSection({
                   {review.body}
                 </p>
               ) : null}
-              {review.images.length > 0 ? (
+              {review.images.some((img) => isAllowedNextImageSrc(img.url)) ? (
                 <div className="mt-4 flex flex-wrap gap-3">
-                  {review.images.map((img) => (
-                    <div
-                      key={img.id}
-                      className="relative h-24 w-32 overflow-hidden bg-[var(--sage)]/30"
-                    >
-                      <Image
-                        src={img.url}
-                        alt={`Photo from ${review.authorName || "a cook"}`}
-                        fill
-                        className="object-cover"
-                        sizes="128px"
-                      />
-                    </div>
-                  ))}
+                  {review.images
+                    .filter((img) => isAllowedNextImageSrc(img.url))
+                    .map((img) => (
+                      <div
+                        key={img.id}
+                        className="relative h-24 w-32 overflow-hidden bg-[var(--sage)]/30"
+                      >
+                        <Image
+                          src={img.url}
+                          alt={`Photo from ${review.authorName || "a cook"}`}
+                          fill
+                          className="object-cover"
+                          sizes="128px"
+                        />
+                      </div>
+                    ))}
                 </div>
               ) : null}
               {isAdmin && currentUserId !== review.userId ? (
