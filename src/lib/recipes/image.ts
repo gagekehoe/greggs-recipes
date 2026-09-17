@@ -1,18 +1,49 @@
 /**
  * Recipe photo helpers — real URL vs branded CSS fallback (no stock Unsplash default).
+ *
+ * `next/image` throws during render when `src` is a remote URL whose host is
+ * not in `images.remotePatterns` (see next.config.ts). That 500s every page
+ * that shows the photo, including home. Keep this allowlist in sync with
+ * that config. Site-relative paths are always safe.
  */
+const ALLOWED_REMOTE_HOSTS = new Set([
+  "images.unsplash.com",
+  "cdn.sanity.io",
+]);
+
+function isAllowedVercelBlobHost(hostname: string): boolean {
+  return /^[a-z0-9-]+\.public\.blob\.vercel-storage\.com$/i.test(hostname);
+}
+
+/** True when Next/Image can render this src without throwing. */
+export function isAllowedNextImageSrc(src: string): boolean {
+  const trimmed = src.trim();
+  if (!trimmed) return false;
+  if (trimmed.startsWith("/") && !trimmed.startsWith("//")) return true;
+  try {
+    const url = new URL(trimmed);
+    if (url.protocol !== "https:") return false;
+    return (
+      ALLOWED_REMOTE_HOSTS.has(url.hostname) ||
+      isAllowedVercelBlobHost(url.hostname)
+    );
+  } catch {
+    return false;
+  }
+}
 
 export function hasRecipeImage(imageUrl?: string | null): boolean {
   if (typeof imageUrl !== "string") return false;
   return imageUrl.trim().length > 0;
 }
 
-/** Public URL when a real photo exists; otherwise null (UI shows placeholder). */
+/** Public URL when a real, Next-safe photo exists; otherwise null (placeholder). */
 export function resolveRecipeImageUrl(
   imageUrl?: string | null
 ): string | null {
   if (!hasRecipeImage(imageUrl)) return null;
-  return imageUrl!.trim();
+  const trimmed = imageUrl!.trim();
+  return isAllowedNextImageSrc(trimmed) ? trimmed : null;
 }
 
 /** One or two letters from the title for the placeholder monogram. */
