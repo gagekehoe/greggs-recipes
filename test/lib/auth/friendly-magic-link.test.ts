@@ -17,7 +17,7 @@ describe("toFriendlyMagicLinkUrl", () => {
     expect(parsed.searchParams.get("token")).toBe("abc123");
     expect(parsed.searchParams.get("email")).toBe("cook@example.com");
     expect(parsed.searchParams.get("callbackUrl")).toBe(
-      "https://greggsrecipes.com/signin/done?next=%2Frecipes%2Fsoup"
+      "/signin/done?next=%2Frecipes%2Fsoup"
     );
     expect(friendly).not.toContain("/api/auth/callback");
   });
@@ -60,7 +60,7 @@ describe("authCallbackFromVerifyParams", () => {
         callbackUrl: "https://greggsrecipes.com/signin/done?next=%2F",
       })
     ).toBe(
-      "/api/auth/callback/nodemailer?token=abc123&email=cook%40example.com&callbackUrl=https%3A%2F%2Fgreggsrecipes.com%2Fsignin%2Fdone%3Fnext%3D%252F"
+      "/api/auth/callback/nodemailer?token=abc123&email=cook%40example.com&callbackUrl=%2Fsignin%2Fdone%3Fnext%3D%252F"
     );
   });
 
@@ -73,12 +73,19 @@ describe("authCallbackFromVerifyParams", () => {
     ).toBe("/api/auth/callback/nodemailer?token=t&email=a%40b.co");
   });
 
-  it("drops external callbackUrl values", () => {
+  it("drops external and backslash callbackUrl values", () => {
     expect(
       authCallbackFromVerifyParams({
         token: "t",
         email: "a@b.co",
         callbackUrl: "https://evil.example/phish",
+      })
+    ).toBe("/api/auth/callback/nodemailer?token=t&email=a%40b.co");
+    expect(
+      authCallbackFromVerifyParams({
+        token: "t",
+        email: "a@b.co",
+        callbackUrl: "/\\evil.example",
       })
     ).toBe("/api/auth/callback/nodemailer?token=t&email=a%40b.co");
   });
@@ -102,8 +109,9 @@ describe("authCallbackFromVerifyParams", () => {
     expect(rebuiltUrl.searchParams.get("email")).toBe(
       original.searchParams.get("email")
     );
+    // Absolute same-origin callbackUrls are normalized to pathname+search+hash.
     expect(rebuiltUrl.searchParams.get("callbackUrl")).toBe(
-      original.searchParams.get("callbackUrl")
+      "/signin/done?next=%2F"
     );
   });
 });

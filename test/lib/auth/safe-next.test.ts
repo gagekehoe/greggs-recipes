@@ -7,13 +7,19 @@ import {
 
 describe("safeNextPath", () => {
   it("allows same-origin relative paths", () => {
+    expect(safeNextPath("/recipes")).toBe("/recipes");
+    expect(safeNextPath("/recipes?x=1")).toBe("/recipes?x=1");
     expect(safeNextPath("/recipes/soup")).toBe("/recipes/soup");
     expect(safeNextPath("/")).toBe("/");
   });
 
-  it("rejects open redirects", () => {
-    expect(safeNextPath("https://evil.example")).toBe("/");
+  it("rejects open redirects including backslash hosts", () => {
+    expect(safeNextPath("/\\evil.example")).toBe("/");
     expect(safeNextPath("//evil.example")).toBe("/");
+    expect(safeNextPath("https://evil.example")).toBe("/");
+    expect(safeNextPath("https://evil.example/phish")).toBe("/");
+    expect(safeNextPath("/\tevil")).toBe("/");
+    expect(safeNextPath("/\u0000evil")).toBe("/");
     expect(safeNextPath(null)).toBe("/");
     expect(safeNextPath(undefined)).toBe("/");
   });
@@ -28,5 +34,6 @@ describe("auth callback helpers", () => {
       "/signin/done?next=%2Frecipes%2Fsoup"
     );
     expect(signInDoneUrl("//evil")).toBe("/signin/done?next=%2F");
+    expect(signInDoneUrl("/\\evil.example")).toBe("/signin/done?next=%2F");
   });
 });

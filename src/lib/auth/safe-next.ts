@@ -1,7 +1,11 @@
-/** Same-origin relative path only — blocks open redirects. */
+import {
+  authPublicOrigin,
+  sameOriginRelativeUrl,
+} from "@/lib/auth/safe-auth-redirect";
+
+/** Same-origin relative path only — blocks open redirects (incl. `/\\evil`). */
 export function safeNextPath(raw: string | null | undefined): string {
-  if (!raw || !raw.startsWith("/") || raw.startsWith("//")) return "/";
-  return raw;
+  return sameOriginRelativeUrl(raw, authPublicOrigin()) ?? "/";
 }
 
 /** Post-auth destination: welcome gate, then optional next path. */
