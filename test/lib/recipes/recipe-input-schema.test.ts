@@ -53,6 +53,13 @@ describe("recipeInputSchema", () => {
     ).toBe(true);
   });
 
+  it("does not default omitted isPrivate to false", () => {
+    const parsed = recipeInputSchema.safeParse(grilledBase);
+    expect(parsed.success).toBe(true);
+    if (!parsed.success) return;
+    expect(parsed.data.isPrivate).toBeUndefined();
+  });
+
   it("rejects publish/save without rights attestation", () => {
     const { rightsAttested: _omit, ...without } = grilledBase;
     const missing = recipeInputSchema.safeParse(without);

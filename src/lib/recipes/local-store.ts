@@ -135,7 +135,7 @@ export async function createLocalRecipe(input: RecipeInput): Promise<Recipe> {
   }
 
   const recipe: Recipe = {
-    id: `local-${Date.now()}`,
+    id: `local-${crypto.randomUUID()}`,
     slug,
     title: input.title.trim(),
     summary: input.summary.trim(),

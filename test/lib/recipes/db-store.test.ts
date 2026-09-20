@@ -92,6 +92,20 @@ describe("db recipe store", () => {
     expect(updated?.servings).toBe(3);
     expect(updated?.isPrivate).toBe(true);
 
+    const photoOnly = await store.updateDbRecipe(privateRecipe.id, {
+      title: privateRecipe.title,
+      summary: privateRecipe.summary,
+      ingredients: privateRecipe.ingredients,
+      steps: privateRecipe.steps,
+      tags: privateRecipe.tags,
+      prepMinutes: privateRecipe.prepMinutes,
+      cookMinutes: privateRecipe.cookMinutes,
+      servings: privateRecipe.servings,
+      imageUrl: "/uploads/recipes/secret.jpg",
+    });
+    expect(photoOnly?.isPrivate).toBe(true);
+    expect(photoOnly?.imageUrl).toBe("/uploads/recipes/secret.jpg");
+
     expect(await store.getDbRecipe("desk-chili")).toMatchObject({
       id: created.id,
       title: "Desk Chili Hot",

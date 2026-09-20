@@ -131,7 +131,6 @@ export async function PATCH(request: Request) {
       imageUrl:
         typeof data.imageUrl === "string" ? data.imageUrl.trim() : undefined,
       tags: data.tags,
-      isPrivate: Boolean(data.isPrivate),
       inspiredBy: data.inspiredBy?.trim() || "",
       inspiredByUrl:
         typeof data.inspiredByUrl === "string"
