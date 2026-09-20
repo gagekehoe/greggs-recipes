@@ -98,7 +98,9 @@ export const recipeInputSchema = z.object({
       `must be ${RECIPE_FIELD_LIMITS.imageAltMax} characters or fewer`
     )
     .optional(),
-  isPrivate: z.boolean().optional().default(false),
+  // No `.default(false)`: PATCH must distinguish “omit” (keep current
+  // visibility) from “false” (publish). POST treats omitted as public.
+  isPrivate: z.boolean().optional(),
   inspiredBy: z
     .string()
     .trim()

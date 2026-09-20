@@ -226,9 +226,13 @@ describe("/api/recipes", () => {
       ).status
     ).toBe(403);
 
-    getRecipeById.mockResolvedValue({ id: "local-1", authorId: "u1" });
+    getRecipeById.mockResolvedValue({
+      id: "local-1",
+      authorId: "u1",
+      isPrivate: true,
+    });
     updateRecipe.mockResolvedValue({
-      recipe: { id: "local-1" },
+      recipe: { id: "local-1", isPrivate: true },
       mode: "local",
     });
     expect(
@@ -242,6 +246,35 @@ describe("/api/recipes", () => {
         )
       ).status
     ).toBe(200);
+    expect(updateRecipe).toHaveBeenCalledWith(
+      "local-1",
+      expect.objectContaining({
+        title: validRecipe.title,
+      })
+    );
+    expect(updateRecipe.mock.calls.at(-1)?.[1]).not.toHaveProperty(
+      "isPrivate",
+      false
+    );
+    expect(updateRecipe.mock.calls.at(-1)?.[1].isPrivate).toBeUndefined();
+
+    updateRecipe.mockClear();
+    expect(
+      (
+        await PATCH(
+          new Request("http://x/api/recipes", {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              id: "local-1",
+              ...validRecipe,
+              isPrivate: false,
+            }),
+          })
+        )
+      ).status
+    ).toBe(200);
+    expect(updateRecipe.mock.calls.at(-1)?.[1].isPrivate).toBe(false);
 
     getRecipeById.mockResolvedValue({
       id: "local-priv",

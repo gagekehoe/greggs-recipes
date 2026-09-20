@@ -92,6 +92,11 @@ describe("local recipe store", () => {
     expect(created.imageUrl).toBe("");
     expect(created.isPrivate).toBe(false);
 
+    const bySlug = await store.getLocalRecipe("test-soup");
+    expect(bySlug?.id).toBe(created.id);
+    const byId = await store.getLocalRecipeById(created.id);
+    expect(byId?.title).toBe("Test Soup");
+
     const privateRecipe = await store.createLocalRecipe({
       title: "Hidden Chili",
       summary: "A private bowl that should stay off the public catalog.",
@@ -106,11 +111,7 @@ describe("local recipe store", () => {
       isPrivate: true,
     });
     expect(privateRecipe.isPrivate).toBe(true);
-
-    const bySlug = await store.getLocalRecipe("test-soup");
-    expect(bySlug?.id).toBe(created.id);
-    const byId = await store.getLocalRecipeById(created.id);
-    expect(byId?.title).toBe("Test Soup");
+    expect(privateRecipe.id).not.toBe(created.id);
 
     const updated = await store.updateLocalRecipe(created.id, {
       title: "Test Soup Updated",
@@ -126,6 +127,20 @@ describe("local recipe store", () => {
     expect(updated?.isPrivate).toBe(true);
     expect(updated?.title).toBe("Test Soup Updated");
     expect(updated?.servings).toBe(3);
+
+    const photoOnly = await store.updateLocalRecipe(created.id, {
+      title: updated!.title,
+      summary: updated!.summary,
+      ingredients: updated!.ingredients,
+      steps: updated!.steps,
+      tags: updated!.tags,
+      prepMinutes: updated!.prepMinutes,
+      cookMinutes: updated!.cookMinutes,
+      servings: updated!.servings,
+      imageUrl: "/uploads/recipes/hidden.jpg",
+    });
+    expect(photoOnly?.isPrivate).toBe(true);
+    expect(photoOnly?.imageUrl).toBe("/uploads/recipes/hidden.jpg");
 
     expect(await store.updateLocalRecipe("missing", {
       title: "Nope",

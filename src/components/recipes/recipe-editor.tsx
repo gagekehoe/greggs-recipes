@@ -273,7 +273,8 @@ export function RecipeEditor({
           servings: recipe.servings,
           imageUrl: nextUrl,
           imageAlt: nextUrl ? `${recipe.title} plated` : "",
-          isPrivate: recipe.isPrivate,
+          // Do not send isPrivate — list rows can be stale after Make private,
+          // and a photo PATCH must not republish the dish.
           inspiredBy: recipe.inspiredBy || "",
           inspiredByUrl: recipe.inspiredByUrl || "",
           rightsAttested: true as const,
