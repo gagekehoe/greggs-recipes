@@ -15,8 +15,10 @@ import {
   updateRecipe,
 } from "@/lib/recipes";
 import {
+  compactDefined,
   formatRecipeValidationError,
   recipeInputSchema,
+  recipePatchSchema,
 } from "@/lib/recipes/recipe-input-schema";
 
 export async function GET(request: Request) {
@@ -113,7 +115,7 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
 
-    const parsed = recipeInputSchema.safeParse(json);
+    const parsed = recipePatchSchema.safeParse(json);
     if (!parsed.success) {
       const details = parsed.error.flatten();
       return NextResponse.json(
@@ -126,17 +128,22 @@ export async function PATCH(request: Request) {
     }
 
     const { rightsAttested: _rightsAttested, ...data } = parsed.data;
-    const result = await updateRecipe(id, {
-      ...data,
-      imageUrl:
-        typeof data.imageUrl === "string" ? data.imageUrl.trim() : undefined,
-      tags: data.tags,
-      inspiredBy: data.inspiredBy?.trim() || "",
-      inspiredByUrl:
-        typeof data.inspiredByUrl === "string"
-          ? data.inspiredByUrl.trim()
-          : "",
-    });
+    const result = await updateRecipe(
+      id,
+      compactDefined({
+        ...data,
+        imageUrl:
+          typeof data.imageUrl === "string" ? data.imageUrl.trim() : undefined,
+        inspiredBy:
+          typeof data.inspiredBy === "string"
+            ? data.inspiredBy.trim()
+            : undefined,
+        inspiredByUrl:
+          typeof data.inspiredByUrl === "string"
+            ? data.inspiredByUrl.trim()
+            : undefined,
+      })
+    );
     if (!result) {
       return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
     }

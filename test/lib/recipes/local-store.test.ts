@@ -129,18 +129,17 @@ describe("local recipe store", () => {
     expect(updated?.servings).toBe(3);
 
     const photoOnly = await store.updateLocalRecipe(created.id, {
-      title: updated!.title,
-      summary: updated!.summary,
-      ingredients: updated!.ingredients,
-      steps: updated!.steps,
-      tags: updated!.tags,
-      prepMinutes: updated!.prepMinutes,
-      cookMinutes: updated!.cookMinutes,
-      servings: updated!.servings,
       imageUrl: "/uploads/recipes/hidden.jpg",
     });
     expect(photoOnly?.isPrivate).toBe(true);
+    expect(photoOnly?.title).toBe("Test Soup Updated");
     expect(photoOnly?.imageUrl).toBe("/uploads/recipes/hidden.jpg");
+
+    const visibilityOnly = await store.updateLocalRecipe(created.id, {
+      isPrivate: false,
+    });
+    expect(visibilityOnly?.isPrivate).toBe(false);
+    expect(visibilityOnly?.imageUrl).toBe("/uploads/recipes/hidden.jpg");
 
     expect(await store.updateLocalRecipe("missing", {
       title: "Nope",

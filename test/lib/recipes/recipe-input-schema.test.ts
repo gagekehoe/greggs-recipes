@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  compactDefined,
   formatRecipeValidationError,
   recipeInputSchema,
+  recipePatchSchema,
   RECIPE_FIELD_LIMITS,
 } from "@/lib/recipes/recipe-input-schema";
 import { recipeApiErrorMessage } from "@/lib/recipes/api-error";
@@ -58,6 +60,37 @@ describe("recipeInputSchema", () => {
     expect(parsed.success).toBe(true);
     if (!parsed.success) return;
     expect(parsed.data.isPrivate).toBeUndefined();
+  });
+
+  it("PATCH schema accepts a single field and does not default the rest", () => {
+    const visibility = recipePatchSchema.safeParse({
+      isPrivate: true,
+      rightsAttested: true,
+    });
+    expect(visibility.success).toBe(true);
+    if (!visibility.success) return;
+    expect(visibility.data.isPrivate).toBe(true);
+    expect(visibility.data.title).toBeUndefined();
+    expect(visibility.data.imageUrl).toBeUndefined();
+    expect(visibility.data.inspiredBy).toBeUndefined();
+    expect(visibility.data.tags).toBeUndefined();
+
+    const photo = recipePatchSchema.safeParse({
+      imageUrl: "/uploads/recipes/a.jpg",
+      rightsAttested: true,
+    });
+    expect(photo.success).toBe(true);
+    if (!photo.success) return;
+    expect(photo.data.imageUrl).toBe("/uploads/recipes/a.jpg");
+    expect(photo.data.isPrivate).toBeUndefined();
+    expect(compactDefined({ title: undefined, isPrivate: true })).toEqual({
+      isPrivate: true,
+    });
+  });
+
+  it("PATCH schema rejects a rights-only payload", () => {
+    const parsed = recipePatchSchema.safeParse({ rightsAttested: true });
+    expect(parsed.success).toBe(false);
   });
 
   it("rejects publish/save without rights attestation", () => {

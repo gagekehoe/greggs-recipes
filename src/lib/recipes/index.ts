@@ -20,7 +20,7 @@ import {
 import { getSanityClient, isSanityConfigured } from "./sanity";
 import { listSharedRecipeIdsForViewer } from "./shares";
 import { slugify } from "./slug";
-import type { Recipe, RecipeInput } from "./types";
+import type { Recipe, RecipeInput, RecipePatchInput } from "./types";
 
 /** Never ship an empty pantry when seed dishes exist. */
 async function localRecipesOrSeed(): Promise<Recipe[]> {
@@ -56,7 +56,7 @@ async function localRecipeOrSeedById(id: string): Promise<Recipe | null> {
   return getSeedRecipes().find((r) => r.id === id) ?? null;
 }
 
-export type { Recipe, RecipeInput } from "./types";
+export type { Recipe, RecipeInput, RecipePatchInput } from "./types";
 export { slugify } from "./slug";
 export {
   hasRecipeImage,
@@ -412,7 +412,7 @@ export async function createRecipe(input: RecipeInput): Promise<{
 
 export async function updateRecipe(
   id: string,
-  input: Omit<RecipeInput, "authorId" | "authorName">
+  input: RecipePatchInput
 ): Promise<{ recipe: Recipe; mode: ContentMode } | null> {
   const mode = getContentMode();
 
@@ -429,37 +429,47 @@ export async function updateRecipe(
   ) {
     const client = getSanityClient(true);
     if (client && process.env.SANITY_API_WRITE_TOKEN) {
-      await client
-        .patch(id)
-        .set({
-          title: input.title.trim(),
-          summary: input.summary.trim(),
-          ingredients: input.ingredients.map((i) => i.trim()).filter(Boolean),
-          steps: input.steps.map((s) => s.trim()).filter(Boolean),
-          tags: input.tags.map((t) => t.trim().toLowerCase()).filter(Boolean),
-          prepMinutes: input.prepMinutes,
-          cookMinutes: input.cookMinutes,
-          servings: input.servings,
-          imageUrl:
-            input.imageUrl !== undefined
-              ? input.imageUrl.trim() || ""
-              : undefined,
-          imageAlt:
-            input.imageAlt !== undefined
-              ? input.imageAlt.trim() || ""
-              : undefined,
-          isPrivate:
-            input.isPrivate !== undefined ? Boolean(input.isPrivate) : undefined,
-          inspiredBy:
-            input.inspiredBy !== undefined
-              ? input.inspiredBy.trim() || ""
-              : undefined,
-          inspiredByUrl:
-            input.inspiredByUrl !== undefined
-              ? input.inspiredByUrl.trim() || ""
-              : undefined,
-        })
-        .commit();
+      const sanitySet: Record<string, unknown> = {};
+      if (input.title !== undefined) sanitySet.title = input.title.trim();
+      if (input.summary !== undefined) sanitySet.summary = input.summary.trim();
+      if (input.ingredients !== undefined) {
+        sanitySet.ingredients = input.ingredients
+          .map((i) => i.trim())
+          .filter(Boolean);
+      }
+      if (input.steps !== undefined) {
+        sanitySet.steps = input.steps.map((s) => s.trim()).filter(Boolean);
+      }
+      if (input.tags !== undefined) {
+        sanitySet.tags = input.tags
+          .map((t) => t.trim().toLowerCase())
+          .filter(Boolean);
+      }
+      if (input.prepMinutes !== undefined) {
+        sanitySet.prepMinutes = input.prepMinutes;
+      }
+      if (input.cookMinutes !== undefined) {
+        sanitySet.cookMinutes = input.cookMinutes;
+      }
+      if (input.servings !== undefined) sanitySet.servings = input.servings;
+      if (input.imageUrl !== undefined) {
+        sanitySet.imageUrl = input.imageUrl.trim() || "";
+      }
+      if (input.imageAlt !== undefined) {
+        sanitySet.imageAlt = input.imageAlt.trim() || "";
+      }
+      if (input.isPrivate !== undefined) {
+        sanitySet.isPrivate = Boolean(input.isPrivate);
+      }
+      if (input.inspiredBy !== undefined) {
+        sanitySet.inspiredBy = input.inspiredBy.trim() || "";
+      }
+      if (input.inspiredByUrl !== undefined) {
+        sanitySet.inspiredByUrl = input.inspiredByUrl.trim() || "";
+      }
+      if (Object.keys(sanitySet).length > 0) {
+        await client.patch(id).set(sanitySet).commit();
+      }
       const recipe = await getRecipeById(id);
       if (!recipe) return null;
       return { recipe, mode };

@@ -184,9 +184,11 @@ export function RecipeEditor({
       let imageUrl: string | undefined;
       if (createPhotoFile) {
         imageUrl = await uploadRecipePhoto(createPhotoFile);
-      } else if (isEditing) {
-        imageUrl = existingImageUrl;
+      } else if (!isEditing) {
+        imageUrl = existingImageUrl || undefined;
       }
+      // Editing without a new file: omit imageUrl so a list-row photo
+      // PATCH is not reverted by this full save.
 
       const payload = {
         title,
@@ -206,8 +208,12 @@ export function RecipeEditor({
         prepMinutes: Number(prepMinutes),
         cookMinutes: Number(cookMinutes),
         servings: Number(servings),
-        imageUrl,
-        imageAlt: imageUrl ? `${title.trim()} plated` : "",
+        ...(imageUrl !== undefined
+          ? {
+              imageUrl,
+              imageAlt: imageUrl ? `${title.trim()} plated` : "",
+            }
+          : {}),
         isPrivate,
         inspiredBy: inspiredBy.trim(),
         inspiredByUrl: inspiredByUrl.trim(),
@@ -263,20 +269,10 @@ export function RecipeEditor({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: recipe.id,
-          title: recipe.title,
-          summary: recipe.summary,
-          ingredients: recipe.ingredients,
-          steps: recipe.steps,
-          tags: recipe.tags,
-          prepMinutes: recipe.prepMinutes,
-          cookMinutes: recipe.cookMinutes,
-          servings: recipe.servings,
           imageUrl: nextUrl,
           imageAlt: nextUrl ? `${recipe.title} plated` : "",
-          // Do not send isPrivate — list rows can be stale after Make private,
-          // and a photo PATCH must not republish the dish.
-          inspiredBy: recipe.inspiredBy || "",
-          inspiredByUrl: recipe.inspiredByUrl || "",
+          // Photo-only PATCH: do not resubmit stale list-row title/body/
+          // isPrivate. Those fields can lag a form save or Make private.
           rightsAttested: true as const,
         }),
       });
@@ -333,19 +329,9 @@ export function RecipeEditor({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: recipe.id,
-          title: recipe.title,
-          summary: recipe.summary,
-          ingredients: recipe.ingredients,
-          steps: recipe.steps,
-          tags: recipe.tags,
-          prepMinutes: recipe.prepMinutes,
-          cookMinutes: recipe.cookMinutes,
-          servings: recipe.servings,
-          imageUrl: recipe.imageUrl,
-          imageAlt: recipe.imageAlt,
           isPrivate: nextPrivate,
-          inspiredBy: recipe.inspiredBy || "",
-          inspiredByUrl: recipe.inspiredByUrl || "",
+          // Visibility-only PATCH: list rows can still show an old photo
+          // after Upload, so do not resubmit imageUrl or other content.
           rightsAttested: true as const,
         }),
       });

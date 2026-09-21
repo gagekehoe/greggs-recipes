@@ -276,6 +276,46 @@ describe("/api/recipes", () => {
     ).toBe(200);
     expect(updateRecipe.mock.calls.at(-1)?.[1].isPrivate).toBe(false);
 
+    updateRecipe.mockClear();
+    expect(
+      (
+        await PATCH(
+          new Request("http://x/api/recipes", {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              id: "local-1",
+              imageUrl: "/uploads/recipes/new.jpg",
+              rightsAttested: true,
+            }),
+          })
+        )
+      ).status
+    ).toBe(200);
+    expect(updateRecipe.mock.calls.at(-1)?.[1]).toEqual({
+      imageUrl: "/uploads/recipes/new.jpg",
+    });
+
+    updateRecipe.mockClear();
+    expect(
+      (
+        await PATCH(
+          new Request("http://x/api/recipes", {
+            method: "PATCH",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify({
+              id: "local-1",
+              isPrivate: true,
+              rightsAttested: true,
+            }),
+          })
+        )
+      ).status
+    ).toBe(200);
+    expect(updateRecipe.mock.calls.at(-1)?.[1]).toEqual({
+      isPrivate: true,
+    });
+
     getRecipeById.mockResolvedValue({
       id: "local-priv",
       authorId: "other",
