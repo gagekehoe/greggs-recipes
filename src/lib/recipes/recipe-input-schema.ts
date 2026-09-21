@@ -120,6 +120,83 @@ export const recipeInputSchema = z.object({
 
 export type RecipeInputPayload = z.infer<typeof recipeInputSchema>;
 
+const PATCHABLE_KEYS = [
+  "title",
+  "summary",
+  "ingredients",
+  "steps",
+  "tags",
+  "prepMinutes",
+  "cookMinutes",
+  "servings",
+  "imageUrl",
+  "imageAlt",
+  "isPrivate",
+  "inspiredBy",
+  "inspiredByUrl",
+] as const;
+
+/**
+ * PATCH schema: every recipe field is optional with no defaults.
+ * List-row photo / visibility updates send one field; omitted keys must not
+ * become "" / [] / false and wipe the stored recipe.
+ */
+export const recipePatchSchema = z
+  .object({
+    title: recipeInputSchema.shape.title.optional(),
+    summary: recipeInputSchema.shape.summary.optional(),
+    ingredients: recipeInputSchema.shape.ingredients.optional(),
+    steps: recipeInputSchema.shape.steps.optional(),
+    tags: z.array(z.string()).optional(),
+    prepMinutes: recipeInputSchema.shape.prepMinutes.optional(),
+    cookMinutes: recipeInputSchema.shape.cookMinutes.optional(),
+    servings: recipeInputSchema.shape.servings.optional(),
+    imageUrl: imageUrlSchema,
+    imageAlt: z
+      .string()
+      .max(
+        RECIPE_FIELD_LIMITS.imageAltMax,
+        `must be ${RECIPE_FIELD_LIMITS.imageAltMax} characters or fewer`
+      )
+      .optional(),
+    isPrivate: z.boolean().optional(),
+    inspiredBy: z
+      .string()
+      .trim()
+      .max(
+        RECIPE_FIELD_LIMITS.inspiredByMax,
+        `must be ${RECIPE_FIELD_LIMITS.inspiredByMax} characters or fewer`
+      )
+      .optional(),
+    inspiredByUrl: inspiredByUrlSchema,
+    rightsAttested: z.literal(true, {
+      message:
+        "Confirm you wrote this recipe or have the right to share it",
+    }),
+  })
+  .superRefine((value, ctx) => {
+    const hasField = PATCHABLE_KEYS.some((key) => value[key] !== undefined);
+    if (!hasField) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "No recipe fields to update",
+      });
+    }
+  });
+
+export type RecipePatchPayload = z.infer<typeof recipePatchSchema>;
+
+/** Drop undefined keys so stores can treat “missing” as keep-current. */
+export function compactDefined<T extends Record<string, unknown>>(
+  obj: T
+): { [K in keyof T]?: Exclude<T[K], undefined> } {
+  const out: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) out[key] = value;
+  }
+  return out as { [K in keyof T]?: Exclude<T[K], undefined> };
+}
+
 const FIELD_LABELS: Record<string, string> = {
   title: "Title",
   summary: "Summary",

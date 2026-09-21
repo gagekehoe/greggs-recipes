@@ -2,7 +2,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { SEED_RECIPES } from "./seed";
 import { slugify } from "./slug";
-import type { Recipe, RecipeInput } from "./types";
+import type { Recipe, RecipeInput, RecipePatchInput } from "./types";
 
 const DATA_PATH = path.join(process.cwd(), "data", "recipes.json");
 
@@ -165,23 +165,42 @@ export async function createLocalRecipe(input: RecipeInput): Promise<Recipe> {
 
 export async function updateLocalRecipe(
   id: string,
-  input: Omit<RecipeInput, "authorId" | "authorName">
+  input: RecipePatchInput
 ): Promise<Recipe | null> {
   const recipes = await ensureStore();
   const index = recipes.findIndex((r) => r.id === id);
   if (index < 0) return null;
 
   const current = recipes[index];
+  const title =
+    input.title !== undefined ? input.title.trim() : current.title;
   const updated: Recipe = {
     ...current,
-    title: input.title.trim(),
-    summary: input.summary.trim(),
-    ingredients: input.ingredients.map((i) => i.trim()).filter(Boolean),
-    steps: input.steps.map((s) => s.trim()).filter(Boolean),
-    tags: input.tags.map((t) => t.trim().toLowerCase()).filter(Boolean),
-    prepMinutes: input.prepMinutes,
-    cookMinutes: input.cookMinutes,
-    servings: input.servings,
+    title,
+    summary:
+      input.summary !== undefined ? input.summary.trim() : current.summary,
+    ingredients:
+      input.ingredients !== undefined
+        ? input.ingredients.map((i) => i.trim()).filter(Boolean)
+        : current.ingredients,
+    steps:
+      input.steps !== undefined
+        ? input.steps.map((s) => s.trim()).filter(Boolean)
+        : current.steps,
+    tags:
+      input.tags !== undefined
+        ? input.tags.map((t) => t.trim().toLowerCase()).filter(Boolean)
+        : current.tags,
+    prepMinutes:
+      input.prepMinutes !== undefined
+        ? input.prepMinutes
+        : current.prepMinutes,
+    cookMinutes:
+      input.cookMinutes !== undefined
+        ? input.cookMinutes
+        : current.cookMinutes,
+    servings:
+      input.servings !== undefined ? input.servings : current.servings,
     imageUrl:
       input.imageUrl !== undefined
         ? input.imageUrl.trim()
@@ -190,7 +209,7 @@ export async function updateLocalRecipe(
       input.imageAlt?.trim() ||
       current.imageAlt ||
       (input.imageUrl?.trim() || current.imageUrl
-        ? `${input.title.trim()} plated`
+        ? `${title} plated`
         : ""),
     isPrivate:
       input.isPrivate !== undefined

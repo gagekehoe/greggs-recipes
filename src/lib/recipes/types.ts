@@ -43,3 +43,8 @@ export type RecipeInput = {
   inspiredBy?: string;
   inspiredByUrl?: string;
 };
+
+/** PATCH body: omitted keys keep the stored value (list-row shortcuts must not clobber). */
+export type RecipePatchInput = Partial<
+  Omit<RecipeInput, "authorId" | "authorName">
+>;

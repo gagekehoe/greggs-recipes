@@ -7,7 +7,7 @@ import {
 } from "@/lib/db";
 import { CAJUN_TUNA_BOWL_SEED } from "./seed";
 import { slugify } from "./slug";
-import type { Recipe, RecipeInput } from "./types";
+import type { Recipe, RecipeInput, RecipePatchInput } from "./types";
 
 function parseStringArray(raw: string | null | undefined): string[] {
   if (!raw) return [];
@@ -180,22 +180,41 @@ export async function createDbRecipe(input: RecipeInput): Promise<Recipe> {
 
 export async function updateDbRecipe(
   id: string,
-  input: Omit<RecipeInput, "authorId" | "authorName">
+  input: RecipePatchInput
 ): Promise<Recipe | null> {
   await ensureDbRecipeSeed();
   const current = await getDbRecipeById(id);
   if (!current) return null;
 
+  const title =
+    input.title !== undefined ? input.title.trim() : current.title;
   const updated: Recipe = {
     ...current,
-    title: input.title.trim(),
-    summary: input.summary.trim(),
-    ingredients: input.ingredients.map((i) => i.trim()).filter(Boolean),
-    steps: input.steps.map((s) => s.trim()).filter(Boolean),
-    tags: input.tags.map((t) => t.trim().toLowerCase()).filter(Boolean),
-    prepMinutes: input.prepMinutes,
-    cookMinutes: input.cookMinutes,
-    servings: input.servings,
+    title,
+    summary:
+      input.summary !== undefined ? input.summary.trim() : current.summary,
+    ingredients:
+      input.ingredients !== undefined
+        ? input.ingredients.map((i) => i.trim()).filter(Boolean)
+        : current.ingredients,
+    steps:
+      input.steps !== undefined
+        ? input.steps.map((s) => s.trim()).filter(Boolean)
+        : current.steps,
+    tags:
+      input.tags !== undefined
+        ? input.tags.map((t) => t.trim().toLowerCase()).filter(Boolean)
+        : current.tags,
+    prepMinutes:
+      input.prepMinutes !== undefined
+        ? input.prepMinutes
+        : current.prepMinutes,
+    cookMinutes:
+      input.cookMinutes !== undefined
+        ? input.cookMinutes
+        : current.cookMinutes,
+    servings:
+      input.servings !== undefined ? input.servings : current.servings,
     imageUrl:
       input.imageUrl !== undefined
         ? input.imageUrl.trim()
@@ -204,7 +223,7 @@ export async function updateDbRecipe(
       input.imageAlt?.trim() ||
       current.imageAlt ||
       (input.imageUrl?.trim() || current.imageUrl
-        ? `${input.title.trim()} plated`
+        ? `${title} plated`
         : ""),
     isPrivate:
       input.isPrivate !== undefined
