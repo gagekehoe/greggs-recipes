@@ -18,6 +18,8 @@ type Props = {
   contentMode: "db" | "sanity" | "local";
   recipes: Recipe[];
   canManageAll: boolean;
+  /** Signed-in user — visibility toggles are author-only. */
+  currentUserId: string;
   /** Prefill the form for this recipe id (from `/my-recipes?edit=`). */
   initialEditId?: string | null;
 };
@@ -68,6 +70,7 @@ export function RecipeEditor({
   contentMode,
   recipes,
   canManageAll,
+  currentUserId,
   initialEditId = null,
 }: Props) {
   const router = useRouter();
@@ -103,6 +106,8 @@ export function RecipeEditor({
     ? recipes.find((r) => r.id === editingId) ?? null
     : null;
   const isEditing = Boolean(editingId);
+  const ownsEditingRecipe =
+    !isEditing || editingRecipe?.authorId === currentUserId;
 
   function resetCreateForm() {
     setEditingId(null);
@@ -214,7 +219,9 @@ export function RecipeEditor({
               imageAlt: imageUrl ? `${title.trim()} plated` : "",
             }
           : {}),
-        isPrivate,
+        // Staff may edit someone else's public recipe; only the author
+        // may change public/private (and a stale form radio must not).
+        ...(ownsEditingRecipe ? { isPrivate } : {}),
         inspiredBy: inspiredBy.trim(),
         inspiredByUrl: inspiredByUrl.trim(),
         rightsAttested: true as const,
@@ -339,6 +346,11 @@ export function RecipeEditor({
       if (!res.ok) {
         setError(recipeApiErrorMessage(data, "Could not update visibility"));
         return;
+      }
+      // Keep the edit form in sync so a later Save does not republish
+      // (or re-hide) using the visibility loaded when Edit was clicked.
+      if (editingId === recipe.id) {
+        setIsPrivate(nextPrivate);
       }
       setStatus(
         nextPrivate
@@ -595,6 +607,7 @@ export function RecipeEditor({
           </div>
         </div>
 
+        {ownsEditingRecipe ? (
         <div className="space-y-2 md:col-span-2">
           <Label id="visibility-label">Visibility</Label>
           <div
@@ -639,6 +652,7 @@ export function RecipeEditor({
             </label>
           </div>
         </div>
+        ) : null}
 
         {isEditing && isPrivate && editingId ? (
           <div className="md:col-span-2">
@@ -692,7 +706,7 @@ export function RecipeEditor({
         <div className="flex flex-wrap gap-3 md:col-span-2">
           <Button
             type="submit"
-            disabled={saving || !rightsAttested}
+            disabled={saving || !rightsAttested || visibilitySavingId !== null}
             className="min-w-40"
           >
             {saving
@@ -770,20 +784,24 @@ export function RecipeEditor({
                       >
                         {editingId === recipe.id ? "Editing…" : "Edit"}
                       </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={visibilitySavingId === recipe.id}
-                        onClick={() =>
-                          setRecipeVisibility(recipe, !recipe.isPrivate)
-                        }
-                      >
-                        {visibilitySavingId === recipe.id
-                          ? "Updating…"
-                          : recipe.isPrivate
-                            ? "Make public"
-                            : "Make private"}
-                      </Button>
+                      {recipe.authorId === currentUserId ? (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={
+                            visibilitySavingId === recipe.id || saving
+                          }
+                          onClick={() =>
+                            setRecipeVisibility(recipe, !recipe.isPrivate)
+                          }
+                        >
+                          {visibilitySavingId === recipe.id
+                            ? "Updating…"
+                            : recipe.isPrivate
+                              ? "Make public"
+                              : "Make private"}
+                        </Button>
+                      ) : null}
                       <Button
                         variant="outline"
                         size="sm"

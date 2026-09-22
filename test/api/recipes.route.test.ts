@@ -363,4 +363,50 @@ describe("/api/recipes", () => {
       (await DELETE(new Request("http://x/api/recipes?id=local-1"))).status
     ).toBe(200);
   });
+
+  it("PATCH refuses staff changing visibility on someone else's public recipe", async () => {
+    const { PATCH } = await import("@/app/api/recipes/route");
+    getSessionUser.mockResolvedValue({
+      id: "admin",
+      role: "admin",
+      name: "Gregg",
+    });
+    getRecipeById.mockResolvedValue({
+      id: "local-2",
+      authorId: "other",
+      isPrivate: false,
+    });
+    updateRecipe.mockResolvedValue({
+      recipe: { id: "local-2", isPrivate: false, title: validRecipe.title },
+      mode: "local",
+    });
+
+    const hide = await PATCH(
+      new Request("http://x/api/recipes", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          id: "local-2",
+          isPrivate: true,
+          rightsAttested: true,
+        }),
+      })
+    );
+    expect(hide.status).toBe(403);
+    expect(updateRecipe).not.toHaveBeenCalled();
+
+    const editContent = await PATCH(
+      new Request("http://x/api/recipes", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ id: "local-2", ...validRecipe }),
+      })
+    );
+    expect(editContent.status).toBe(200);
+    expect(updateRecipe).toHaveBeenCalledWith(
+      "local-2",
+      expect.objectContaining({ title: validRecipe.title })
+    );
+    expect(updateRecipe.mock.calls.at(-1)?.[1].isPrivate).toBeUndefined();
+  });
 });
