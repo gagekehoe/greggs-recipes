@@ -5,6 +5,7 @@ import {
   canEditRecipe,
   canManagePeople,
   canManageRecipe,
+  canChangeRecipeVisibility,
   canViewRecipe,
   canWriteRecipes,
   getAdminEmail,
@@ -97,6 +98,21 @@ describe("canEditRecipe / canManageRecipe", () => {
         other
       )
     ).toBe(true);
+  });
+
+  it("lets only the author change public/private", () => {
+    expect(
+      canChangeRecipeVisibility("cook", { authorId: author }, author)
+    ).toBe(true);
+    expect(
+      canChangeRecipeVisibility("admin", { authorId: author }, other)
+    ).toBe(false);
+    expect(
+      canChangeRecipeVisibility("owner", { authorId: author }, author)
+    ).toBe(true);
+    expect(
+      canChangeRecipeVisibility("viewer", { authorId: author }, author)
+    ).toBe(false);
   });
 });
 

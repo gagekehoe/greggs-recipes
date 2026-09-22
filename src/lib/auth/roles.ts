@@ -104,6 +104,21 @@ export function canManageRecipe(
   return canEditRecipe(role, recipe.authorId, userId);
 }
 
+/**
+ * Public/private may only be changed by the author. Staff can still edit
+ * someone else's public recipe, but must not hide it from Browse — they
+ * cannot undo a private flag on a recipe they do not own.
+ */
+export function canChangeRecipeVisibility(
+  role: Role | undefined | null,
+  recipe: { authorId: string },
+  userId: string | undefined | null
+): boolean {
+  return Boolean(
+    userId && recipe.authorId === userId && canWriteRecipes(role)
+  );
+}
+
 /** Bootstrap email for the site owner (Gregg). Env name kept as ADMIN_EMAIL. */
 export function getAdminEmail(): string {
   return (process.env.ADMIN_EMAIL || "gagekehoe17@gmail.com").trim().toLowerCase();

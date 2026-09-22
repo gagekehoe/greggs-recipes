@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { publicAuthorLabel } from "@/lib/auth/profile";
 import {
+  canChangeRecipeVisibility,
   canManageRecipe,
   canWriteRecipes,
   hasKitchenStaffPowers,
@@ -128,6 +129,19 @@ export async function PATCH(request: Request) {
     }
 
     const { rightsAttested: _rightsAttested, ...data } = parsed.data;
+    if (
+      data.isPrivate !== undefined &&
+      Boolean(data.isPrivate) !== Boolean(existing.isPrivate) &&
+      !canChangeRecipeVisibility(user.role, existing, user.id)
+    ) {
+      return NextResponse.json(
+        {
+          error: "Only the author can change who can see this recipe.",
+        },
+        { status: 403 }
+      );
+    }
+
     const result = await updateRecipe(
       id,
       compactDefined({

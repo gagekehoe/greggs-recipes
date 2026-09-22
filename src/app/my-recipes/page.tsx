@@ -65,6 +65,7 @@ export default async function MyRecipesPage({ searchParams }: Props) {
         contentMode={getContentMode()}
         recipes={visible}
         canManageAll={hasKitchenStaffPowers(user.role)}
+        currentUserId={user.id}
         initialEditId={initialEditId}
       />
     </div>
