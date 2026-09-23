@@ -178,6 +178,72 @@ export async function createDbRecipe(input: RecipeInput): Promise<Recipe> {
   return recipe;
 }
 
+/**
+ * Column-level PATCH. Never rewrite the whole row from a snapshot — overlapping
+ * list-row photo / visibility updates would otherwise clobber a concurrent save.
+ */
+function dbSetFromPatch(
+  input: RecipePatchInput,
+  current: Recipe
+): Record<string, unknown> {
+  const set: Record<string, unknown> = {
+    updatedAt: new Date(),
+  };
+
+  if (input.title !== undefined) {
+    set.title = input.title.trim();
+  }
+  if (input.summary !== undefined) {
+    set.summary = input.summary.trim();
+  }
+  if (input.ingredients !== undefined) {
+    set.ingredients = JSON.stringify(
+      input.ingredients.map((i) => i.trim()).filter(Boolean)
+    );
+  }
+  if (input.steps !== undefined) {
+    set.steps = JSON.stringify(
+      input.steps.map((s) => s.trim()).filter(Boolean)
+    );
+  }
+  if (input.tags !== undefined) {
+    set.tags = JSON.stringify(
+      input.tags.map((t) => t.trim().toLowerCase()).filter(Boolean)
+    );
+  }
+  if (input.prepMinutes !== undefined) {
+    set.prepMinutes = input.prepMinutes;
+  }
+  if (input.cookMinutes !== undefined) {
+    set.cookMinutes = input.cookMinutes;
+  }
+  if (input.servings !== undefined) {
+    set.servings = input.servings;
+  }
+  if (input.imageUrl !== undefined) {
+    set.imageUrl = input.imageUrl.trim();
+  }
+  if (input.imageAlt !== undefined) {
+    set.imageAlt = input.imageAlt.trim();
+  } else if (input.imageUrl !== undefined) {
+    const title = input.title !== undefined ? input.title.trim() : current.title;
+    set.imageAlt =
+      current.imageAlt ||
+      (input.imageUrl.trim() || current.imageUrl ? `${title} plated` : "");
+  }
+  if (input.isPrivate !== undefined) {
+    set.isPrivate = Boolean(input.isPrivate);
+  }
+  if (input.inspiredBy !== undefined) {
+    set.inspiredBy = input.inspiredBy.trim();
+  }
+  if (input.inspiredByUrl !== undefined) {
+    set.inspiredByUrl = input.inspiredByUrl.trim();
+  }
+
+  return set;
+}
+
 export async function updateDbRecipe(
   id: string,
   input: RecipePatchInput
@@ -186,66 +252,11 @@ export async function updateDbRecipe(
   const current = await getDbRecipeById(id);
   if (!current) return null;
 
-  const title =
-    input.title !== undefined ? input.title.trim() : current.title;
-  const updated: Recipe = {
-    ...current,
-    title,
-    summary:
-      input.summary !== undefined ? input.summary.trim() : current.summary,
-    ingredients:
-      input.ingredients !== undefined
-        ? input.ingredients.map((i) => i.trim()).filter(Boolean)
-        : current.ingredients,
-    steps:
-      input.steps !== undefined
-        ? input.steps.map((s) => s.trim()).filter(Boolean)
-        : current.steps,
-    tags:
-      input.tags !== undefined
-        ? input.tags.map((t) => t.trim().toLowerCase()).filter(Boolean)
-        : current.tags,
-    prepMinutes:
-      input.prepMinutes !== undefined
-        ? input.prepMinutes
-        : current.prepMinutes,
-    cookMinutes:
-      input.cookMinutes !== undefined
-        ? input.cookMinutes
-        : current.cookMinutes,
-    servings:
-      input.servings !== undefined ? input.servings : current.servings,
-    imageUrl:
-      input.imageUrl !== undefined
-        ? input.imageUrl.trim()
-        : current.imageUrl,
-    imageAlt:
-      input.imageAlt?.trim() ||
-      current.imageAlt ||
-      (input.imageUrl?.trim() || current.imageUrl
-        ? `${title} plated`
-        : ""),
-    isPrivate:
-      input.isPrivate !== undefined
-        ? Boolean(input.isPrivate)
-        : current.isPrivate,
-    inspiredBy:
-      input.inspiredBy !== undefined
-        ? input.inspiredBy.trim()
-        : current.inspiredBy,
-    inspiredByUrl:
-      input.inspiredByUrl !== undefined
-        ? input.inspiredByUrl.trim()
-        : current.inspiredByUrl,
-    source: "db",
-    updatedAt: new Date().toISOString(),
-  };
-
   await db
     .update(recipesTable)
-    .set(rowValuesFromRecipe(updated))
+    .set(dbSetFromPatch(input, current))
     .where(eq(recipesTable.id, id));
-  return updated;
+  return getDbRecipeById(id);
 }
 
 export async function deleteDbRecipe(id: string): Promise<boolean> {
