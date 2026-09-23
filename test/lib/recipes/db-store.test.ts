@@ -118,4 +118,34 @@ describe("db recipe store", () => {
       after.some((r) => r.slug === "extra-saucy-late-night-cajun-tuna-bowl")
     ).toBe(true);
   });
+
+  it("keeps both fields when a title PATCH overlaps a photo PATCH", async () => {
+    const store = await import("@/lib/recipes/db-store");
+    const raced = await store.createDbRecipe({
+      title: "Race Chili",
+      summary: "A bowl used to prove overlapping PATCHes keep every field.",
+      ingredients: ["beans"],
+      steps: ["simmer"],
+      tags: ["test"],
+      prepMinutes: 5,
+      cookMinutes: 20,
+      servings: 2,
+      authorId: "cook-1",
+      authorName: "Gregg",
+    });
+
+    await Promise.all([
+      store.updateDbRecipe(raced.id, { title: "Race Chili Winner" }),
+      store.updateDbRecipe(raced.id, {
+        imageUrl: "/uploads/recipes/race.jpg",
+      }),
+    ]);
+
+    const afterRace = await store.getDbRecipeById(raced.id);
+    expect(afterRace?.title).toBe("Race Chili Winner");
+    expect(afterRace?.imageUrl).toBe("/uploads/recipes/race.jpg");
+    expect(afterRace?.summary).toBe(
+      "A bowl used to prove overlapping PATCHes keep every field."
+    );
+  });
 });

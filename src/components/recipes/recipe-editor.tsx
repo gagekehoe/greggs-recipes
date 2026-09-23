@@ -706,7 +706,12 @@ export function RecipeEditor({
         <div className="flex flex-wrap gap-3 md:col-span-2">
           <Button
             type="submit"
-            disabled={saving || !rightsAttested || visibilitySavingId !== null}
+            disabled={
+              saving ||
+              !rightsAttested ||
+              visibilitySavingId !== null ||
+              savingPhotoId !== null
+            }
             className="min-w-40"
           >
             {saving
@@ -852,7 +857,9 @@ export function RecipeEditor({
                         variant="secondary"
                         size="sm"
                         disabled={
-                          savingPhotoId === recipe.id || !pendingFile
+                          savingPhotoId === recipe.id ||
+                          saving ||
+                          !pendingFile
                         }
                         onClick={() => uploadAndSavePhoto(recipe)}
                       >
@@ -865,7 +872,9 @@ export function RecipeEditor({
                           type="button"
                           variant="outline"
                           size="sm"
-                          disabled={savingPhotoId === recipe.id}
+                          disabled={
+                            savingPhotoId === recipe.id || saving
+                          }
                           onClick={() => saveRecipePhoto(recipe, "")}
                         >
                           Clear
