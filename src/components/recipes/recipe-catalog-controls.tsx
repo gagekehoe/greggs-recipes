@@ -34,14 +34,22 @@ const SORT_LABELS: Record<CatalogSort, string> = {
 
 const DEBOUNCE_MS = 300;
 
-/** Shared control height — Input is h-11; Select defaults to md:h-9 via data-size. */
-const CONTROL_SURFACE =
-  "h-11 rounded-none border-[var(--line)] bg-[var(--paper)] md:h-11";
+/**
+ * Identical chrome for Search / Sort / Tags.
+ * Important overrides beat Input (md:h-9, py-2) and SelectTrigger
+ * (data-[size=default]:md:h-9, py-2) — plain utilities lose to those.
+ */
+const CONTROL_SURFACE = cn(
+  "box-border h-10! max-h-10! min-h-10! shrink-0 rounded-none border border-[var(--line)] bg-[var(--paper)]",
+  "px-3! py-0! text-sm! leading-none!"
+);
 const SELECT_CONTROL_SURFACE = cn(
   CONTROL_SURFACE,
-  // Beat SelectTrigger's data-[size=default]:md:h-9 (higher specificity than md:h-11).
-  "data-[size=default]:h-11 data-[size=default]:md:h-11"
+  "data-[size=default]:h-10! data-[size=default]:max-h-10! data-[size=default]:min-h-10!",
+  "data-[size=default]:md:h-10! data-[size=default]:py-0!"
 );
+/** Label + control: flex/gap so Base UI Select's hidden input can't add space-y margin. */
+const FIELD = "flex min-w-0 flex-col gap-2";
 
 type Props = {
   query: CatalogQuery;
@@ -136,7 +144,7 @@ export function RecipeCatalogControls({
       aria-busy={isPending}
     >
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:gap-4">
-        <div className="min-w-0 flex-1 space-y-2">
+        <div className={cn(FIELD, "flex-1")}>
           <Label
             htmlFor="recipe-catalog-search"
             className="text-xs uppercase tracking-[0.14em] text-[var(--ink-soft)]"
@@ -160,60 +168,63 @@ export function RecipeCatalogControls({
             placeholder="Search by title, summary, or tag"
             className={cn(
               CONTROL_SURFACE,
-              "text-[var(--ink)] placeholder:text-[var(--ink-soft)]"
+              "w-full text-[var(--ink)] placeholder:text-[var(--ink-soft)]"
             )}
             autoComplete="off"
             enterKeyHint="search"
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-3 sm:flex sm:shrink-0 sm:items-end sm:gap-4">
-          <div className="min-w-0 space-y-2 sm:w-44">
+        <div className="grid grid-cols-2 items-end gap-3 sm:flex sm:shrink-0 sm:gap-4">
+          <div className={cn(FIELD, "sm:w-44")}>
             <Label
               htmlFor="recipe-catalog-sort"
               className="text-xs uppercase tracking-[0.14em] text-[var(--ink-soft)]"
             >
               Sort
             </Label>
-            <Select
-              value={query.sort}
-              onValueChange={(value) => {
-                if (!value) return;
-                navigate({ ...query, sort: value as CatalogSort });
-              }}
-            >
-              <SelectTrigger
-                id="recipe-catalog-sort"
-                className={cn(SELECT_CONTROL_SURFACE, "w-full")}
+            {/* Wrapper keeps Select's hidden input out of the label/control stack. */}
+            <div className="h-10 w-full">
+              <Select
+                value={query.sort}
+                onValueChange={(value) => {
+                  if (!value) return;
+                  navigate({ ...query, sort: value as CatalogSort });
+                }}
               >
-                <SelectValue>{SORT_LABELS[query.sort]}</SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                {(Object.keys(SORT_LABELS) as CatalogSort[]).map((sort) => (
-                  <SelectItem key={sort} value={sort}>
-                    {SORT_LABELS[sort]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+                <SelectTrigger
+                  id="recipe-catalog-sort"
+                  className={cn(SELECT_CONTROL_SURFACE, "w-full")}
+                >
+                  <SelectValue>{SORT_LABELS[query.sort]}</SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  {(Object.keys(SORT_LABELS) as CatalogSort[]).map((sort) => (
+                    <SelectItem key={sort} value={sort}>
+                      {SORT_LABELS[sort]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {availableTags.length > 0 ? (
-            <div className="min-w-0 space-y-2 sm:w-52">
+            <div className={cn(FIELD, "sm:w-52")}>
               <Label
                 htmlFor="recipe-catalog-tags"
                 className="text-xs uppercase tracking-[0.14em] text-[var(--ink-soft)]"
               >
                 Tags
               </Label>
-              <div className="flex h-11 items-stretch gap-1 md:h-11">
+              <div className="flex h-10 items-stretch gap-1">
                 <Popover open={tagsOpen} onOpenChange={setTagsOpen}>
                   <PopoverTrigger
                     id="recipe-catalog-tags"
                     type="button"
                     className={cn(
                       CONTROL_SURFACE,
-                      "flex min-w-0 flex-1 items-center justify-between gap-2 border px-3 text-left text-sm text-[var(--ink)] transition-colors outline-none focus-visible:border-[var(--sage-deep)] focus-visible:ring-3 focus-visible:ring-[var(--sage-deep)]/30",
+                      "flex min-w-0 flex-1 items-center justify-between gap-2 text-left text-[var(--ink)] transition-colors outline-none focus-visible:border-[var(--sage-deep)] focus-visible:ring-3 focus-visible:ring-[var(--sage-deep)]/30",
                       query.tags.length > 0 && "border-[var(--sage-deep)]/60"
                     )}
                     aria-label={
@@ -303,7 +314,7 @@ export function RecipeCatalogControls({
                     onClick={clearTags}
                     className={cn(
                       CONTROL_SURFACE,
-                      "inline-flex w-11 shrink-0 items-center justify-center border text-[var(--ink-muted)] transition-colors hover:border-[var(--sage-deep)]/50 hover:text-[var(--ink)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sage-deep)]"
+                      "inline-flex w-10 items-center justify-center text-[var(--ink-muted)] transition-colors hover:border-[var(--sage-deep)]/50 hover:text-[var(--ink)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sage-deep)]"
                     )}
                     aria-label="Clear selected tags"
                   >
