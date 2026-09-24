@@ -59,7 +59,9 @@ async function localRecipeOrSeedById(id: string): Promise<Recipe | null> {
 export type { Recipe, RecipeInput, RecipePatchInput } from "./types";
 export { slugify } from "./slug";
 export {
+  hasRealRecipePhoto,
   hasRecipeImage,
+  pickHomeBannerRecipe,
   recipeImageInitials,
   recipePlaceholderTone,
   resolveRecipeImageUrl,

@@ -11,8 +11,33 @@ const ALLOWED_REMOTE_HOSTS = new Set([
   "cdn.sanity.io",
 ]);
 
+/**
+ * Site-relative assets that are branding / social defaults — not plated recipe
+ * photos. Never treat these as a real dish image for the home banner.
+ */
+const KNOWN_PLACEHOLDER_IMAGE_PATHS = new Set([
+  "/og-default.png",
+]);
+
 function isAllowedVercelBlobHost(hostname: string): boolean {
   return /^[a-z0-9-]+\.public\.blob\.vercel-storage\.com$/i.test(hostname);
+}
+
+function normalizeSitePath(src: string): string {
+  const pathOnly = src.split("?")[0]?.split("#")[0] ?? src;
+  return pathOnly.trim();
+}
+
+function isKnownPlaceholderPath(src: string): boolean {
+  if (src.startsWith("/") && !src.startsWith("//")) {
+    return KNOWN_PLACEHOLDER_IMAGE_PATHS.has(normalizeSitePath(src));
+  }
+  try {
+    const url = new URL(src);
+    return KNOWN_PLACEHOLDER_IMAGE_PATHS.has(normalizeSitePath(url.pathname));
+  } catch {
+    return false;
+  }
 }
 
 /** True when Next/Image can render this src without throwing. */
@@ -43,7 +68,36 @@ export function resolveRecipeImageUrl(
 ): string | null {
   if (!hasRecipeImage(imageUrl)) return null;
   const trimmed = imageUrl!.trim();
+  if (isKnownPlaceholderPath(trimmed)) return null;
   return isAllowedNextImageSrc(trimmed) ? trimmed : null;
+}
+
+/**
+ * True when the recipe has a real plated photo (Blob/http or site upload),
+ * not an empty value or a known branding placeholder path.
+ */
+export function hasRealRecipePhoto(imageUrl?: string | null): boolean {
+  return resolveRecipeImageUrl(imageUrl) !== null;
+}
+
+type BannerRecipeCandidate = {
+  imageUrl?: string | null;
+  isPrivate?: boolean;
+};
+
+/**
+ * Home banner pick: prefer a public recipe with a real photo. Never returns a
+ * recipe that would render the “Photo soon” placeholder graphic.
+ */
+export function pickHomeBannerRecipe<T extends BannerRecipeCandidate>(
+  recipes: T[]
+): T | null {
+  const withPhoto = (recipe: T) => hasRealRecipePhoto(recipe.imageUrl);
+  return (
+    recipes.find((recipe) => !recipe.isPrivate && withPhoto(recipe)) ??
+    recipes.find(withPhoto) ??
+    null
+  );
 }
 
 /** One or two letters from the title for the placeholder monogram. */

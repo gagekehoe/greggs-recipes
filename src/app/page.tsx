@@ -2,6 +2,7 @@ import { RecipeGrid } from "@/components/recipes/recipe-card";
 import { RecipePhoto } from "@/components/recipes/recipe-photo";
 import { getSessionUser } from "@/lib/auth/session";
 import { listRecipes } from "@/lib/recipes";
+import { pickHomeBannerRecipe } from "@/lib/recipes/image";
 
 export const dynamic = "force-dynamic";
 
@@ -11,7 +12,7 @@ export default async function HomePage() {
     includePrivateForUserId: user?.id ?? null,
     viewerRole: user?.role ?? null,
   });
-  const featured = recipes.find((r) => !r.isPrivate) ?? recipes[0];
+  const featured = pickHomeBannerRecipe(recipes);
 
   return (
     <>

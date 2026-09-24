@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 import {
+  hasRealRecipePhoto,
   hasRecipeImage,
   isAllowedNextImageSrc,
+  pickHomeBannerRecipe,
   recipeImageInitials,
   recipePlaceholderTone,
   resolveRecipeImageUrl,
@@ -15,12 +17,14 @@ describe("recipe image helpers", () => {
     expect(hasRecipeImage("   ")).toBe(false);
     expect(resolveRecipeImageUrl("")).toBeNull();
     expect(resolveRecipeImageUrl("  ")).toBeNull();
+    expect(hasRealRecipePhoto("")).toBe(false);
   });
 
   it("returns trimmed Next-safe image URLs and drops hosts that would 500", () => {
     const blob =
       "https://abc123.public.blob.vercel-storage.com/recipes/uuid.jpg";
     expect(hasRecipeImage(blob)).toBe(true);
+    expect(hasRealRecipePhoto(blob)).toBe(true);
     expect(resolveRecipeImageUrl(`  ${blob}  `)).toBe(blob);
     expect(resolveRecipeImageUrl("/uploads/recipes/bowl.jpg")).toBe(
       "/uploads/recipes/bowl.jpg"
@@ -40,6 +44,69 @@ describe("recipe image helpers", () => {
     expect(resolveRecipeImageUrl("//cdn.sanity.io/x.jpg")).toBeNull();
     expect(isAllowedNextImageSrc("/recipes/cajun-tuna-bowl.jpg")).toBe(true);
     expect(isAllowedNextImageSrc("https://i.imgur.com/abc.jpg")).toBe(false);
+  });
+
+  it("rejects known branding placeholder paths as recipe photos", () => {
+    expect(resolveRecipeImageUrl("/og-default.png")).toBeNull();
+    expect(resolveRecipeImageUrl("/og-default.png?v=1")).toBeNull();
+    expect(hasRealRecipePhoto("/og-default.png")).toBe(false);
+  });
+
+  it("picks a public recipe with a real photo for the home banner", () => {
+    const recipes = [
+      { id: "1", title: "No photo", imageUrl: "", isPrivate: false },
+      {
+        id: "2",
+        title: "Private with photo",
+        imageUrl: "/uploads/recipes/secret.jpg",
+        isPrivate: true,
+      },
+      {
+        id: "3",
+        title: "Public with photo",
+        imageUrl:
+          "https://abc123.public.blob.vercel-storage.com/recipes/bowl.jpg",
+        isPrivate: false,
+      },
+    ];
+
+    expect(pickHomeBannerRecipe(recipes)?.id).toBe("3");
+  });
+
+  it("falls back to a private recipe photo when no public photo exists", () => {
+    const recipes = [
+      { id: "1", title: "Blank", imageUrl: "   ", isPrivate: false },
+      {
+        id: "2",
+        title: "Placeholder path",
+        imageUrl: "/og-default.png",
+        isPrivate: false,
+      },
+      {
+        id: "3",
+        title: "Private plated",
+        imageUrl: "/recipes/cajun-tuna-bowl.jpg",
+        isPrivate: true,
+      },
+    ];
+
+    expect(pickHomeBannerRecipe(recipes)?.id).toBe("3");
+  });
+
+  it("returns null when no recipe has a real photo", () => {
+    const recipes = [
+      { id: "1", title: "A", imageUrl: "", isPrivate: false },
+      { id: "2", title: "B", imageUrl: null, isPrivate: false },
+      { id: "3", title: "C", imageUrl: "/og-default.png", isPrivate: false },
+      {
+        id: "4",
+        title: "D",
+        imageUrl: "https://i.imgur.com/nope.jpg",
+        isPrivate: false,
+      },
+    ];
+
+    expect(pickHomeBannerRecipe(recipes)).toBeNull();
   });
 
   it("builds monogram initials from the title", () => {
