@@ -2,7 +2,13 @@
 
 import { useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { CheckIcon, ChevronDownIcon, XIcon } from "lucide-react";
+import {
+  CheckIcon,
+  ChevronDownIcon,
+  LayoutGridIcon,
+  ListIcon,
+  XIcon,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -20,9 +26,13 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import {
+  CATALOG_VIEW_STORAGE_KEY,
   catalogHref,
+  DEFAULT_CATALOG_VIEW,
+  parseCatalogView,
   type CatalogQuery,
   type CatalogSort,
+  type CatalogView,
 } from "@/lib/recipes/catalog-query";
 import { cn } from "@/lib/utils";
 
@@ -56,6 +66,8 @@ type Props = {
   availableTags: string[];
   resultCount: number;
   totalCount: number;
+  /** True when `?view=` was present in the request URL (vs defaulted). */
+  viewFromUrl: boolean;
 };
 
 function tagsSummary(selected: readonly string[]): string {
@@ -65,17 +77,37 @@ function tagsSummary(selected: readonly string[]): string {
   return `${selected[0]} +${selected.length - 1}`;
 }
 
+function readStoredView(): CatalogView | null {
+  try {
+    const raw = window.localStorage.getItem(CATALOG_VIEW_STORAGE_KEY);
+    if (raw == null) return null;
+    return parseCatalogView(raw);
+  } catch {
+    return null;
+  }
+}
+
+function writeStoredView(view: CatalogView) {
+  try {
+    window.localStorage.setItem(CATALOG_VIEW_STORAGE_KEY, view);
+  } catch {
+    // Private mode / quota — URL still carries the preference.
+  }
+}
+
 export function RecipeCatalogControls({
   query,
   availableTags,
   resultCount,
   totalCount,
+  viewFromUrl,
 }: Props) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [tagsOpen, setTagsOpen] = useState(false);
   const queryRef = useRef(query);
   const debounceRef = useRef<number | null>(null);
+  const hydratedViewRef = useRef(false);
 
   useEffect(() => {
     queryRef.current = query;
@@ -86,6 +118,24 @@ export function RecipeCatalogControls({
       if (debounceRef.current != null) window.clearTimeout(debounceRef.current);
     };
   }, []);
+
+  // Restore list preference from localStorage when the URL omitted `view`.
+  useEffect(() => {
+    if (hydratedViewRef.current) return;
+    hydratedViewRef.current = true;
+    if (viewFromUrl) {
+      writeStoredView(query.view);
+      return;
+    }
+    const stored = readStoredView();
+    if (stored && stored !== DEFAULT_CATALOG_VIEW && stored !== query.view) {
+      startTransition(() => {
+        router.replace(catalogHref({ ...queryRef.current, view: stored }), {
+          scroll: false,
+        });
+      });
+    }
+  }, [query.view, router, viewFromUrl]);
 
   function navigate(next: CatalogQuery) {
     startTransition(() => {
@@ -127,7 +177,13 @@ export function RecipeCatalogControls({
   function clearAll() {
     if (debounceRef.current != null) window.clearTimeout(debounceRef.current);
     setTagsOpen(false);
-    navigate({ q: "", sort: "newest", tags: [] });
+    navigate({ q: "", sort: "newest", tags: [], view: query.view });
+  }
+
+  function setView(view: CatalogView) {
+    if (view === query.view) return;
+    writeStoredView(view);
+    navigate({ ...query, view });
   }
 
   const hasFilters =
@@ -324,6 +380,51 @@ export function RecipeCatalogControls({
               </div>
             </div>
           ) : null}
+
+          <div className={cn(FIELD, "col-span-2 sm:w-auto")}>
+            <Label
+              id="recipe-catalog-view-label"
+              className="text-xs uppercase tracking-[0.14em] text-[var(--ink-soft)]"
+            >
+              View
+            </Label>
+            <div
+              role="group"
+              aria-labelledby="recipe-catalog-view-label"
+              className="flex h-10 w-full overflow-hidden border border-[var(--line)] bg-[var(--paper)] sm:w-auto"
+            >
+              <button
+                type="button"
+                onClick={() => setView("grid")}
+                aria-pressed={query.view === "grid"}
+                className={cn(
+                  "inline-flex h-10 flex-1 items-center justify-center gap-1.5 px-3 text-sm transition-colors outline-none focus-visible:z-10 focus-visible:ring-3 focus-visible:ring-[var(--sage-deep)]/30 sm:flex-none sm:px-3.5",
+                  query.view === "grid"
+                    ? "bg-[var(--sage)]/20 text-[var(--ink)]"
+                    : "text-[var(--ink-muted)] hover:bg-[var(--sage)]/10 hover:text-[var(--ink)]"
+                )}
+                aria-label="Grid view"
+              >
+                <LayoutGridIcon className="size-4" aria-hidden />
+                <span className="sm:sr-only">Grid</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setView("list")}
+                aria-pressed={query.view === "list"}
+                className={cn(
+                  "inline-flex h-10 flex-1 items-center justify-center gap-1.5 border-l border-[var(--line)] px-3 text-sm transition-colors outline-none focus-visible:z-10 focus-visible:ring-3 focus-visible:ring-[var(--sage-deep)]/30 sm:flex-none sm:px-3.5",
+                  query.view === "list"
+                    ? "bg-[var(--sage)]/20 text-[var(--ink)]"
+                    : "text-[var(--ink-muted)] hover:bg-[var(--sage)]/10 hover:text-[var(--ink)]"
+                )}
+                aria-label="List view"
+              >
+                <ListIcon className="size-4" aria-hidden />
+                <span className="sm:sr-only">List</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
