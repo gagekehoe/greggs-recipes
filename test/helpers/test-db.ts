@@ -88,6 +88,7 @@ const SCHEMA_SQL = `
     isPrivate INTEGER NOT NULL DEFAULT 0,
     inspiredBy TEXT NOT NULL DEFAULT '',
     inspiredByUrl TEXT NOT NULL DEFAULT '',
+    createdAt INTEGER NOT NULL,
     updatedAt INTEGER NOT NULL
   );
   CREATE TABLE IF NOT EXISTS recipe_share (

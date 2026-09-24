@@ -16,8 +16,8 @@ describe("recipe_share table (sqlite)", () => {
       .run();
     sqlite
       .prepare(
-        `INSERT INTO recipe (id, slug, title, authorId, authorName, updatedAt)
-         VALUES ('r1', 'soup', 'Soup', 'u1', 'Cook', 1)`
+        `INSERT INTO recipe (id, slug, title, authorId, authorName, createdAt, updatedAt)
+         VALUES ('r1', 'soup', 'Soup', 'u1', 'Cook', 1, 1)`
       )
       .run();
 

@@ -42,6 +42,7 @@ function normalizeRecipe(raw: Partial<Recipe> & Pick<Recipe, "id" | "slug" | "ti
     imageUrl: raw.imageUrl?.trim() || "",
     imageAlt: raw.imageAlt || (raw.imageUrl?.trim() ? `${raw.title} plated` : ""),
     source: raw.source || "local",
+    createdAt: raw.createdAt || raw.updatedAt || new Date().toISOString(),
     updatedAt: raw.updatedAt || new Date().toISOString(),
     authorId: raw.authorId || SYSTEM_AUTHOR.authorId,
     authorName: raw.authorName || SYSTEM_AUTHOR.authorName,
@@ -56,10 +57,10 @@ export function getSeedRecipes(): Recipe[] {
   return SEED_RECIPES.map((r) => normalizeRecipe(r));
 }
 
-function sortByUpdatedAt(recipes: Recipe[]): Recipe[] {
+function sortByCreatedAt(recipes: Recipe[]): Recipe[] {
   return recipes.sort(
     (a, b) =>
-      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 }
 
@@ -113,7 +114,7 @@ async function writeStore(recipes: Recipe[]): Promise<void> {
 
 export async function listLocalRecipes(): Promise<Recipe[]> {
   const recipes = await ensureStore();
-  return sortByUpdatedAt(recipes);
+  return sortByCreatedAt(recipes);
 }
 
 export async function getLocalRecipe(slug: string): Promise<Recipe | null> {
@@ -150,6 +151,7 @@ export async function createLocalRecipe(input: RecipeInput): Promise<Recipe> {
       input.imageAlt?.trim() ||
       (input.imageUrl?.trim() ? `${input.title.trim()} plated` : ""),
     source: "local",
+    createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     authorId: input.authorId,
     authorName: input.authorName,
@@ -223,6 +225,8 @@ export async function updateLocalRecipe(
       input.inspiredByUrl !== undefined
         ? input.inspiredByUrl.trim()
         : current.inspiredByUrl,
+    // Preserve createdAt — edits must not bump Browse “Newest”.
+    createdAt: current.createdAt,
     updatedAt: new Date().toISOString(),
   };
 

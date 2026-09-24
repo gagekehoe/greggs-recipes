@@ -119,6 +119,33 @@ describe("db recipe store", () => {
     ).toBe(true);
   });
 
+  it("preserves createdAt when a recipe is edited", async () => {
+    const store = await import("@/lib/recipes/db-store");
+    const created = await store.createDbRecipe({
+      title: "Stable Chili",
+      summary: "Edits should not change createdAt.",
+      ingredients: ["beans"],
+      steps: ["simmer"],
+      tags: ["test"],
+      prepMinutes: 5,
+      cookMinutes: 20,
+      servings: 2,
+      authorId: "cook-1",
+      authorName: "Gregg",
+    });
+    expect(created.createdAt).toBeTruthy();
+    const originalCreatedAt = created.createdAt;
+
+    await new Promise((r) => setTimeout(r, 5));
+    const updated = await store.updateDbRecipe(created.id, {
+      title: "Stable Chili Edited",
+    });
+    expect(updated?.createdAt).toBe(originalCreatedAt);
+    expect(new Date(updated!.updatedAt).getTime()).toBeGreaterThan(
+      new Date(originalCreatedAt).getTime()
+    );
+  });
+
   it("keeps both fields when a title PATCH overlaps a photo PATCH", async () => {
     const store = await import("@/lib/recipes/db-store");
     const raced = await store.createDbRecipe({

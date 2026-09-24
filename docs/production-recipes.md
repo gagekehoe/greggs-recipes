@@ -15,6 +15,8 @@ Or paste `drizzle/0001_recipe_catalog.sql` into the Neon SQL Editor (creates `re
 
 For author-only drafts, also apply `drizzle/0002_recipe_privacy.sql` (adds `isPrivate`, default public). Details: [private-recipes.md](./private-recipes.md).
 
+Browse **Newest** sorts by `createdAt` (when the recipe was added). After that column exists in schema, apply `drizzle/0008_recipe_created_at.sql` once on Neon (backfills from `updatedAt` for existing rows). Edits only bump `updatedAt` and do not change Newest order.
+
 Confirm Vercel already has `DATABASE_URL` (same Neon DB used for auth/reviews). Redeploy after merge; no Sanity setup is required.
 
 ## Behavior

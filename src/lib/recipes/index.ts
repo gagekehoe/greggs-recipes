@@ -32,7 +32,7 @@ async function localRecipesOrSeed(): Promise<Recipe[]> {
   }
   return getSeedRecipes().sort(
     (a, b) =>
-      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
 }
 
@@ -85,10 +85,11 @@ type SanityRecipeDoc = {
   isPrivate?: boolean;
   inspiredBy?: string;
   inspiredByUrl?: string;
+  _createdAt?: string;
   _updatedAt?: string;
 };
 
-const RECIPE_QUERY = `*[_type == "recipe"] | order(_updatedAt desc) {
+const RECIPE_QUERY = `*[_type == "recipe"] | order(_createdAt desc) {
   _id,
   title,
   slug,
@@ -106,6 +107,7 @@ const RECIPE_QUERY = `*[_type == "recipe"] | order(_updatedAt desc) {
   isPrivate,
   inspiredBy,
   inspiredByUrl,
+  _createdAt,
   _updatedAt
 }`;
 
@@ -127,6 +129,7 @@ const RECIPE_BY_SLUG_QUERY = `*[_type == "recipe" && slug.current == $slug][0] {
   isPrivate,
   inspiredBy,
   inspiredByUrl,
+  _createdAt,
   _updatedAt
 }`;
 
@@ -150,6 +153,7 @@ function mapSanityRecipe(doc: SanityRecipeDoc): Recipe {
       doc.imageAlt ||
       (doc.imageUrl?.trim() ? `${doc.title} plated` : ""),
     source: "sanity",
+    createdAt: doc._createdAt || doc._updatedAt || new Date().toISOString(),
     updatedAt: doc._updatedAt || new Date().toISOString(),
     authorId: doc.authorId || "system",
     authorName: doc.authorName || "Gregg",
@@ -332,7 +336,7 @@ export async function getRecipeById(id: string): Promise<Recipe | null> {
         `*[_type == "recipe" && _id == $id][0]{
           _id, title, slug, summary, ingredients, steps, tags,
           prepMinutes, cookMinutes, servings, imageUrl, imageAlt,
-          authorId, authorName, isPrivate, inspiredBy, inspiredByUrl, _updatedAt
+          authorId, authorName, isPrivate, inspiredBy, inspiredByUrl, _createdAt, _updatedAt
         }`,
         { id }
       );
@@ -402,6 +406,7 @@ export async function createRecipe(input: RecipeInput): Promise<{
         isPrivate: Boolean(input.isPrivate),
         inspiredBy: input.inspiredBy?.trim() || "",
         inspiredByUrl: input.inspiredByUrl?.trim() || "",
+        _createdAt: doc._createdAt,
         _updatedAt: doc._updatedAt,
       }),
       mode,

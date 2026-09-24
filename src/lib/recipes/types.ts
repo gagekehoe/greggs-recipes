@@ -14,6 +14,9 @@ export type Recipe = {
   imageUrl: string;
   imageAlt: string;
   source: RecipeSource;
+  /** When the recipe was first added to the site (Browse “Newest”). */
+  createdAt: string;
+  /** Last content edit; does not affect Newest sort. */
   updatedAt: string;
   authorId: string;
   authorName: string;

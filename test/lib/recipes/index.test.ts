@@ -60,6 +60,7 @@ vi.mock("@/lib/recipes/local-store", () => ({
       imageUrl: "/recipes/cajun-tuna-bowl.jpg",
       imageAlt: "bowl",
       source: "local",
+      createdAt: "2026-09-14T20:00:00.000Z",
       updatedAt: "2026-09-14T20:00:00.000Z",
       authorId: "admin",
       authorName: "Gregg",
@@ -91,6 +92,7 @@ function recipe(partial: Partial<Recipe> = {}): Recipe {
     imageUrl: "https://example.com/s.jpg",
     imageAlt: "soup",
     source: "local",
+    createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
     authorId: "u1",
     authorName: "Cook",
@@ -232,6 +234,7 @@ describe("recipes facade", () => {
         servings: 4,
         authorId: "a1",
         authorName: "Ada",
+        _createdAt: "2026-01-15T00:00:00.000Z",
         _updatedAt: "2026-02-01T00:00:00.000Z",
       },
     ]);
@@ -244,6 +247,8 @@ describe("recipes facade", () => {
       slug: "sanity-stew",
       title: "Sanity Stew",
       source: "sanity",
+      createdAt: "2026-01-15T00:00:00.000Z",
+      updatedAt: "2026-02-01T00:00:00.000Z",
     });
   });
 

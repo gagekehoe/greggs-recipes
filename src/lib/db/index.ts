@@ -140,6 +140,7 @@ function createSqlite(): DbBundle {
       isPrivate INTEGER NOT NULL DEFAULT 0,
       inspiredBy TEXT NOT NULL DEFAULT '',
       inspiredByUrl TEXT NOT NULL DEFAULT '',
+      createdAt INTEGER NOT NULL,
       updatedAt INTEGER NOT NULL
     );
     CREATE TABLE IF NOT EXISTS recipe_share (
@@ -191,6 +192,20 @@ function createSqlite(): DbBundle {
     sqlite.exec(`ALTER TABLE user ADD COLUMN passwordUpdatedAt INTEGER`);
   } catch {
     // Column already present on existing local DBs.
+  }
+
+  try {
+    sqlite.exec(`ALTER TABLE recipe ADD COLUMN createdAt INTEGER`);
+  } catch {
+    // Column already present on existing local DBs.
+  }
+
+  try {
+    sqlite.exec(
+      `UPDATE recipe SET createdAt = updatedAt WHERE createdAt IS NULL`
+    );
+  } catch {
+    // Table/column unavailable during first probe.
   }
 
   // Legacy bootstrap: ADMIN_EMAIL was stored as admin → promote to owner.

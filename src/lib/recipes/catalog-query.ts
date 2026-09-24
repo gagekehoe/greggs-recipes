@@ -1,6 +1,6 @@
 import type { Recipe } from "./types";
 
-/** Shareable catalog sort values (`?sort=`). Default: newest. */
+/** Shareable catalog sort values (`?sort=`). Default: newest (by createdAt). */
 export type CatalogSort = "newest" | "title-asc" | "title-desc";
 
 /** Browse layout: grid cards (default) or compact list rows. */
@@ -147,10 +147,10 @@ export function sortRecipesByCatalog(
     copy.sort((a, b) => b.title.localeCompare(a.title, undefined, { sensitivity: "base" }));
     return copy;
   }
-  // newest — updatedAt descending (stable store default)
+  // newest — createdAt descending (when added to the site; edits do not bump)
   copy.sort(
     (a, b) =>
-      new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
   );
   return copy;
 }

@@ -155,6 +155,10 @@ export const recipes = sqliteTable("recipe", {
   inspiredBy: text("inspiredBy").notNull().default(""),
   /** Optional https link for the Inspired by credit. */
   inspiredByUrl: text("inspiredByUrl").notNull().default(""),
+  /** First insert time — Browse “Newest” uses this, not updatedAt. */
+  createdAt: integer("createdAt", { mode: "timestamp_ms" })
+    .notNull()
+    .$defaultFn(() => new Date()),
   updatedAt: integer("updatedAt", { mode: "timestamp_ms" })
     .notNull()
     .$defaultFn(() => new Date()),

@@ -47,6 +47,7 @@ function recipe(partial: Partial<Recipe> = {}): Recipe {
     imageUrl: "",
     imageAlt: "",
     source: "db",
+    createdAt: "2026-09-22T00:00:00.000Z",
     updatedAt: "2026-09-22T00:00:00.000Z",
     authorId: "me",
     authorName: "Maya",
