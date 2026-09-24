@@ -34,6 +34,15 @@ const SORT_LABELS: Record<CatalogSort, string> = {
 
 const DEBOUNCE_MS = 300;
 
+/** Shared control height — Input is h-11; Select defaults to md:h-9 via data-size. */
+const CONTROL_SURFACE =
+  "h-11 rounded-none border-[var(--line)] bg-[var(--paper)] md:h-11";
+const SELECT_CONTROL_SURFACE = cn(
+  CONTROL_SURFACE,
+  // Beat SelectTrigger's data-[size=default]:md:h-9 (higher specificity than md:h-11).
+  "data-[size=default]:h-11 data-[size=default]:md:h-11"
+);
+
 type Props = {
   query: CatalogQuery;
   availableTags: string[];
@@ -149,13 +158,16 @@ export function RecipeCatalogControls({
               }
             }}
             placeholder="Search by title, summary, or tag"
-            className="h-11 rounded-none border-[var(--line)] bg-[var(--paper)] text-[var(--ink)] placeholder:text-[var(--ink-soft)] md:h-11"
+            className={cn(
+              CONTROL_SURFACE,
+              "text-[var(--ink)] placeholder:text-[var(--ink-soft)]"
+            )}
             autoComplete="off"
             enterKeyHint="search"
           />
         </div>
 
-        <div className="grid grid-cols-2 gap-3 sm:flex sm:shrink-0 sm:gap-4">
+        <div className="grid grid-cols-2 gap-3 sm:flex sm:shrink-0 sm:items-end sm:gap-4">
           <div className="min-w-0 space-y-2 sm:w-44">
             <Label
               htmlFor="recipe-catalog-sort"
@@ -172,7 +184,7 @@ export function RecipeCatalogControls({
             >
               <SelectTrigger
                 id="recipe-catalog-sort"
-                className="h-11 w-full rounded-none border-[var(--line)] bg-[var(--paper)] md:h-11"
+                className={cn(SELECT_CONTROL_SURFACE, "w-full")}
               >
                 <SelectValue>{SORT_LABELS[query.sort]}</SelectValue>
               </SelectTrigger>
@@ -194,13 +206,14 @@ export function RecipeCatalogControls({
               >
                 Tags
               </Label>
-              <div className="flex items-stretch gap-1">
+              <div className="flex h-11 items-stretch gap-1 md:h-11">
                 <Popover open={tagsOpen} onOpenChange={setTagsOpen}>
                   <PopoverTrigger
                     id="recipe-catalog-tags"
                     type="button"
                     className={cn(
-                      "flex h-11 min-w-0 flex-1 items-center justify-between gap-2 border border-[var(--line)] bg-[var(--paper)] px-3 text-left text-sm text-[var(--ink)] transition-colors outline-none focus-visible:border-[var(--sage-deep)] focus-visible:ring-3 focus-visible:ring-[var(--sage-deep)]/30",
+                      CONTROL_SURFACE,
+                      "flex min-w-0 flex-1 items-center justify-between gap-2 border px-3 text-left text-sm text-[var(--ink)] transition-colors outline-none focus-visible:border-[var(--sage-deep)] focus-visible:ring-3 focus-visible:ring-[var(--sage-deep)]/30",
                       query.tags.length > 0 && "border-[var(--sage-deep)]/60"
                     )}
                     aria-label={
@@ -288,7 +301,10 @@ export function RecipeCatalogControls({
                   <button
                     type="button"
                     onClick={clearTags}
-                    className="inline-flex h-11 w-11 shrink-0 items-center justify-center border border-[var(--line)] bg-[var(--paper)] text-[var(--ink-muted)] transition-colors hover:border-[var(--sage-deep)]/50 hover:text-[var(--ink)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sage-deep)]"
+                    className={cn(
+                      CONTROL_SURFACE,
+                      "inline-flex w-11 shrink-0 items-center justify-center border text-[var(--ink-muted)] transition-colors hover:border-[var(--sage-deep)]/50 hover:text-[var(--ink)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sage-deep)]"
+                    )}
                     aria-label="Clear selected tags"
                   >
                     <XIcon className="size-4" aria-hidden />
