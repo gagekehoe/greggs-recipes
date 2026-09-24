@@ -26,7 +26,11 @@ vi.mock("@/lib/db", async () => {
  * End-to-end auth path using in-memory SQLite + mocked email:
  * register → login → forgot → reset → login with new password.
  */
-describe("auth password flow (integration)", () => {
+describe(
+  "auth password flow (integration)",
+  // bcrypt + multi-step register/login/reset exceeds the default 5s under CI coverage.
+  { timeout: 20_000 },
+  () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     delete process.env.AUTH_RESEND_KEY;
