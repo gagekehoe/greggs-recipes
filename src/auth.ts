@@ -17,6 +17,10 @@ import {
   migrateBootstrapAdminToOwner,
 } from "@/lib/auth/owner-bootstrap";
 import { authorizeCredentials } from "@/lib/auth/credentials";
+import {
+  isPasswordSessionStale,
+  passwordStampFromUser,
+} from "@/lib/auth/password-session";
 import { safeAuthRedirect } from "@/lib/auth/safe-auth-redirect";
 
 const databaseReady = isDatabaseConfigured();
@@ -67,14 +71,45 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         token.role = (user as { role?: Role }).role || "viewer";
         token.email = user.email;
         token.name = user.name;
+        token.pwdAt = passwordStampFromUser(
+          (user as { passwordUpdatedAt?: Date | null }).passwordUpdatedAt
+        );
+        return token;
       }
+
+      // Reject JWTs issued before a password reset (or other password change).
+      if (token.sub && isDatabaseConfigured()) {
+        try {
+          const rows = await db
+            .select({ passwordUpdatedAt: users.passwordUpdatedAt })
+            .from(users)
+            .where(eq(users.id, token.sub))
+            .limit(1);
+          const row = rows[0] as
+            | { passwordUpdatedAt: Date | null }
+            | undefined;
+          if (
+            !row ||
+            isPasswordSessionStale(token.pwdAt, row.passwordUpdatedAt)
+          ) {
+            return {};
+          }
+        } catch (error) {
+          console.error("[auth] jwt password-session check failed:", error);
+        }
+      }
+
       return token;
     },
     async session({ session, token }) {
       if (!session.user) return session;
 
       const id = (token.sub as string | undefined) || undefined;
-      if (id) session.user.id = id;
+      // Empty token after password reset / deleted user → no session.
+      if (!id) {
+        return { ...session, user: undefined as never };
+      }
+      session.user.id = id;
 
       if (id && isDatabaseConfigured()) {
         try {
@@ -85,6 +120,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
               role: users.role,
               image: users.image,
               emailVerified: users.emailVerified,
+              passwordUpdatedAt: users.passwordUpdatedAt,
             })
             .from(users)
             .where(eq(users.id, id))
@@ -96,19 +132,24 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 role: Role;
                 image: string | null;
                 emailVerified: Date | null;
+                passwordUpdatedAt: Date | null;
               }
             | undefined;
-          if (row) {
-            session.user.name = row.name;
-            session.user.email = row.email;
-            session.user.image = row.image;
-            session.user.role = roleWithVerifiedOwnerBootstrap(
-              row.email,
-              row.role,
-              row.emailVerified
-            );
-            return session;
+          if (
+            !row ||
+            isPasswordSessionStale(token.pwdAt, row.passwordUpdatedAt)
+          ) {
+            return { ...session, user: undefined as never };
           }
+          session.user.name = row.name;
+          session.user.email = row.email;
+          session.user.image = row.image;
+          session.user.role = roleWithVerifiedOwnerBootstrap(
+            row.email,
+            row.role,
+            row.emailVerified
+          );
+          return session;
         } catch (error) {
           console.error("[auth] session DB refresh failed:", error);
         }

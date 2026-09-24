@@ -9,7 +9,7 @@ import {
 } from "@/lib/auth/password";
 import { consumePasswordResetToken } from "@/lib/auth/password-reset";
 import { ensureOwnerRole } from "@/lib/auth/owner-bootstrap";
-import { db, isDatabaseConfigured, users } from "@/lib/db";
+import { db, isDatabaseConfigured, sessions, users } from "@/lib/db";
 
 const schema = z.object({
   email: z.string().email(),
@@ -73,10 +73,14 @@ export async function POST(request: Request) {
   }
 
   const passwordHash = await hashPassword(parsed.data.password);
+  const passwordUpdatedAt = new Date();
   await db
     .update(users)
-    .set({ passwordHash, emailVerified: new Date() })
+    .set({ passwordHash, emailVerified: passwordUpdatedAt, passwordUpdatedAt })
     .where(eq(users.id, existing[0].id));
+
+  // Defense in depth: drop any adapter DB sessions (JWT strategy is primary).
+  await db.delete(sessions).where(eq(sessions.userId, existing[0].id));
 
   // Inbox proven via reset token — promote ADMIN_EMAIL to Owner if applicable.
   await ensureOwnerRole(existing[0].id, existing[0].email);

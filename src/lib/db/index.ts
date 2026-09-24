@@ -62,6 +62,7 @@ function createSqlite(): DbBundle {
       emailVerified INTEGER,
       image TEXT,
       passwordHash TEXT,
+      passwordUpdatedAt INTEGER,
       role TEXT NOT NULL DEFAULT 'viewer'
     );
     CREATE TABLE IF NOT EXISTS account (
@@ -182,6 +183,12 @@ function createSqlite(): DbBundle {
 
   try {
     sqlite.exec(`ALTER TABLE user ADD COLUMN passwordHash TEXT`);
+  } catch {
+    // Column already present on existing local DBs.
+  }
+
+  try {
+    sqlite.exec(`ALTER TABLE user ADD COLUMN passwordUpdatedAt INTEGER`);
   } catch {
     // Column already present on existing local DBs.
   }

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const selectLimit = vi.fn();
 const updateSet = vi.fn();
+const deleteWhere = vi.fn();
 const consumePasswordResetToken = vi.fn();
 const ensureOwnerRole = vi.fn();
 let databaseConfigured = true;
@@ -20,6 +21,7 @@ vi.mock("@/lib/db", async () => {
   return {
     isDatabaseConfigured: () => databaseConfigured,
     users: schema.users,
+    sessions: schema.sessions,
     db: {
       select: () => ({
         from: () => ({
@@ -34,6 +36,12 @@ vi.mock("@/lib/db", async () => {
           return {
             where: () => Promise.resolve(),
           };
+        },
+      }),
+      delete: () => ({
+        where: () => {
+          deleteWhere();
+          return Promise.resolve();
         },
       }),
     },
@@ -160,8 +168,17 @@ describe("POST /api/auth/reset-password", () => {
       expect.objectContaining({
         passwordHash: expect.any(String),
         emailVerified: expect.any(Date),
+        passwordUpdatedAt: expect.any(Date),
       })
     );
+    const updated = updateSet.mock.calls[0][0] as {
+      emailVerified: Date;
+      passwordUpdatedAt: Date;
+    };
+    expect(updated.passwordUpdatedAt.getTime()).toBe(
+      updated.emailVerified.getTime()
+    );
+    expect(deleteWhere).toHaveBeenCalled();
     expect(ensureOwnerRole).toHaveBeenCalledWith("u1", "cook@example.com");
   });
 });
