@@ -88,9 +88,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           const row = rows[0] as
             | { passwordUpdatedAt: Date | null }
             | undefined;
+          const pwdAt =
+            typeof token.pwdAt === "number" ? token.pwdAt : undefined;
           if (
             !row ||
-            isPasswordSessionStale(token.pwdAt, row.passwordUpdatedAt)
+            isPasswordSessionStale(pwdAt, row.passwordUpdatedAt)
           ) {
             return {};
           }
@@ -135,9 +137,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
                 passwordUpdatedAt: Date | null;
               }
             | undefined;
+          const pwdAt =
+            typeof token.pwdAt === "number" ? token.pwdAt : undefined;
           if (
             !row ||
-            isPasswordSessionStale(token.pwdAt, row.passwordUpdatedAt)
+            isPasswordSessionStale(pwdAt, row.passwordUpdatedAt)
           ) {
             return { ...session, user: undefined as never };
           }
