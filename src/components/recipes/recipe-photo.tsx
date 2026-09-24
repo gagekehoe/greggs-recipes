@@ -7,7 +7,7 @@ import {
 } from "@/lib/recipes/image";
 import { cn } from "@/lib/utils";
 
-type Variant = "card" | "detail" | "hero";
+type Variant = "card" | "detail" | "hero" | "thumb";
 
 type Props = {
   title: string;
@@ -74,14 +74,17 @@ export function RecipePhoto({
           "relative z-10 font-display tracking-wide text-[#f3f0e8]/95",
           variant === "card" && "text-5xl md:text-6xl",
           variant === "detail" && "text-7xl md:text-8xl",
-          variant === "hero" && "text-8xl md:text-9xl"
+          variant === "hero" && "text-8xl md:text-9xl",
+          variant === "thumb" && "text-xl"
         )}
       >
         {initials}
       </span>
-      <p className="relative z-10 mt-2 text-[0.65rem] uppercase tracking-[0.18em] text-[#c5d0c2]/85">
-        Photo soon
-      </p>
+      {variant !== "thumb" ? (
+        <p className="relative z-10 mt-2 text-[0.65rem] uppercase tracking-[0.18em] text-[#c5d0c2]/85">
+          Photo soon
+        </p>
+      ) : null}
     </div>
   );
 }

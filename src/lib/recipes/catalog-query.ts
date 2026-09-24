@@ -3,13 +3,21 @@ import type { Recipe } from "./types";
 /** Shareable catalog sort values (`?sort=`). Default: newest. */
 export type CatalogSort = "newest" | "title-asc" | "title-desc";
 
+/** Browse layout: grid cards (default) or compact list rows. */
+export type CatalogView = "grid" | "list";
+
 export const DEFAULT_CATALOG_SORT: CatalogSort = "newest";
+export const DEFAULT_CATALOG_VIEW: CatalogView = "grid";
+
+/** localStorage key for persisting Browse view when URL omits `view`. */
+export const CATALOG_VIEW_STORAGE_KEY = "greggs-recipes:catalog-view";
 
 export type CatalogQuery = {
   q: string;
   sort: CatalogSort;
   /** Normalized lowercase tags (multi-select). */
   tags: string[];
+  view: CatalogView;
 };
 
 const SORT_VALUES = new Set<CatalogSort>([
@@ -17,6 +25,8 @@ const SORT_VALUES = new Set<CatalogSort>([
   "title-asc",
   "title-desc",
 ]);
+
+const VIEW_VALUES = new Set<CatalogView>(["grid", "list"]);
 
 function normalizeTag(raw: string): string {
   return raw.trim().toLowerCase();
@@ -54,10 +64,21 @@ export function parseCatalogSort(
   return DEFAULT_CATALOG_SORT;
 }
 
+export function parseCatalogView(
+  viewParam: string | string[] | undefined | null
+): CatalogView {
+  const raw = Array.isArray(viewParam) ? viewParam[0] : viewParam;
+  if (typeof raw === "string" && VIEW_VALUES.has(raw as CatalogView)) {
+    return raw as CatalogView;
+  }
+  return DEFAULT_CATALOG_VIEW;
+}
+
 export function parseCatalogQuery(params: {
   q?: string | string[] | undefined | null;
   sort?: string | string[] | undefined | null;
   tag?: string | string[] | undefined | null;
+  view?: string | string[] | undefined | null;
 }): CatalogQuery {
   const qRaw = Array.isArray(params.q) ? params.q[0] : params.q;
   const q =
@@ -66,6 +87,7 @@ export function parseCatalogQuery(params: {
     q,
     sort: parseCatalogSort(params.sort),
     tags: parseCatalogTags(params.tag),
+    view: parseCatalogView(params.view),
   };
 }
 
@@ -145,7 +167,7 @@ export function applyCatalogQuery(
 
 /**
  * Build a shareable query string for the home catalog.
- * Omits defaults (`sort=newest`, empty q/tags).
+ * Omits defaults (`sort=newest`, `view=grid`, empty q/tags).
  */
 export function buildCatalogSearchParams(query: CatalogQuery): URLSearchParams {
   const params = new URLSearchParams();
@@ -154,6 +176,7 @@ export function buildCatalogSearchParams(query: CatalogQuery): URLSearchParams {
   for (const tag of query.tags) {
     params.append("tag", tag);
   }
+  if (query.view !== DEFAULT_CATALOG_VIEW) params.set("view", query.view);
   return params;
 }
 

@@ -9,9 +9,19 @@ import {
 } from "@/lib/auth/author-credits";
 import { getSessionUser } from "@/lib/auth/session";
 import { totalMinutes, type Recipe } from "@/lib/recipes";
+import type { CatalogView } from "@/lib/recipes/catalog-query";
 import type { AuthorPrivilege } from "@/lib/auth/roles";
 import type { RatingSummary } from "@/lib/reviews/rating";
 import { getRatingSummaries } from "@/lib/reviews/store";
+
+function recipeMetaLine(recipe: Recipe, rating?: RatingSummary): string {
+  const minutes = totalMinutes(recipe);
+  const parts = [`${minutes} min`, `serves ${recipe.servings}`];
+  if (rating && rating.count > 0) {
+    parts.push(`${rating.average}★ (${rating.count})`);
+  }
+  return parts.join(" · ");
+}
 
 export function RecipeCard({
   recipe,
@@ -26,7 +36,6 @@ export function RecipeCard({
   authorLabel: string;
   authorPrivilege: AuthorPrivilege;
 }) {
-  const minutes = totalMinutes(recipe);
   return (
     <article
       className="group recipe-reveal"
@@ -71,10 +80,7 @@ export function RecipeCard({
             {recipe.summary}
           </p>
           <p className="mt-3 text-xs uppercase tracking-[0.14em] text-[var(--ink-soft)]">
-            {minutes} min · serves {recipe.servings}
-            {rating && rating.count > 0
-              ? ` · ${rating.average}★ (${rating.count})`
-              : ""}
+            {recipeMetaLine(recipe, rating)}
           </p>
           <RecipeAuthorCredit
             className="mt-1.5"
@@ -87,16 +93,84 @@ export function RecipeCard({
   );
 }
 
+export function RecipeListRow({
+  recipe,
+  index = 0,
+  rating,
+  authorLabel,
+  authorPrivilege,
+}: {
+  recipe: Recipe;
+  index?: number;
+  rating?: RatingSummary;
+  authorLabel: string;
+  authorPrivilege: AuthorPrivilege;
+}) {
+  return (
+    <article
+      className="group recipe-reveal border-b border-[var(--line)] last:border-b-0"
+      style={{ animationDelay: `${Math.min(index, 8) * 40}ms` }}
+    >
+      <Link
+        href={`/recipes/${recipe.slug}`}
+        className="flex gap-3 py-3 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--sage-deep)] sm:gap-4 sm:py-3.5"
+      >
+        <div className="relative size-16 shrink-0 overflow-hidden bg-[var(--sage-deep)] sm:size-20">
+          <RecipePhoto
+            title={recipe.title}
+            imageUrl={recipe.imageUrl}
+            imageAlt={recipe.imageAlt}
+            variant="thumb"
+            sizes="80px"
+            imageClassName="transition-transform duration-500 ease-out group-hover:scale-[1.04]"
+          />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <h3 className="font-display text-xl leading-tight text-[var(--ink)] transition-colors group-hover:text-[var(--accent-deep)] sm:text-2xl">
+              {recipe.title}
+            </h3>
+            {recipe.isPrivate ? (
+              <Badge
+                variant="secondary"
+                className="border border-[var(--accent-deep)]/45 bg-[var(--paper)] px-1.5 py-0 text-[0.65rem] uppercase tracking-[0.08em] text-[var(--accent-deep)]"
+              >
+                Private
+              </Badge>
+            ) : null}
+          </div>
+          <p className="mt-1 line-clamp-1 text-sm leading-snug text-[var(--ink-muted)] sm:line-clamp-2">
+            {recipe.summary}
+          </p>
+          <p className="mt-1.5 text-xs uppercase tracking-[0.14em] text-[var(--ink-soft)]">
+            {recipeMetaLine(recipe, rating)}
+          </p>
+          <RecipeAuthorCredit
+            className="mt-1"
+            label={authorLabel}
+            privilege={authorPrivilege}
+          />
+        </div>
+      </Link>
+    </article>
+  );
+}
+
+async function loadCatalogExtras(recipes: Recipe[]) {
+  const [ratings, privilegeByUserId] = await Promise.all([
+    getRatingSummaries(recipes.map((r) => r.id)),
+    getAuthorPrivilegesByUserIds(recipes.map((r) => r.authorId)),
+  ]);
+  return { ratings, privilegeByUserId };
+}
+
 export async function RecipeGrid({ recipes }: { recipes: Recipe[] }) {
   if (recipes.length === 0) {
     const user = await getSessionUser();
     return <EmptyRecipes user={user} />;
   }
 
-  const [ratings, privilegeByUserId] = await Promise.all([
-    getRatingSummaries(recipes.map((r) => r.id)),
-    getAuthorPrivilegesByUserIds(recipes.map((r) => r.authorId)),
-  ]);
+  const { ratings, privilegeByUserId } = await loadCatalogExtras(recipes);
 
   return (
     <div className="grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
@@ -117,6 +191,46 @@ export async function RecipeGrid({ recipes }: { recipes: Recipe[] }) {
   );
 }
 
+export async function RecipeList({ recipes }: { recipes: Recipe[] }) {
+  if (recipes.length === 0) {
+    const user = await getSessionUser();
+    return <EmptyRecipes user={user} />;
+  }
+
+  const { ratings, privilegeByUserId } = await loadCatalogExtras(recipes);
+
+  return (
+    <div className="border-t border-[var(--line)]">
+      {recipes.map((recipe, index) => {
+        const credit = resolveRecipeAuthorCredit(recipe, privilegeByUserId);
+        return (
+          <RecipeListRow
+            key={recipe.id}
+            recipe={recipe}
+            index={index}
+            rating={ratings[recipe.id]}
+            authorLabel={credit.label}
+            authorPrivilege={credit.privilege}
+          />
+        );
+      })}
+    </div>
+  );
+}
+
+export async function RecipeCatalog({
+  recipes,
+  view,
+}: {
+  recipes: Recipe[];
+  view: CatalogView;
+}) {
+  if (view === "list") {
+    return <RecipeList recipes={recipes} />;
+  }
+  return <RecipeGrid recipes={recipes} />;
+}
+
 export function RecipeSkeletonGrid() {
   return (
     <div className="grid gap-x-8 gap-y-12 sm:grid-cols-2 lg:grid-cols-3">
@@ -130,4 +244,29 @@ export function RecipeSkeletonGrid() {
       ))}
     </div>
   );
+}
+
+export function RecipeSkeletonList() {
+  return (
+    <div className="border-t border-[var(--line)]">
+      {Array.from({ length: 6 }).map((_, i) => (
+        <div
+          key={i}
+          className="flex animate-pulse gap-3 border-b border-[var(--line)] py-3 last:border-b-0 sm:gap-4 sm:py-3.5"
+        >
+          <div className="size-16 shrink-0 bg-[var(--sage)]/40 sm:size-20" />
+          <div className="min-w-0 flex-1">
+            <div className="h-6 w-2/5 bg-[var(--sage)]/35" />
+            <div className="mt-2 h-4 w-4/5 bg-[var(--sage)]/25" />
+            <div className="mt-2 h-3 w-1/3 bg-[var(--sage)]/20" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+export function RecipeCatalogSkeleton({ view }: { view: CatalogView }) {
+  if (view === "list") return <RecipeSkeletonList />;
+  return <RecipeSkeletonGrid />;
 }

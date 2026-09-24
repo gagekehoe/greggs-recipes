@@ -6,9 +6,11 @@ import {
   catalogQueryIsActive,
   collectCatalogTags,
   DEFAULT_CATALOG_SORT,
+  DEFAULT_CATALOG_VIEW,
   filterRecipesByCatalogQuery,
   parseCatalogQuery,
   parseCatalogTags,
+  parseCatalogView,
   sortRecipesByCatalog,
 } from "@/lib/recipes/catalog-query";
 import type { Recipe } from "@/lib/recipes/types";
@@ -38,13 +40,16 @@ function recipe(partial: Partial<Recipe> = {}): Recipe {
   };
 }
 
+const baseQuery = {
+  q: "",
+  sort: DEFAULT_CATALOG_SORT,
+  tags: [] as string[],
+  view: DEFAULT_CATALOG_VIEW,
+};
+
 describe("parseCatalogQuery", () => {
-  it("defaults to empty search, newest sort, no tags", () => {
-    expect(parseCatalogQuery({})).toEqual({
-      q: "",
-      sort: DEFAULT_CATALOG_SORT,
-      tags: [],
-    });
+  it("defaults to empty search, newest sort, grid view, no tags", () => {
+    expect(parseCatalogQuery({})).toEqual(baseQuery);
   });
 
   it("trims and collapses search whitespace", () => {
@@ -66,6 +71,14 @@ describe("parseCatalogQuery", () => {
       "quick",
       "spicy",
     ]);
+  });
+
+  it("accepts grid/list view and falls back otherwise", () => {
+    expect(parseCatalogView("list")).toBe("list");
+    expect(parseCatalogView("grid")).toBe("grid");
+    expect(parseCatalogQuery({ view: "list" }).view).toBe("list");
+    expect(parseCatalogQuery({ view: "cards" }).view).toBe("grid");
+    expect(parseCatalogQuery({ view: ["list", "grid"] }).view).toBe("list");
   });
 });
 
@@ -97,23 +110,20 @@ describe("filter and sort", () => {
   it("searches title, summary, and tags", () => {
     expect(
       filterRecipesByCatalogQuery(recipes, {
+        ...baseQuery,
         q: "zucchini",
-        sort: "newest",
-        tags: [],
       }).map((r) => r.id)
     ).toEqual(["a"]);
     expect(
       filterRecipesByCatalogQuery(recipes, {
+        ...baseQuery,
         q: "sunday",
-        sort: "newest",
-        tags: [],
       }).map((r) => r.id)
     ).toEqual(["b"]);
     expect(
       filterRecipesByCatalogQuery(recipes, {
+        ...baseQuery,
         q: "soup",
-        sort: "newest",
-        tags: [],
       }).map((r) => r.id)
     ).toEqual(["c"]);
   });
@@ -121,8 +131,7 @@ describe("filter and sort", () => {
   it("requires all selected tags (AND)", () => {
     expect(
       filterRecipesByCatalogQuery(recipes, {
-        q: "",
-        sort: "newest",
+        ...baseQuery,
         tags: ["dinner", "soup"],
       }).map((r) => r.id)
     ).toEqual(["c"]);
@@ -149,7 +158,7 @@ describe("filter and sort", () => {
   it("applies filter then sort", () => {
     expect(
       applyCatalogQuery(recipes, {
-        q: "",
+        ...baseQuery,
         sort: "title-asc",
         tags: ["dinner"],
       }).map((r) => r.title)
@@ -168,30 +177,35 @@ describe("collectCatalogTags and URL helpers", () => {
   });
 
   it("builds shareable params omitting defaults", () => {
-    expect(buildCatalogSearchParams({ q: "", sort: "newest", tags: [] }).toString()).toBe(
-      ""
-    );
+    expect(buildCatalogSearchParams(baseQuery).toString()).toBe("");
     expect(
       buildCatalogSearchParams({
         q: "stew",
         sort: "title-asc",
         tags: ["dinner", "beef"],
+        view: "grid",
       }).toString()
     ).toBe("q=stew&sort=title-asc&tag=dinner&tag=beef");
-    expect(catalogHref({ q: "stew", sort: "newest", tags: [] })).toBe(
-      "/?q=stew#recipes"
+    expect(
+      buildCatalogSearchParams({
+        ...baseQuery,
+        view: "list",
+      }).toString()
+    ).toBe("view=list");
+    expect(catalogHref({ ...baseQuery, q: "stew" })).toBe("/?q=stew#recipes");
+    expect(catalogHref({ ...baseQuery, view: "list" })).toBe(
+      "/?view=list#recipes"
     );
-    expect(catalogHref({ q: "", sort: "newest", tags: [] })).toBe("/#recipes");
+    expect(catalogHref(baseQuery)).toBe("/#recipes");
   });
 
-  it("detects active query state", () => {
-    expect(catalogQueryIsActive({ q: "", sort: "newest", tags: [] })).toBe(false);
-    expect(catalogQueryIsActive({ q: "x", sort: "newest", tags: [] })).toBe(true);
+  it("detects active query state ignoring view", () => {
+    expect(catalogQueryIsActive(baseQuery)).toBe(false);
+    expect(catalogQueryIsActive({ ...baseQuery, view: "list" })).toBe(false);
+    expect(catalogQueryIsActive({ ...baseQuery, q: "x" })).toBe(true);
     expect(
-      catalogQueryIsActive({ q: "", sort: "title-asc", tags: [] })
+      catalogQueryIsActive({ ...baseQuery, sort: "title-asc" })
     ).toBe(true);
-    expect(catalogQueryIsActive({ q: "", sort: "newest", tags: ["soup"] })).toBe(
-      true
-    );
+    expect(catalogQueryIsActive({ ...baseQuery, tags: ["soup"] })).toBe(true);
   });
 });

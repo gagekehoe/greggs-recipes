@@ -2,8 +2,8 @@ import { Suspense } from "react";
 import { EmptyCatalogMatches } from "@/components/recipes/empty-catalog-matches";
 import { RecipeCatalogControls } from "@/components/recipes/recipe-catalog-controls";
 import {
-  RecipeGrid,
-  RecipeSkeletonGrid,
+  RecipeCatalog,
+  RecipeCatalogSkeleton,
 } from "@/components/recipes/recipe-card";
 import { RecipePhoto } from "@/components/recipes/recipe-photo";
 import { getSessionUser } from "@/lib/auth/session";
@@ -23,12 +23,20 @@ type Props = {
     q?: string | string[];
     sort?: string | string[];
     tag?: string | string[];
+    view?: string | string[];
   }>;
 };
+
+function hasViewParam(view: string | string[] | undefined): boolean {
+  if (view == null) return false;
+  if (Array.isArray(view)) return view.some((v) => String(v).length > 0);
+  return view.length > 0;
+}
 
 export default async function HomePage({ searchParams }: Props) {
   const params = await searchParams;
   const catalogQuery = parseCatalogQuery(params);
+  const viewFromUrl = hasViewParam(params.view);
   const user = await getSessionUser();
   const { recipes, mode, error } = await listRecipes({
     includePrivateForUserId: user?.id ?? null,
@@ -121,16 +129,24 @@ export default async function HomePage({ searchParams }: Props) {
               availableTags={availableTags}
               resultCount={filtered.length}
               totalCount={recipes.length}
+              viewFromUrl={viewFromUrl}
             />
           ) : null}
 
           {noMatches ? (
             <EmptyCatalogMatches
-              clearHref={catalogHref({ q: "", sort: "newest", tags: [] })}
+              clearHref={catalogHref({
+                q: "",
+                sort: "newest",
+                tags: [],
+                view: catalogQuery.view,
+              })}
             />
           ) : (
-            <Suspense fallback={<RecipeSkeletonGrid />}>
-              <RecipeGrid recipes={filtered} />
+            <Suspense
+              fallback={<RecipeCatalogSkeleton view={catalogQuery.view} />}
+            >
+              <RecipeCatalog recipes={filtered} view={catalogQuery.view} />
             </Suspense>
           )}
         </div>
