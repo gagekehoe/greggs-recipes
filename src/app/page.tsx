@@ -1,18 +1,46 @@
-import { RecipeGrid } from "@/components/recipes/recipe-card";
+import { Suspense } from "react";
+import { EmptyCatalogMatches } from "@/components/recipes/empty-catalog-matches";
+import { RecipeCatalogControls } from "@/components/recipes/recipe-catalog-controls";
+import {
+  RecipeGrid,
+  RecipeSkeletonGrid,
+} from "@/components/recipes/recipe-card";
 import { RecipePhoto } from "@/components/recipes/recipe-photo";
 import { getSessionUser } from "@/lib/auth/session";
 import { listRecipes } from "@/lib/recipes";
+import {
+  applyCatalogQuery,
+  catalogHref,
+  collectCatalogTags,
+  parseCatalogQuery,
+} from "@/lib/recipes/catalog-query";
 import { pickHomeBannerRecipe } from "@/lib/recipes/image";
 
 export const dynamic = "force-dynamic";
 
-export default async function HomePage() {
+type Props = {
+  searchParams: Promise<{
+    q?: string | string[];
+    sort?: string | string[];
+    tag?: string | string[];
+  }>;
+};
+
+export default async function HomePage({ searchParams }: Props) {
+  const params = await searchParams;
+  const catalogQuery = parseCatalogQuery(params);
   const user = await getSessionUser();
   const { recipes, mode, error } = await listRecipes({
     includePrivateForUserId: user?.id ?? null,
     viewerRole: user?.role ?? null,
   });
+  // Banner uses the full visible catalog (visibility already applied), not the
+  // filtered subset — so a shared search link does not change the hero photo.
   const featured = pickHomeBannerRecipe(recipes);
+  const availableTags = collectCatalogTags(recipes);
+  const filtered = applyCatalogQuery(recipes, catalogQuery);
+  const showControls = recipes.length > 0;
+  const noMatches = showControls && filtered.length === 0;
 
   return (
     <>
@@ -87,7 +115,24 @@ export default async function HomePage() {
             </div>
           ) : null}
 
-          <RecipeGrid recipes={recipes} />
+          {showControls ? (
+            <RecipeCatalogControls
+              query={catalogQuery}
+              availableTags={availableTags}
+              resultCount={filtered.length}
+              totalCount={recipes.length}
+            />
+          ) : null}
+
+          {noMatches ? (
+            <EmptyCatalogMatches
+              clearHref={catalogHref({ q: "", sort: "newest", tags: [] })}
+            />
+          ) : (
+            <Suspense fallback={<RecipeSkeletonGrid />}>
+              <RecipeGrid recipes={filtered} />
+            </Suspense>
+          )}
         </div>
       </section>
     </>
