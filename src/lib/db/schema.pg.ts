@@ -21,6 +21,14 @@ export const users = pgTable("user", {
   image: text("image"),
   /** bcrypt hash; null until the user sets a password (e.g. former magic-link accounts). */
   passwordHash: text("passwordHash"),
+  /**
+   * When the password last changed. Auth.js JWTs store a matching stamp at
+   * sign-in; tokens older than this are rejected (session revoke on reset).
+   */
+  passwordUpdatedAt: timestamp("passwordUpdatedAt", {
+    mode: "date",
+    withTimezone: true,
+  }),
   role: text("role", { enum: ROLES }).notNull().default("viewer"),
 });
 

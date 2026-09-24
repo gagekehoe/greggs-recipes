@@ -17,6 +17,8 @@ declare module "next-auth" {
 declare module "next-auth/jwt" {
   interface JWT {
     role?: Role;
+    /** `passwordUpdatedAt` ms stamp captured at sign-in; see password-session.ts */
+    pwdAt?: number;
   }
 }
 

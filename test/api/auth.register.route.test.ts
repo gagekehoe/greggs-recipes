@@ -106,6 +106,7 @@ describe("POST /api/auth/register", () => {
         email: "new@example.com",
         role: "viewer",
         passwordHash: expect.any(String),
+        passwordUpdatedAt: expect.any(Date),
       })
     );
     const inserted = insertValues.mock.calls[0][0] as Record<string, unknown>;

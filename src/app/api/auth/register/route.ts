@@ -65,10 +65,12 @@ export async function POST(request: Request) {
   await migrateBootstrapAdminToOwner();
   // Never grant Owner at signup, and never mark emailVerified until the inbox
   // is proven (forgot/reset). ADMIN_EMAIL is promoted only after verification.
+  // Stamp passwordUpdatedAt so any later reset invalidates JWTs from this signup.
   await db.insert(users).values({
     email,
     passwordHash,
     role: "viewer",
+    passwordUpdatedAt: new Date(),
   });
 
   return NextResponse.json({ ok: true });

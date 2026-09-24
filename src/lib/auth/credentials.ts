@@ -10,6 +10,8 @@ export type CredentialsUser = {
   email: string;
   image: string | null;
   role: Role;
+  /** Captured into the JWT as `pwdAt` so resets can invalidate older sessions. */
+  passwordUpdatedAt: Date | null;
 };
 
 /**
@@ -44,6 +46,7 @@ export async function authorizeCredentials(
       image: users.image,
       role: users.role,
       passwordHash: users.passwordHash,
+      passwordUpdatedAt: users.passwordUpdatedAt,
       emailVerified: users.emailVerified,
     })
     .from(users)
@@ -58,6 +61,7 @@ export async function authorizeCredentials(
         image: string | null;
         role: Role;
         passwordHash: string | null;
+        passwordUpdatedAt: Date | null;
         emailVerified: Date | null;
       }
     | undefined;
@@ -81,5 +85,6 @@ export async function authorizeCredentials(
     email: row.email,
     image: row.image,
     role,
+    passwordUpdatedAt: row.passwordUpdatedAt ?? null,
   };
 }
