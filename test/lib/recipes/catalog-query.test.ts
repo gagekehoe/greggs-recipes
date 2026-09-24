@@ -30,6 +30,7 @@ function recipe(partial: Partial<Recipe> = {}): Recipe {
     imageUrl: "",
     imageAlt: "",
     source: "local",
+    createdAt: "2026-01-02T00:00:00.000Z",
     updatedAt: "2026-01-02T00:00:00.000Z",
     authorId: "u1",
     authorName: "Gregg",
@@ -50,6 +51,7 @@ const baseQuery = {
 describe("parseCatalogQuery", () => {
   it("defaults to empty search, newest sort, grid view, no tags", () => {
     expect(parseCatalogQuery({})).toEqual(baseQuery);
+    expect(DEFAULT_CATALOG_SORT).toBe("newest");
   });
 
   it("trims and collapses search whitespace", () => {
@@ -89,13 +91,16 @@ describe("filter and sort", () => {
       title: "Zucchini Pasta",
       summary: "Light weeknight",
       tags: ["pasta", "vegetarian"],
-      updatedAt: "2026-01-01T00:00:00.000Z",
+      // Added first; edited recently — must not win Newest
+      createdAt: "2026-01-01T00:00:00.000Z",
+      updatedAt: "2026-01-10T00:00:00.000Z",
     }),
     recipe({
       id: "b",
       title: "Beef Stew",
       summary: "Slow Sunday pot",
       tags: ["beef", "dinner"],
+      createdAt: "2026-01-03T00:00:00.000Z",
       updatedAt: "2026-01-03T00:00:00.000Z",
     }),
     recipe({
@@ -103,7 +108,8 @@ describe("filter and sort", () => {
       title: "Tomato Soup",
       summary: "Warm bowl",
       tags: ["soup", "dinner"],
-      updatedAt: "2026-01-02T00:00:00.000Z",
+      createdAt: "2026-01-02T00:00:00.000Z",
+      updatedAt: "2026-01-09T00:00:00.000Z",
     }),
   ];
 
@@ -137,11 +143,20 @@ describe("filter and sort", () => {
     ).toEqual(["c"]);
   });
 
-  it("sorts newest, title A–Z, and Z–A", () => {
+  it("sorts newest by createdAt (not updatedAt), title A–Z, and Z–A", () => {
+    // Newest = added order: b (Jan 3), c (Jan 2), a (Jan 1) —
+    // even though a was edited last.
     expect(sortRecipesByCatalog(recipes, "newest").map((r) => r.id)).toEqual([
       "b",
       "c",
       "a",
+    ]);
+    expect(
+      sortRecipesByCatalog(recipes, "newest").map((r) => r.updatedAt)
+    ).not.toEqual([
+      "2026-01-10T00:00:00.000Z",
+      "2026-01-09T00:00:00.000Z",
+      "2026-01-03T00:00:00.000Z",
     ]);
     expect(sortRecipesByCatalog(recipes, "title-asc").map((r) => r.title)).toEqual([
       "Beef Stew",
@@ -152,6 +167,19 @@ describe("filter and sort", () => {
       "Zucchini Pasta",
       "Tomato Soup",
       "Beef Stew",
+    ]);
+  });
+
+  it("keeps Newest stable when only updatedAt changes", () => {
+    const edited = recipes.map((r) =>
+      r.id === "a"
+        ? { ...r, updatedAt: "2026-12-31T00:00:00.000Z" }
+        : r
+    );
+    expect(sortRecipesByCatalog(edited, "newest").map((r) => r.id)).toEqual([
+      "b",
+      "c",
+      "a",
     ]);
   });
 

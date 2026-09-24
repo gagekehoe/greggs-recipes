@@ -156,6 +156,10 @@ export const recipes = pgTable("recipe", {
   inspiredBy: text("inspiredBy").notNull().default(""),
   /** Optional https link for the Inspired by credit. */
   inspiredByUrl: text("inspiredByUrl").notNull().default(""),
+  /** First insert time — Browse “Newest” uses this, not updatedAt. */
+  createdAt: timestamp("createdAt", { mode: "date", withTimezone: true })
+    .notNull()
+    .$defaultFn(() => new Date()),
   updatedAt: timestamp("updatedAt", { mode: "date", withTimezone: true })
     .notNull()
     .$defaultFn(() => new Date()),

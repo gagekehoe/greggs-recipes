@@ -46,6 +46,7 @@ function mapRow(row: DbRecipe): Recipe {
       row.imageAlt ||
       (row.imageUrl?.trim() ? `${row.title} plated` : ""),
     source: "db",
+    createdAt: toIso(row.createdAt ?? row.updatedAt),
     updatedAt: toIso(row.updatedAt),
     authorId: row.authorId,
     authorName: row.authorName,
@@ -74,6 +75,7 @@ function rowValuesFromRecipe(recipe: Recipe) {
     isPrivate: recipe.isPrivate ?? false,
     inspiredBy: recipe.inspiredBy?.trim() || "",
     inspiredByUrl: recipe.inspiredByUrl?.trim() || "",
+    createdAt: new Date(recipe.createdAt),
     updatedAt: new Date(recipe.updatedAt),
   };
 }
@@ -114,7 +116,7 @@ export async function listDbRecipes(): Promise<Recipe[]> {
   const rows = await db
     .select()
     .from(recipesTable)
-    .orderBy(desc(recipesTable.updatedAt));
+    .orderBy(desc(recipesTable.createdAt));
   return rows.map(mapRow);
 }
 
@@ -166,6 +168,7 @@ export async function createDbRecipe(input: RecipeInput): Promise<Recipe> {
       input.imageAlt?.trim() ||
       (input.imageUrl?.trim() ? `${input.title.trim()} plated` : ""),
     source: "db",
+    createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     authorId: input.authorId,
     authorName: input.authorName,

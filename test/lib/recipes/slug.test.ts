@@ -18,6 +18,7 @@ function recipeStub(overrides: Partial<Recipe> = {}): Recipe {
     imageUrl: "https://example.com/dish.jpg",
     imageAlt: "Test dish",
     source: "local",
+    createdAt: "2026-01-01T00:00:00.000Z",
     updatedAt: "2026-01-01T00:00:00.000Z",
     authorId: "user-1",
     authorName: "Cook",
