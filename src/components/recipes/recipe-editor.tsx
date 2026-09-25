@@ -15,7 +15,13 @@ import {
 } from "@/lib/recipes/my-recipes-query";
 import { RECIPE_FIELD_LIMITS } from "@/lib/recipes/recipe-input-schema";
 import type { Recipe } from "@/lib/recipes/types";
-import { IMAGE_UPLOAD_LIMITS } from "@/lib/uploads/limits";
+import {
+  RECIPE_PHOTO_ACCEPT,
+  RECIPE_PHOTO_MAX_MB,
+  recipePhotoFileInputClassName,
+  saveRecipePhotoOnly,
+  uploadRecipePhoto,
+} from "@/lib/uploads/recipe-photo-client";
 import { RecipeShareManager } from "@/components/recipes/recipe-share-manager";
 
 type Props = {
@@ -38,47 +44,9 @@ type Props = {
   listEmptyState?: ReactNode;
 };
 
-const PHOTO_ACCEPT = "image/jpeg,image/png,image/webp,image/gif";
-const PHOTO_MAX_MB = IMAGE_UPLOAD_LIMITS.maxBytesPerFile / (1024 * 1024);
-
-const fileInputClassName =
-  "block w-full text-sm text-[var(--ink-muted)] file:mr-3 file:rounded-lg file:border-0 file:bg-[var(--mist)] file:px-3 file:py-1.5 file:text-sm file:font-medium file:text-[var(--ink)]";
-
-function assertPhotoReady(file: File) {
-  if (file.size > IMAGE_UPLOAD_LIMITS.maxBytesPerFile) {
-    throw new Error(
-      `Photo is too large (${(file.size / (1024 * 1024)).toFixed(1)}MB). Use a JPEG/PNG/WebP under ${PHOTO_MAX_MB}MB, or compress it before uploading.`
-    );
-  }
-  if (
-    file.type &&
-    !(IMAGE_UPLOAD_LIMITS.allowedMimeTypes as readonly string[]).includes(
-      file.type
-    )
-  ) {
-    throw new Error("Unsupported image type. Use JPEG, PNG, WebP, or GIF.");
-  }
-}
-
-async function uploadRecipePhoto(file: File): Promise<string> {
-  assertPhotoReady(file);
-  const form = new FormData();
-  form.set("file", file);
-  const res = await fetch("/api/recipes/images", {
-    method: "POST",
-    body: form,
-  });
-  const data = await res.json().catch(() => ({}));
-  if (!res.ok) {
-    throw new Error(
-      typeof data.error === "string" ? data.error : "Could not upload photo"
-    );
-  }
-  if (typeof data.url !== "string" || !data.url) {
-    throw new Error("Upload did not return a photo URL");
-  }
-  return data.url;
-}
+const PHOTO_ACCEPT = RECIPE_PHOTO_ACCEPT;
+const PHOTO_MAX_MB = RECIPE_PHOTO_MAX_MB;
+const fileInputClassName = recipePhotoFileInputClassName;
 
 export function RecipeEditor({
   contentMode,
@@ -301,23 +269,11 @@ export function RecipeEditor({
     setError(null);
     setStatus(null);
     try {
-      const res = await fetch("/api/recipes", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id: recipe.id,
-          imageUrl: nextUrl,
-          imageAlt: nextUrl ? `${recipe.title} plated` : "",
-          // Photo-only PATCH: do not resubmit stale list-row title/body/
-          // isPrivate. Those fields can lag a form save or Make private.
-          rightsAttested: true as const,
-        }),
+      await saveRecipePhotoOnly({
+        recipeId: recipe.id,
+        title: recipe.title,
+        imageUrl: nextUrl,
       });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(recipeApiErrorMessage(data, "Could not update photo"));
-        return;
-      }
       setStatus(
         nextUrl
           ? `Updated photo for “${recipe.title}”.`
@@ -329,8 +285,12 @@ export function RecipeEditor({
         return next;
       });
       router.refresh();
-    } catch {
-      setError("Network error while updating photo.");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Network error while updating photo."
+      );
     } finally {
       setSavingPhotoId(null);
     }

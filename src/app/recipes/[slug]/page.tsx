@@ -6,6 +6,7 @@ import { RecipeAuthorCredit } from "@/components/recipes/recipe-author-credit";
 import { RecipeCommentsSection } from "@/components/recipes/recipe-comments";
 import { RecipePhoto } from "@/components/recipes/recipe-photo";
 import { RecipeReviewsSection } from "@/components/recipes/recipe-reviews";
+import { RecipeOwnerActions } from "@/components/recipes/recipe-owner-actions";
 import { RecipeShareManager } from "@/components/recipes/recipe-share-manager";
 import {
   getAuthorPrivilegesByUserIds,
@@ -235,14 +236,11 @@ export default async function RecipePage({ params }: Props) {
         </p>
         {canEdit ? (
           <div className="mt-6 space-y-4">
-            <p>
-              <Link
-                href={`/my-recipes?edit=${encodeURIComponent(recipe.id)}`}
-                className="inline-flex min-h-11 items-center rounded-lg border border-[var(--line)] bg-[var(--paper)] px-4 text-sm font-medium text-[var(--ink)] transition-colors hover:bg-[var(--mist)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-3 focus-visible:outline-[var(--sage-deep)]"
-              >
-                Edit recipe
-              </Link>
-            </p>
+            <RecipeOwnerActions
+              recipeId={recipe.id}
+              recipeTitle={recipe.title}
+              imageUrl={recipe.imageUrl}
+            />
             {recipe.isPrivate ? (
               <RecipeShareManager
                 recipeId={recipe.id}
