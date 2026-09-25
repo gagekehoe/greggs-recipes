@@ -1,9 +1,18 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { EmptyMyRecipesMatches } from "@/components/recipes/empty-my-recipes-matches";
+import { MyRecipesControls } from "@/components/recipes/my-recipes-controls";
 import { RecipeEditor } from "@/components/recipes/recipe-editor";
 import { canWriteRecipes, hasKitchenStaffPowers } from "@/lib/auth/roles";
 import { getSessionUser } from "@/lib/auth/session";
 import { getContentMode, listRecipes } from "@/lib/recipes";
+import {
+  applyMyRecipesQuery,
+  myRecipesHref,
+  myRecipesQueryIsActive,
+  parseMyRecipesQuery,
+} from "@/lib/recipes/my-recipes-query";
 
 export const metadata = {
   title: "My recipes",
@@ -12,7 +21,11 @@ export const metadata = {
 export const dynamic = "force-dynamic";
 
 type Props = {
-  searchParams: Promise<{ edit?: string }>;
+  searchParams: Promise<{
+    edit?: string;
+    sort?: string | string[];
+    photo?: string | string[];
+  }>;
 };
 
 export default async function MyRecipesPage({ searchParams }: Props) {
@@ -45,6 +58,7 @@ export default async function MyRecipesPage({ searchParams }: Props) {
     typeof params.edit === "string" && params.edit.trim()
       ? params.edit.trim()
       : null;
+  const listQuery = parseMyRecipesQuery(params);
 
   const { recipes } = await listRecipes({
     includePrivateForUserId: user.id,
@@ -59,15 +73,45 @@ export default async function MyRecipesPage({ searchParams }: Props) {
         )
       : recipes.filter((r) => r.authorId === user.id);
 
+  const filtered = applyMyRecipesQuery(visible, listQuery);
+  const showControls = visible.length > 0;
+  const noMatches =
+    showControls &&
+    filtered.length === 0 &&
+    myRecipesQueryIsActive(listQuery);
+
   return (
     <div className="mx-auto max-w-4xl px-5 py-28 md:px-8 md:py-32">
-      <RecipeEditor
-        contentMode={getContentMode()}
-        recipes={visible}
-        canManageAll={hasKitchenStaffPowers(user.role)}
-        currentUserId={user.id}
-        initialEditId={initialEditId}
-      />
+      <Suspense fallback={null}>
+        <RecipeEditor
+          contentMode={getContentMode()}
+          recipes={filtered}
+          allRecipes={visible}
+          canManageAll={hasKitchenStaffPowers(user.role)}
+          currentUserId={user.id}
+          initialEditId={initialEditId}
+          listControls={
+            showControls ? (
+              <MyRecipesControls
+                query={listQuery}
+                resultCount={filtered.length}
+                totalCount={visible.length}
+                editId={initialEditId}
+              />
+            ) : null
+          }
+          listEmptyState={
+            noMatches ? (
+              <EmptyMyRecipesMatches
+                clearHref={myRecipesHref(
+                  { sort: "newest", photo: "all" },
+                  initialEditId
+                )}
+              />
+            ) : null
+          }
+        />
+      </Suspense>
     </div>
   );
 }

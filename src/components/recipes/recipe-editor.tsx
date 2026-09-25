@@ -1,14 +1,18 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { recipeApiErrorMessage } from "@/lib/recipes/api-error";
 import { hasRecipeImage } from "@/lib/recipes/image";
+import {
+  myRecipesHref,
+  parseMyRecipesQuery,
+} from "@/lib/recipes/my-recipes-query";
 import { RECIPE_FIELD_LIMITS } from "@/lib/recipes/recipe-input-schema";
 import type { Recipe } from "@/lib/recipes/types";
 import { IMAGE_UPLOAD_LIMITS } from "@/lib/uploads/limits";
@@ -16,12 +20,22 @@ import { RecipeShareManager } from "@/components/recipes/recipe-share-manager";
 
 type Props = {
   contentMode: "db" | "sanity" | "local";
+  /** Filtered/sorted list shown under “Yours” / “All recipes”. */
   recipes: Recipe[];
+  /**
+   * Full owned set for `?edit=` lookup when the target is filtered out of
+   * `recipes` (e.g. Has photo while editing a dish without one).
+   */
+  allRecipes?: Recipe[];
   canManageAll: boolean;
   /** Signed-in user — visibility toggles are author-only. */
   currentUserId: string;
   /** Prefill the form for this recipe id (from `/my-recipes?edit=`). */
   initialEditId?: string | null;
+  /** Sort / photo controls rendered above the owned-recipe list. */
+  listControls?: ReactNode;
+  /** When the list is empty because filters matched nothing. */
+  listEmptyState?: ReactNode;
 };
 
 const PHOTO_ACCEPT = "image/jpeg,image/png,image/webp,image/gif";
@@ -69,12 +83,17 @@ async function uploadRecipePhoto(file: File): Promise<string> {
 export function RecipeEditor({
   contentMode,
   recipes,
+  allRecipes,
   canManageAll,
   currentUserId,
   initialEditId = null,
+  listControls = null,
+  listEmptyState = null,
 }: Props) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const formRef = useRef<HTMLFormElement>(null);
+  const recipesForLookup = allRecipes ?? recipes;
   const createPhotoRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -103,11 +122,24 @@ export function RecipeEditor({
   );
 
   const editingRecipe = editingId
-    ? recipes.find((r) => r.id === editingId) ?? null
+    ? recipesForLookup.find((r) => r.id === editingId) ?? null
     : null;
   const isEditing = Boolean(editingId);
   const ownsEditingRecipe =
     !isEditing || editingRecipe?.authorId === currentUserId;
+
+  function currentListQuery() {
+    return parseMyRecipesQuery({
+      sort: searchParams.get("sort"),
+      photo: searchParams.get("photo"),
+    });
+  }
+
+  function replaceMyRecipesUrl(editId: string | null) {
+    router.replace(myRecipesHref(currentListQuery(), editId), {
+      scroll: false,
+    });
+  }
 
   function resetCreateForm() {
     setEditingId(null);
@@ -148,9 +180,7 @@ export function RecipeEditor({
     setError(null);
     setStatus(null);
     if (syncUrl) {
-      router.replace(`/my-recipes?edit=${encodeURIComponent(recipe.id)}`, {
-        scroll: false,
-      });
+      replaceMyRecipesUrl(recipe.id);
     }
     requestAnimationFrame(() => {
       formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -159,12 +189,12 @@ export function RecipeEditor({
 
   function cancelEdit() {
     resetCreateForm();
-    router.replace("/my-recipes", { scroll: false });
+    replaceMyRecipesUrl(null);
   }
 
   useEffect(() => {
     if (!initialEditId) return;
-    const recipe = recipes.find((r) => r.id === initialEditId);
+    const recipe = recipesForLookup.find((r) => r.id === initialEditId);
     if (!recipe) {
       setError("That recipe isn’t in your list — it may have been deleted.");
       return;
@@ -743,11 +773,16 @@ export function RecipeEditor({
         <h2 className="font-display text-3xl text-[var(--ink)]">
           {canManageAll ? "All recipes" : "Yours"}
         </h2>
+        {listControls}
         {recipes.length === 0 ? (
-          <p className="text-[var(--ink-muted)]">
-            You haven&apos;t published anything yet. Use the form above to add
-            the first dish to Gregg&apos;s shared collection.
-          </p>
+          listEmptyState ? (
+            listEmptyState
+          ) : (
+            <p className="text-[var(--ink-muted)]">
+              You haven&apos;t published anything yet. Use the form above to add
+              the first dish to Gregg&apos;s shared collection.
+            </p>
+          )
         ) : (
           <ul className="divide-y divide-[var(--line)]">
             {recipes.map((recipe) => {
