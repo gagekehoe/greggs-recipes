@@ -15,6 +15,7 @@ import {
   parseCatalogQuery,
 } from "@/lib/recipes/catalog-query";
 import { pickHomeBannerRecipe } from "@/lib/recipes/image";
+import { getRatingSummaries } from "@/lib/reviews/store";
 
 export const dynamic = "force-dynamic";
 
@@ -46,7 +47,11 @@ export default async function HomePage({ searchParams }: Props) {
   // filtered subset — so a shared search link does not change the hero photo.
   const featured = pickHomeBannerRecipe(recipes);
   const availableTags = collectCatalogTags(recipes);
-  const filtered = applyCatalogQuery(recipes, catalogQuery);
+  const ratings =
+    catalogQuery.sort === "rating"
+      ? await getRatingSummaries(recipes.map((r) => r.id))
+      : undefined;
+  const filtered = applyCatalogQuery(recipes, catalogQuery, ratings);
   const showControls = recipes.length > 0;
   const noMatches = showControls && filtered.length === 0;
 

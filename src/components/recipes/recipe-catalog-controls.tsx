@@ -38,6 +38,8 @@ import { cn } from "@/lib/utils";
 
 const SORT_LABELS: Record<CatalogSort, string> = {
   newest: "Newest",
+  oldest: "Oldest",
+  rating: "Highest rated",
   "title-asc": "Title A–Z",
   "title-desc": "Title Z–A",
 };
@@ -232,7 +234,7 @@ export function RecipeCatalogControls({
         </div>
 
         <div className="grid grid-cols-2 items-end gap-3 sm:flex sm:shrink-0 sm:gap-4">
-          <div className={cn(FIELD, "sm:w-44")}>
+          <div className={cn(FIELD, "sm:w-48")}>
             <Label
               htmlFor="recipe-catalog-sort"
               className="text-xs uppercase tracking-[0.14em] text-[var(--ink-soft)]"

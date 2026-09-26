@@ -62,6 +62,8 @@ describe("parseCatalogQuery", () => {
     expect(parseCatalogQuery({ sort: "title-asc" }).sort).toBe("title-asc");
     expect(parseCatalogQuery({ sort: "title-desc" }).sort).toBe("title-desc");
     expect(parseCatalogQuery({ sort: "newest" }).sort).toBe("newest");
+    expect(parseCatalogQuery({ sort: "oldest" }).sort).toBe("oldest");
+    expect(parseCatalogQuery({ sort: "rating" }).sort).toBe("rating");
     expect(parseCatalogQuery({ sort: "popular" }).sort).toBe("newest");
   });
 
@@ -170,6 +172,85 @@ describe("filter and sort", () => {
     ]);
   });
 
+  it("sorts oldest by createdAt ascending (opposite of newest)", () => {
+    expect(sortRecipesByCatalog(recipes, "oldest").map((r) => r.id)).toEqual([
+      "a",
+      "c",
+      "b",
+    ]);
+    // Edits still do not affect Oldest order.
+    const edited = recipes.map((r) =>
+      r.id === "a"
+        ? { ...r, updatedAt: "2026-12-31T00:00:00.000Z" }
+        : r
+    );
+    expect(sortRecipesByCatalog(edited, "oldest").map((r) => r.id)).toEqual([
+      "a",
+      "c",
+      "b",
+    ]);
+  });
+
+  it("sorts by rating: highest average first, unrated last", () => {
+    const ratings = {
+      a: { average: 4.5, count: 2 },
+      b: { average: 5, count: 1 },
+      c: { average: 0, count: 0 },
+    };
+    expect(
+      sortRecipesByCatalog(recipes, "rating", ratings).map((r) => r.id)
+    ).toEqual(["b", "a", "c"]);
+  });
+
+  it("rating ties break by review count, then newest createdAt", () => {
+    const tied = [
+      recipe({
+        id: "x",
+        title: "Alpha",
+        createdAt: "2026-01-01T00:00:00.000Z",
+      }),
+      recipe({
+        id: "y",
+        title: "Bravo",
+        createdAt: "2026-01-03T00:00:00.000Z",
+      }),
+      recipe({
+        id: "z",
+        title: "Charlie",
+        createdAt: "2026-01-02T00:00:00.000Z",
+      }),
+      recipe({
+        id: "u",
+        title: "Unrated New",
+        createdAt: "2026-01-10T00:00:00.000Z",
+      }),
+      recipe({
+        id: "v",
+        title: "Unrated Old",
+        createdAt: "2026-01-01T00:00:00.000Z",
+      }),
+    ];
+    const ratings = {
+      x: { average: 4, count: 1 },
+      y: { average: 4, count: 3 },
+      z: { average: 4, count: 3 },
+      u: { average: 0, count: 0 },
+      v: { average: 0, count: 0 },
+    };
+    // y and z same avg+count → newer createdAt (y) first; unrated u then v by newest
+    expect(
+      sortRecipesByCatalog(tied, "rating", ratings).map((r) => r.id)
+    ).toEqual(["y", "z", "x", "u", "v"]);
+  });
+
+  it("rating sort treats missing map entries as unrated", () => {
+    expect(
+      sortRecipesByCatalog(recipes, "rating", {
+        b: { average: 3, count: 1 },
+      }).map((r) => r.id)
+    ).toEqual(["b", "c", "a"]);
+  });
+
   it("keeps Newest stable when only updatedAt changes", () => {
     const edited = recipes.map((r) =>
       r.id === "a"
@@ -191,6 +272,13 @@ describe("filter and sort", () => {
         tags: ["dinner"],
       }).map((r) => r.title)
     ).toEqual(["Beef Stew", "Tomato Soup"]);
+    expect(
+      applyCatalogQuery(
+        recipes,
+        { ...baseQuery, sort: "oldest", q: "tomato" },
+        { c: { average: 5, count: 1 } }
+      ).map((r) => r.id)
+    ).toEqual(["c"]);
   });
 });
 
@@ -217,12 +305,27 @@ describe("collectCatalogTags and URL helpers", () => {
     expect(
       buildCatalogSearchParams({
         ...baseQuery,
+        sort: "oldest",
+      }).toString()
+    ).toBe("sort=oldest");
+    expect(
+      buildCatalogSearchParams({
+        ...baseQuery,
+        sort: "rating",
+      }).toString()
+    ).toBe("sort=rating");
+    expect(
+      buildCatalogSearchParams({
+        ...baseQuery,
         view: "list",
       }).toString()
     ).toBe("view=list");
     expect(catalogHref({ ...baseQuery, q: "stew" })).toBe("/?q=stew#recipes");
     expect(catalogHref({ ...baseQuery, view: "list" })).toBe(
       "/?view=list#recipes"
+    );
+    expect(catalogHref({ ...baseQuery, sort: "oldest" })).toBe(
+      "/?sort=oldest#recipes"
     );
     expect(catalogHref(baseQuery)).toBe("/#recipes");
   });
@@ -234,6 +337,8 @@ describe("collectCatalogTags and URL helpers", () => {
     expect(
       catalogQueryIsActive({ ...baseQuery, sort: "title-asc" })
     ).toBe(true);
+    expect(catalogQueryIsActive({ ...baseQuery, sort: "oldest" })).toBe(true);
+    expect(catalogQueryIsActive({ ...baseQuery, sort: "rating" })).toBe(true);
     expect(catalogQueryIsActive({ ...baseQuery, tags: ["soup"] })).toBe(true);
   });
 });

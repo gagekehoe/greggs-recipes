@@ -54,6 +54,8 @@ describe("parseMyRecipesQuery", () => {
   it("accepts known sorts and photo filters; falls back otherwise", () => {
     expect(parseMyRecipesQuery({ sort: "title-asc" }).sort).toBe("title-asc");
     expect(parseMyRecipesQuery({ sort: "title-desc" }).sort).toBe("title-desc");
+    expect(parseMyRecipesQuery({ sort: "oldest" }).sort).toBe("oldest");
+    expect(parseMyRecipesQuery({ sort: "rating" }).sort).toBe("rating");
     expect(parseMyRecipesQuery({ sort: "bogus" }).sort).toBe("newest");
     expect(parseMyRecipesPhoto("has")).toBe("has");
     expect(parseMyRecipesPhoto("none")).toBe("none");
@@ -120,6 +122,30 @@ describe("filter and sort", () => {
         photo: "has",
       }).map((r) => r.id)
     ).toEqual(["b"]);
+  });
+
+  it("applies oldest and rating sorts with photo filter", () => {
+    expect(
+      applyMyRecipesQuery(recipes, { sort: "oldest", photo: "all" }).map(
+        (r) => r.id
+      )
+    ).toEqual(["a", "c", "b"]);
+    expect(
+      applyMyRecipesQuery(
+        recipes,
+        { sort: "rating", photo: "none" },
+        {
+          a: { average: 5, count: 1 },
+          c: { average: 0, count: 0 },
+        }
+      ).map((r) => r.id)
+    ).toEqual(["a", "c"]);
+    expect(
+      buildMyRecipesSearchParams({ sort: "oldest", photo: "all" }).toString()
+    ).toBe("sort=oldest");
+    expect(
+      buildMyRecipesSearchParams({ sort: "rating", photo: "has" }).toString()
+    ).toBe("sort=rating&photo=has");
   });
 });
 

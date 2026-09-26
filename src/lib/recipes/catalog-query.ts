@@ -1,7 +1,18 @@
+import type { RatingSummary } from "@/lib/reviews/rating";
 import type { Recipe } from "./types";
 
-/** Shareable catalog sort values (`?sort=`). Default: newest (by createdAt). */
-export type CatalogSort = "newest" | "title-asc" | "title-desc";
+/**
+ * Shareable catalog sort values (`?sort=`). Default: newest (by createdAt).
+ * - newest / oldest — recipe `createdAt` (when added to the site)
+ * - rating — average review stars (highest first); unrated last
+ * - title-asc / title-desc — title A–Z / Z–A
+ */
+export type CatalogSort =
+  | "newest"
+  | "oldest"
+  | "rating"
+  | "title-asc"
+  | "title-desc";
 
 /** Browse layout: grid cards (default) or compact list rows. */
 export type CatalogView = "grid" | "list";
@@ -20,12 +31,29 @@ export type CatalogQuery = {
   view: CatalogView;
 };
 
+/** Optional rating map for `sort=rating` (from `getRatingSummaries`). */
+export type CatalogRatingMap = Readonly<Record<string, RatingSummary>>;
+
 const SORT_VALUES = new Set<CatalogSort>([
   "newest",
+  "oldest",
+  "rating",
   "title-asc",
   "title-desc",
 ]);
 
+const EMPTY_RATING: RatingSummary = { average: 0, count: 0 };
+
+function ratingFor(
+  recipeId: string,
+  ratings: CatalogRatingMap | undefined
+): RatingSummary {
+  return ratings?.[recipeId] ?? EMPTY_RATING;
+}
+
+function createdAtMs(recipe: Recipe): number {
+  return new Date(recipe.createdAt).getTime();
+}
 const VIEW_VALUES = new Set<CatalogView>(["grid", "list"]);
 
 function normalizeTag(raw: string): string {
@@ -136,35 +164,62 @@ export function filterRecipesByCatalogQuery(
 
 export function sortRecipesByCatalog(
   recipes: readonly Recipe[],
-  sort: CatalogSort
+  sort: CatalogSort,
+  ratings?: CatalogRatingMap
 ): Recipe[] {
   const copy = [...recipes];
   if (sort === "title-asc") {
-    copy.sort((a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: "base" }));
+    copy.sort((a, b) =>
+      a.title.localeCompare(b.title, undefined, { sensitivity: "base" })
+    );
     return copy;
   }
   if (sort === "title-desc") {
-    copy.sort((a, b) => b.title.localeCompare(a.title, undefined, { sensitivity: "base" }));
+    copy.sort((a, b) =>
+      b.title.localeCompare(a.title, undefined, { sensitivity: "base" })
+    );
+    return copy;
+  }
+  if (sort === "oldest") {
+    // createdAt ascending — opposite of Newest
+    copy.sort((a, b) => createdAtMs(a) - createdAtMs(b));
+    return copy;
+  }
+  if (sort === "rating") {
+    // Highest average first. Unrated (count === 0) always after rated.
+    // Ties: more reviews, then newest createdAt, then title A–Z.
+    copy.sort((a, b) => {
+      const ra = ratingFor(a.id, ratings);
+      const rb = ratingFor(b.id, ratings);
+      const aRated = ra.count > 0;
+      const bRated = rb.count > 0;
+      if (aRated !== bRated) return aRated ? -1 : 1;
+      if (aRated && bRated) {
+        if (rb.average !== ra.average) return rb.average - ra.average;
+        if (rb.count !== ra.count) return rb.count - ra.count;
+      }
+      const byCreated = createdAtMs(b) - createdAtMs(a);
+      if (byCreated !== 0) return byCreated;
+      return a.title.localeCompare(b.title, undefined, { sensitivity: "base" });
+    });
     return copy;
   }
   // newest — createdAt descending (when added to the site; edits do not bump)
-  copy.sort(
-    (a, b) =>
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-  );
+  copy.sort((a, b) => createdAtMs(b) - createdAtMs(a));
   return copy;
 }
 
 export function applyCatalogQuery(
   recipes: readonly Recipe[],
-  query: CatalogQuery
+  query: CatalogQuery,
+  ratings?: CatalogRatingMap
 ): Recipe[] {
   return sortRecipesByCatalog(
     filterRecipesByCatalogQuery(recipes, query),
-    query.sort
+    query.sort,
+    ratings
   );
 }
-
 /**
  * Build a shareable query string for the home catalog.
  * Omits defaults (`sort=newest`, `view=grid`, empty q/tags).
