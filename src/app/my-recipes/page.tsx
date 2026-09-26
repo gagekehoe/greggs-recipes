@@ -13,6 +13,7 @@ import {
   myRecipesQueryIsActive,
   parseMyRecipesQuery,
 } from "@/lib/recipes/my-recipes-query";
+import { getRatingSummaries } from "@/lib/reviews/store";
 
 export const metadata = {
   title: "My recipes",
@@ -73,7 +74,11 @@ export default async function MyRecipesPage({ searchParams }: Props) {
         )
       : recipes.filter((r) => r.authorId === user.id);
 
-  const filtered = applyMyRecipesQuery(visible, listQuery);
+  const ratings =
+    listQuery.sort === "rating"
+      ? await getRatingSummaries(visible.map((r) => r.id))
+      : undefined;
+  const filtered = applyMyRecipesQuery(visible, listQuery, ratings);
   const showControls = visible.length > 0;
   const noMatches =
     showControls &&

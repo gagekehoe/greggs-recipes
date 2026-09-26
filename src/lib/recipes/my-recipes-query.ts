@@ -2,6 +2,7 @@ import {
   DEFAULT_CATALOG_SORT,
   parseCatalogSort,
   sortRecipesByCatalog,
+  type CatalogRatingMap,
   type CatalogSort,
 } from "./catalog-query";
 import { hasRecipeImage } from "./image";
@@ -59,11 +60,13 @@ export function filterRecipesByPhoto(
 
 export function applyMyRecipesQuery(
   recipes: readonly Recipe[],
-  query: MyRecipesQuery
+  query: MyRecipesQuery,
+  ratings?: CatalogRatingMap
 ): Recipe[] {
   return sortRecipesByCatalog(
     filterRecipesByPhoto(recipes, query.photo),
-    query.sort
+    query.sort,
+    ratings
   );
 }
 
