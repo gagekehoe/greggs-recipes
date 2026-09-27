@@ -130,6 +130,11 @@ describe("/api/comments", () => {
       userId: "other",
       recipeId: "r1",
     });
+    getRecipeById.mockResolvedValue({
+      id: "r1",
+      isPrivate: false,
+      authorId: "author",
+    });
     expect(
       (await DELETE(new Request("http://x/api/comments?id=c1"))).status
     ).toBe(403);
@@ -140,10 +145,35 @@ describe("/api/comments", () => {
       userId: "u1",
       recipeId: "r1",
     });
+    getRecipeById.mockResolvedValue({
+      id: "r1",
+      isPrivate: false,
+      authorId: "author",
+    });
     deleteComment.mockResolvedValue(true);
     listCommentsForRecipe.mockResolvedValue([]);
     expect(
       (await DELETE(new Request("http://x/api/comments?id=c1"))).status
     ).toBe(200);
+  });
+
+  it("DELETE hides private recipes the caller can no longer view", async () => {
+    const { DELETE } = await import("@/app/api/comments/route");
+    getSessionUser.mockResolvedValue({ id: "u1", role: "viewer" });
+    getCommentById.mockResolvedValue({
+      id: "c1",
+      userId: "u1",
+      recipeId: "r1",
+    });
+    getRecipeById.mockResolvedValue({
+      id: "r1",
+      isPrivate: true,
+      authorId: "author",
+    });
+
+    const res = await DELETE(new Request("http://x/api/comments?id=c1"));
+    expect(res.status).toBe(404);
+    expect(deleteComment).not.toHaveBeenCalled();
+    expect(listCommentsForRecipe).not.toHaveBeenCalled();
   });
 });

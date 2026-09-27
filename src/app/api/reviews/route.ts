@@ -237,6 +237,17 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "Review not found" }, { status: 404 });
     }
 
+    const recipe = await getRecipeById(existing.recipeId);
+    if (!recipe) {
+      return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
+    }
+    const access = recipe.isPrivate
+      ? await getRecipeShareAccess(recipe.id, user.id, user.role)
+      : undefined;
+    if (!canViewRecipe(recipe, user.id, access)) {
+      return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
+    }
+
     const isReviewAuthor = canEditOwnReview(user.role, existing.userId, user.id);
     if (!isReviewAuthor && !hasKitchenStaffPowers(user.role)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });

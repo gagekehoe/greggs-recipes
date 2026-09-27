@@ -212,6 +212,11 @@ describe("GET/POST/DELETE /api/reviews", () => {
       userId: "other",
       recipeId: "r1",
     });
+    getRecipeById.mockResolvedValue({
+      id: "r1",
+      isPrivate: false,
+      authorId: "author",
+    });
     expect(
       (await DELETE(new Request("http://localhost/api/reviews?id=rev1"))).status
     ).toBe(403);
@@ -223,5 +228,26 @@ describe("GET/POST/DELETE /api/reviews", () => {
       new Request("http://localhost/api/reviews?id=rev1")
     );
     expect(ok.status).toBe(200);
+  });
+
+  it("DELETE hides private recipes the caller can no longer view", async () => {
+    const { DELETE } = await import("@/app/api/reviews/route");
+    getSessionUser.mockResolvedValue({ id: "u1", role: "viewer" });
+    getReviewById.mockResolvedValue({
+      id: "rev1",
+      userId: "u1",
+      recipeId: "r1",
+    });
+    getRecipeById.mockResolvedValue({
+      id: "r1",
+      isPrivate: true,
+      authorId: "author",
+    });
+
+    const res = await DELETE(
+      new Request("http://localhost/api/reviews?id=rev1")
+    );
+    expect(res.status).toBe(404);
+    expect(deleteReview).not.toHaveBeenCalled();
   });
 });

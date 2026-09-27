@@ -1,7 +1,10 @@
 import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { getSessionUser } from "@/lib/auth/session";
+import { canViewRecipe } from "@/lib/auth/roles";
+import { getSessionUser, type SessionUser } from "@/lib/auth/session";
 import { db, recipeReviewImages } from "@/lib/db";
+import { getRecipeById } from "@/lib/recipes";
+import { getRecipeShareAccess } from "@/lib/recipes/shares";
 import { canManageReviewImages } from "@/lib/reviews/permissions";
 import { REVIEW_IMAGE_LIMITS } from "@/lib/reviews/rating";
 import {
@@ -12,6 +15,23 @@ import {
   listReviewsForRecipe,
 } from "@/lib/reviews/store";
 import { saveReviewImageFile } from "@/lib/reviews/uploads";
+
+async function assertCanViewReviewRecipe(
+  recipeId: string,
+  user: Pick<SessionUser, "id" | "role">
+) {
+  const recipe = await getRecipeById(recipeId);
+  if (!recipe) {
+    return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
+  }
+  const access = recipe.isPrivate
+    ? await getRecipeShareAccess(recipe.id, user.id, user.role)
+    : undefined;
+  if (!canViewRecipe(recipe, user.id, access)) {
+    return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
+  }
+  return null;
+}
 
 /** Attach more photos to an existing review (signed-in owner/admin only). */
 export async function POST(request: Request) {
@@ -34,6 +54,8 @@ export async function POST(request: Request) {
     if (!existing) {
       return NextResponse.json({ error: "Review not found" }, { status: 404 });
     }
+    const hidden = await assertCanViewReviewRecipe(existing.recipeId, user);
+    if (hidden) return hidden;
     if (!canManageReviewImages(user.role, existing.userId, user.id)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
@@ -103,6 +125,8 @@ export async function DELETE(request: Request) {
     if (!review) {
       return NextResponse.json({ error: "Review not found" }, { status: 404 });
     }
+    const hidden = await assertCanViewReviewRecipe(review.recipeId, user);
+    if (hidden) return hidden;
     if (!canManageReviewImages(user.role, review.userId, user.id)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
