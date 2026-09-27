@@ -115,6 +115,9 @@ export async function DELETE(request: Request) {
       return NextResponse.json({ error: "Comment not found" }, { status: 404 });
     }
 
+    const viewGate = await assertCanViewRecipeId(existing.recipeId);
+    if ("error" in viewGate) return viewGate.error;
+
     if (!canDeleteComment(user.role, existing.userId, user.id)) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }

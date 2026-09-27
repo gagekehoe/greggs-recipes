@@ -1,6 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const getSessionUser = vi.fn();
+const getRecipeById = vi.fn();
+const getRecipeShareAccess = vi.fn();
 const getReviewById = vi.fn();
 const countReviewImages = vi.fn();
 const addReviewImages = vi.fn();
@@ -11,6 +13,12 @@ const selectLimit = vi.fn();
 
 vi.mock("@/lib/auth/session", () => ({
   getSessionUser: (...a: unknown[]) => getSessionUser(...a),
+}));
+vi.mock("@/lib/recipes", () => ({
+  getRecipeById: (...a: unknown[]) => getRecipeById(...a),
+}));
+vi.mock("@/lib/recipes/shares", () => ({
+  getRecipeShareAccess: (...a: unknown[]) => getRecipeShareAccess(...a),
 }));
 vi.mock("@/lib/reviews/store", () => ({
   getReviewById: (...a: unknown[]) => getReviewById(...a),
@@ -42,6 +50,16 @@ vi.mock("@/lib/db", async () => {
 describe("/api/reviews/images", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    getRecipeById.mockResolvedValue({
+      id: "r1",
+      isPrivate: false,
+      authorId: "author",
+    });
+    getRecipeShareAccess.mockResolvedValue({
+      sharedWithUser: false,
+      viewerRole: null,
+      sharedRoles: [],
+    });
   });
 
   it("POST requires auth, ownership, and images", async () => {
@@ -141,6 +159,43 @@ describe("/api/reviews/images", () => {
     expect(ok.status).toBe(201);
   });
 
+  it("POST hides private recipes the caller can no longer view", async () => {
+    const { POST } = await import("@/app/api/reviews/images/route");
+    getSessionUser.mockResolvedValue({ id: "u1", role: "viewer" });
+    getReviewById.mockResolvedValue({
+      id: "rev1",
+      userId: "u1",
+      recipeId: "r1",
+    });
+    getRecipeById.mockResolvedValue({
+      id: "r1",
+      isPrivate: true,
+      authorId: "author",
+    });
+    getRecipeShareAccess.mockResolvedValue({
+      sharedWithUser: false,
+      viewerRole: "viewer",
+      sharedRoles: [],
+    });
+
+    const form = new FormData();
+    form.set("reviewId", "rev1");
+    form.append(
+      "images",
+      new File([new Uint8Array([1])], "a.png", { type: "image/png" })
+    );
+
+    const res = await POST(
+      new Request("http://x/api/reviews/images", {
+        method: "POST",
+        body: form,
+      })
+    );
+    expect(res.status).toBe(404);
+    expect(addReviewImages).not.toHaveBeenCalled();
+    expect(listReviewsForRecipe).not.toHaveBeenCalled();
+  });
+
   it("DELETE enforces authz", async () => {
     const { DELETE } = await import("@/app/api/reviews/images/route");
     getSessionUser.mockResolvedValue(null);
@@ -171,5 +226,33 @@ describe("/api/reviews/images", () => {
     expect(
       (await DELETE(new Request("http://x/api/reviews/images?id=i1"))).status
     ).toBe(200);
+  });
+
+  it("DELETE hides private recipes the caller can no longer view", async () => {
+    const { DELETE } = await import("@/app/api/reviews/images/route");
+    getSessionUser.mockResolvedValue({ id: "u1", role: "viewer" });
+    selectLimit.mockResolvedValue([{ id: "i1", reviewId: "rev1" }]);
+    getReviewById.mockResolvedValue({
+      id: "rev1",
+      userId: "u1",
+      recipeId: "r1",
+    });
+    getRecipeById.mockResolvedValue({
+      id: "r1",
+      isPrivate: true,
+      authorId: "author",
+    });
+    getRecipeShareAccess.mockResolvedValue({
+      sharedWithUser: false,
+      viewerRole: "viewer",
+      sharedRoles: [],
+    });
+
+    const res = await DELETE(
+      new Request("http://x/api/reviews/images?id=i1")
+    );
+    expect(res.status).toBe(404);
+    expect(deleteReviewImage).not.toHaveBeenCalled();
+    expect(listReviewsForRecipe).not.toHaveBeenCalled();
   });
 });
