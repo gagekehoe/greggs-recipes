@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
 import { z } from "zod";
 import {
   hashPassword,
   MIN_PASSWORD_LENGTH,
   normalizeEmail,
+  sqlEmailEqualsNormalized,
   validatePassword,
 } from "@/lib/auth/password";
 import { migrateBootstrapAdminToOwner } from "@/lib/auth/owner-bootstrap";
@@ -47,7 +47,7 @@ export async function POST(request: Request) {
   const existing = await db
     .select({ id: users.id })
     .from(users)
-    .where(eq(users.email, email))
+    .where(sqlEmailEqualsNormalized(users.email, email))
     .limit(1);
 
   // Any existing row is already an account — including legacy magic-link users

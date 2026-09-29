@@ -260,6 +260,81 @@ describe(
     expect(sendPasswordResetEmail).toHaveBeenCalledTimes(1);
   });
 
+  it("finds mixed-case stored emails for login, forgot, reset, and register", async () => {
+    const { db, users } = await import("@/lib/db");
+    const { POST: register } = await import("@/app/api/auth/register/route");
+    const { POST: forgot } = await import(
+      "@/app/api/auth/forgot-password/route"
+    );
+    const { POST: reset } = await import("@/app/api/auth/reset-password/route");
+    const { authorizeCredentials } = await import("@/lib/auth/credentials");
+    const { hashPassword } = await import("@/lib/auth/password");
+
+    await db.insert(users).values({
+      id: "u-legacy-case",
+      email: "Legacy.Cook@Example.COM",
+      name: "Legacy Cook",
+      role: "cook",
+      passwordHash: await hashPassword("first-pass-1"),
+    });
+
+    await expect(
+      authorizeCredentials({
+        email: "legacy.cook@example.com",
+        password: "first-pass-1",
+      })
+    ).resolves.toMatchObject({
+      id: "u-legacy-case",
+      email: "Legacy.Cook@Example.COM",
+    });
+
+    const duplicate = await register(
+      new Request("http://x/api/auth/register", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          email: "legacy.cook@example.com",
+          password: "other-pass-9",
+        }),
+      })
+    );
+    expect(duplicate.status).toBe(409);
+
+    const forgotRes = await forgot(
+      new Request("http://x/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: "legacy.cook@example.com" }),
+      })
+    );
+    expect(forgotRes.status).toBe(200);
+    expect(sendPasswordResetEmail).toHaveBeenCalledTimes(1);
+
+    const rawToken = new URL(
+      (sendPasswordResetEmail.mock.calls[0][0] as { url: string }).url
+    ).searchParams.get("token")!;
+
+    const resetRes = await reset(
+      new Request("http://x/api/auth/reset-password", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          email: "legacy.cook@example.com",
+          token: rawToken,
+          password: "second-pass-2",
+        }),
+      })
+    );
+    expect(resetRes.status).toBe(200);
+
+    await expect(
+      authorizeCredentials({
+        email: "Legacy.Cook@Example.COM",
+        password: "second-pass-2",
+      })
+    ).resolves.toMatchObject({ id: "u-legacy-case" });
+  });
+
   it("registers ADMIN_EMAIL as viewer until reset proves the inbox", async () => {
     const { db, users } = await import("@/lib/db");
     const { POST: register } = await import("@/app/api/auth/register/route");

@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
-import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { normalizeEmail } from "@/lib/auth/password";
+import { normalizeEmail, sqlEmailEqualsNormalized } from "@/lib/auth/password";
 import { issuePasswordReset } from "@/lib/auth/password-reset";
 import { db, isDatabaseConfigured, users } from "@/lib/db";
 
@@ -40,7 +39,7 @@ export async function POST(request: Request) {
   const existing = await db
     .select({ id: users.id })
     .from(users)
-    .where(eq(users.email, email))
+    .where(sqlEmailEqualsNormalized(users.email, email))
     .limit(1);
 
   if (existing[0]) {

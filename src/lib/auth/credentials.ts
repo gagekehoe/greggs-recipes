@@ -1,8 +1,11 @@
-import { eq } from "drizzle-orm";
 import { db, isDatabaseConfigured, users } from "@/lib/db";
 import type { Role } from "@/lib/db/schema";
 import { roleWithVerifiedOwnerBootstrap } from "@/lib/auth/roles";
-import { normalizeEmail, verifyPassword } from "@/lib/auth/password";
+import {
+  normalizeEmail,
+  sqlEmailEqualsNormalized,
+  verifyPassword,
+} from "@/lib/auth/password";
 
 export type CredentialsUser = {
   id: string;
@@ -50,7 +53,7 @@ export async function authorizeCredentials(
       emailVerified: users.emailVerified,
     })
     .from(users)
-    .where(eq(users.email, email))
+    .where(sqlEmailEqualsNormalized(users.email, email))
     .limit(1);
 
   const row = rows[0] as
