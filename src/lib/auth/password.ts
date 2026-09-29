@@ -1,10 +1,24 @@
 import bcrypt from "bcryptjs";
+import { sql } from "drizzle-orm";
 
 const BCRYPT_ROUNDS = 12;
 export const MIN_PASSWORD_LENGTH = 8;
 
 export function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
+}
+
+/**
+ * Case-insensitive match for `user.email`.
+ * Pass `normalizeEmail()` output. Login/register/reset always query the
+ * lowercased form, but Auth.js/magic-link rows may store mixed-case emails;
+ * a case-sensitive `eq` misses those accounts (lockout + duplicate signup).
+ */
+export function sqlEmailEqualsNormalized(
+  emailColumn: object,
+  normalizedEmail: string
+) {
+  return sql`lower(${emailColumn}) = ${normalizedEmail}`;
 }
 
 export function validatePassword(password: string): string | null {

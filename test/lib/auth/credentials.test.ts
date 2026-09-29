@@ -24,6 +24,31 @@ describe("authorizeCredentials", () => {
     mod.__testSqlite.exec(`DELETE FROM user;`);
   });
 
+  it("finds a mixed-case stored email after normalizeEmail", async () => {
+    const { db, users } = await import("@/lib/db");
+    const { authorizeCredentials } = await import("@/lib/auth/credentials");
+    const passwordHash = await hashPassword("password123");
+
+    await db.insert(users).values({
+      id: "u-mixed",
+      email: "Cook@Example.COM",
+      name: "Cook",
+      role: "cook",
+      passwordHash,
+    });
+
+    await expect(
+      authorizeCredentials({
+        email: "cook@example.com",
+        password: "password123",
+      })
+    ).resolves.toMatchObject({
+      id: "u-mixed",
+      email: "Cook@Example.COM",
+      role: "cook",
+    });
+  });
+
   it("returns the user for correct credentials", async () => {
     const { db, users } = await import("@/lib/db");
     const { authorizeCredentials } = await import("@/lib/auth/credentials");

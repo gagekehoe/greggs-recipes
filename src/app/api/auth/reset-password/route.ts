@@ -5,6 +5,7 @@ import {
   hashPassword,
   MIN_PASSWORD_LENGTH,
   normalizeEmail,
+  sqlEmailEqualsNormalized,
   validatePassword,
 } from "@/lib/auth/password";
 import { consumePasswordResetToken } from "@/lib/auth/password-reset";
@@ -62,7 +63,7 @@ export async function POST(request: Request) {
   const existing = await db
     .select({ id: users.id, email: users.email })
     .from(users)
-    .where(eq(users.email, email))
+    .where(sqlEmailEqualsNormalized(users.email, email))
     .limit(1);
 
   if (!existing[0]) {
