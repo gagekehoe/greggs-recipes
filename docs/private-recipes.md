@@ -14,7 +14,7 @@ Private recipes support **selective sharing**: the author (or a cook who can man
 | `/recipes/[slug]` + OG metadata | **404** unless author or share recipient |
 | My recipes + `GET /api/recipes?mine=1` | Management list: author (and staff’s own private dishes). Shared-with-me dishes appear on Browse/detail, not as editable “mine” rows |
 | Share UI | My recipes (private rows + edit form) and recipe detail when you can manage the recipe |
-| Make public / Make private | Author (or cook owning the recipe) can toggle later |
+| Make public / Make private | Author (or cook owning the recipe) can toggle later. **Changing visibility drops share grants** so Make private is author-only again (the share UI is hidden while public, so leftover grants would otherwise silently revive) |
 
 Identity matches My recipes ownership: **Auth.js user id** on `recipe.authorId` (not email). Share grants store `recipe_share.userId` and/or `recipe_share.role`.
 

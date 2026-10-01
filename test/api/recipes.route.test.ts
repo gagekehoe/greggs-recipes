@@ -6,6 +6,7 @@ const createRecipe = vi.fn();
 const getRecipeById = vi.fn();
 const updateRecipe = vi.fn();
 const removeRecipe = vi.fn();
+const clearSharesForRecipe = vi.fn();
 
 vi.mock("@/lib/auth/session", () => ({
   getSessionUser: (...a: unknown[]) => getSessionUser(...a),
@@ -16,6 +17,9 @@ vi.mock("@/lib/recipes", () => ({
   getRecipeById: (...a: unknown[]) => getRecipeById(...a),
   updateRecipe: (...a: unknown[]) => updateRecipe(...a),
   removeRecipe: (...a: unknown[]) => removeRecipe(...a),
+}));
+vi.mock("@/lib/recipes/shares", () => ({
+  clearSharesForRecipe: (...a: unknown[]) => clearSharesForRecipe(...a),
 }));
 
 const validRecipe = {
@@ -408,5 +412,89 @@ describe("/api/recipes", () => {
       expect.objectContaining({ title: validRecipe.title })
     );
     expect(updateRecipe.mock.calls.at(-1)?.[1].isPrivate).toBeUndefined();
+  });
+
+  it("PATCH drops leftover share grants when visibility changes", async () => {
+    const { PATCH } = await import("@/app/api/recipes/route");
+    getSessionUser.mockResolvedValue({
+      id: "u1",
+      role: "cook",
+      name: "Maya",
+    });
+    clearSharesForRecipe.mockResolvedValue(undefined);
+
+    getRecipeById.mockResolvedValue({
+      id: "local-1",
+      authorId: "u1",
+      isPrivate: true,
+    });
+    updateRecipe.mockResolvedValue({
+      recipe: { id: "local-1", isPrivate: false },
+      mode: "local",
+    });
+
+    const publish = await PATCH(
+      new Request("http://x/api/recipes", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          id: "local-1",
+          isPrivate: false,
+          rightsAttested: true,
+        }),
+      })
+    );
+    expect(publish.status).toBe(200);
+    expect(clearSharesForRecipe).toHaveBeenCalledWith("local-1");
+
+    clearSharesForRecipe.mockClear();
+    getRecipeById.mockResolvedValue({
+      id: "local-1",
+      authorId: "u1",
+      isPrivate: false,
+    });
+    updateRecipe.mockResolvedValue({
+      recipe: { id: "local-1", isPrivate: true },
+      mode: "local",
+    });
+
+    const hide = await PATCH(
+      new Request("http://x/api/recipes", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          id: "local-1",
+          isPrivate: true,
+          rightsAttested: true,
+        }),
+      })
+    );
+    expect(hide.status).toBe(200);
+    expect(clearSharesForRecipe).toHaveBeenCalledWith("local-1");
+
+    clearSharesForRecipe.mockClear();
+    getRecipeById.mockResolvedValue({
+      id: "local-1",
+      authorId: "u1",
+      isPrivate: true,
+    });
+    updateRecipe.mockResolvedValue({
+      recipe: { id: "local-1", isPrivate: true, imageUrl: "/uploads/recipes/n.jpg" },
+      mode: "local",
+    });
+
+    const photoOnly = await PATCH(
+      new Request("http://x/api/recipes", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          id: "local-1",
+          imageUrl: "/uploads/recipes/n.jpg",
+          rightsAttested: true,
+        }),
+      })
+    );
+    expect(photoOnly.status).toBe(200);
+    expect(clearSharesForRecipe).not.toHaveBeenCalled();
   });
 });

@@ -21,6 +21,7 @@ import {
   recipeInputSchema,
   recipePatchSchema,
 } from "@/lib/recipes/recipe-input-schema";
+import { clearSharesForRecipe } from "@/lib/recipes/shares";
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -161,6 +162,17 @@ export async function PATCH(request: Request) {
     if (!result) {
       return NextResponse.json({ error: "Recipe not found" }, { status: 404 });
     }
+
+    // Share grants must not survive a visibility toggle. Make public hides the
+    // share UI, so leftover rows would silently re-open the recipe to old
+    // sharees on the next Make private (UI copy: "only you can see it").
+    if (
+      data.isPrivate !== undefined &&
+      Boolean(data.isPrivate) !== Boolean(existing.isPrivate)
+    ) {
+      await clearSharesForRecipe(id);
+    }
+
     return NextResponse.json(result);
   } catch (err) {
     const message =
