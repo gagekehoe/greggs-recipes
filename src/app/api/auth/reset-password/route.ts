@@ -60,11 +60,13 @@ export async function POST(request: Request) {
     );
   }
 
-  const existing = await db
+  const existing = (await db
     .select({ id: users.id, email: users.email })
     .from(users)
-    .where(sqlEmailEqualsNormalized(users.email, email))
-    .limit(1);
+    .where(sqlEmailEqualsNormalized(users.email, email))) as Array<{
+    id: string;
+    email: string;
+  }>;
 
   if (!existing[0]) {
     return NextResponse.json(
@@ -75,16 +77,21 @@ export async function POST(request: Request) {
 
   const passwordHash = await hashPassword(parsed.data.password);
   const passwordUpdatedAt = new Date();
-  await db
-    .update(users)
-    .set({ passwordHash, emailVerified: passwordUpdatedAt, passwordUpdatedAt })
-    .where(eq(users.id, existing[0].id));
+  // Stamp every case-variant row. A leftover mixed-case Auth.js account plus a
+  // later lowercase register share one inbox; updating only `limit(1)` can
+  // leave the password on the other id and keep login/reset non-deterministic.
+  for (const row of existing) {
+    await db
+      .update(users)
+      .set({ passwordHash, emailVerified: passwordUpdatedAt, passwordUpdatedAt })
+      .where(eq(users.id, row.id));
 
-  // Defense in depth: drop any adapter DB sessions (JWT strategy is primary).
-  await db.delete(sessions).where(eq(sessions.userId, existing[0].id));
+    // Defense in depth: drop any adapter DB sessions (JWT strategy is primary).
+    await db.delete(sessions).where(eq(sessions.userId, row.id));
 
-  // Inbox proven via reset token — promote ADMIN_EMAIL to Owner if applicable.
-  await ensureOwnerRole(existing[0].id, existing[0].email);
+    // Inbox proven via reset token — promote ADMIN_EMAIL to Owner if applicable.
+    await ensureOwnerRole(row.id, row.email);
+  }
 
   return NextResponse.json({ ok: true });
 }

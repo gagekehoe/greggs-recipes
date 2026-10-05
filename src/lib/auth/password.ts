@@ -13,6 +13,10 @@ export function normalizeEmail(email: string): string {
  * Pass `normalizeEmail()` output. Login/register/reset always query the
  * lowercased form, but Auth.js/magic-link rows may store mixed-case emails;
  * a case-sensitive `eq` misses those accounts (lockout + duplicate signup).
+ *
+ * Callers that mutate or authenticate must handle **every** matching row:
+ * `user.email` is unique only as stored, so mixed-case + lowercase duplicates
+ * can both exist. `.limit(1)` is non-deterministic in that case.
  */
 export function sqlEmailEqualsNormalized(
   emailColumn: object,

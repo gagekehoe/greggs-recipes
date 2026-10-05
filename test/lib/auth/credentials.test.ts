@@ -24,6 +24,39 @@ describe("authorizeCredentials", () => {
     mod.__testSqlite.exec(`DELETE FROM user;`);
   });
 
+  it("signs in against the password-bearing row when a mixed-case duplicate exists", async () => {
+    const { db, users } = await import("@/lib/db");
+    const { authorizeCredentials } = await import("@/lib/auth/credentials");
+    const passwordHash = await hashPassword("password123");
+
+    // Legacy Auth.js row first (typical insertion order) — no password.
+    await db.insert(users).values({
+      id: "u-legacy-mixed",
+      email: "Cook@Example.COM",
+      name: "Legacy Cook",
+      role: "cook",
+      passwordHash: null,
+    });
+    await db.insert(users).values({
+      id: "u-lowercase",
+      email: "cook@example.com",
+      name: "Cook",
+      role: "cook",
+      passwordHash,
+    });
+
+    await expect(
+      authorizeCredentials({
+        email: "cook@example.com",
+        password: "password123",
+      })
+    ).resolves.toMatchObject({
+      id: "u-lowercase",
+      email: "cook@example.com",
+      role: "cook",
+    });
+  });
+
   it("finds a mixed-case stored email after normalizeEmail", async () => {
     const { db, users } = await import("@/lib/db");
     const { authorizeCredentials } = await import("@/lib/auth/credentials");

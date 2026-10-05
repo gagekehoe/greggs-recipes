@@ -335,6 +335,78 @@ describe(
     ).resolves.toMatchObject({ id: "u-legacy-case" });
   });
 
+  it("logs in and resets when a mixed-case Auth.js row and lowercase duplicate both exist", async () => {
+    const { db, users } = await import("@/lib/db");
+    const { POST: forgot } = await import(
+      "@/app/api/auth/forgot-password/route"
+    );
+    const { POST: reset } = await import("@/app/api/auth/reset-password/route");
+    const { authorizeCredentials } = await import("@/lib/auth/credentials");
+    const { hashPassword } = await import("@/lib/auth/password");
+
+    await db.insert(users).values({
+      id: "u-legacy-mixed",
+      email: "Dup.Cook@Example.COM",
+      name: "Legacy Cook",
+      role: "cook",
+      passwordHash: null,
+    });
+    await db.insert(users).values({
+      id: "u-dup-lower",
+      email: "dup.cook@example.com",
+      name: "Cook",
+      role: "cook",
+      passwordHash: await hashPassword("first-pass-1"),
+    });
+
+    await expect(
+      authorizeCredentials({
+        email: "dup.cook@example.com",
+        password: "first-pass-1",
+      })
+    ).resolves.toMatchObject({ id: "u-dup-lower" });
+
+    const forgotRes = await forgot(
+      new Request("http://x/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: "dup.cook@example.com" }),
+      })
+    );
+    expect(forgotRes.status).toBe(200);
+    const rawToken = new URL(
+      (sendPasswordResetEmail.mock.calls[0][0] as { url: string }).url
+    ).searchParams.get("token")!;
+
+    const resetRes = await reset(
+      new Request("http://x/api/auth/reset-password", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          email: "dup.cook@example.com",
+          token: rawToken,
+          password: "second-pass-2",
+        }),
+      })
+    );
+    expect(resetRes.status).toBe(200);
+
+    await expect(
+      authorizeCredentials({
+        email: "dup.cook@example.com",
+        password: "second-pass-2",
+      })
+    ).resolves.toMatchObject({
+      id: expect.stringMatching(/^u-(legacy-mixed|dup-lower)$/),
+    });
+    await expect(
+      authorizeCredentials({
+        email: "dup.cook@example.com",
+        password: "first-pass-1",
+      })
+    ).resolves.toBeNull();
+  });
+
   it("registers ADMIN_EMAIL as viewer until reset proves the inbox", async () => {
     const { db, users } = await import("@/lib/db");
     const { POST: register } = await import("@/app/api/auth/register/route");

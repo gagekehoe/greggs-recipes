@@ -25,9 +25,7 @@ vi.mock("@/lib/db", async () => {
     db: {
       select: () => ({
         from: () => ({
-          where: () => ({
-            limit: (...a: unknown[]) => selectLimit(...a),
-          }),
+          where: (...a: unknown[]) => selectLimit(...a),
         }),
       }),
       update: () => ({
@@ -180,5 +178,27 @@ describe("POST /api/auth/reset-password", () => {
     );
     expect(deleteWhere).toHaveBeenCalled();
     expect(ensureOwnerRole).toHaveBeenCalledWith("u1", "cook@example.com");
+  });
+
+  it("stamps every case-variant duplicate so login is not stuck on a leftover row", async () => {
+    const { POST } = await import("@/app/api/auth/reset-password/route");
+    consumePasswordResetToken.mockResolvedValue(true);
+    selectLimit.mockResolvedValue([
+      { id: "u-legacy", email: "Cook@Example.COM" },
+      { id: "u-new", email: "cook@example.com" },
+    ]);
+
+    const res = await POST(
+      post({
+        email: "cook@example.com",
+        token: "good-token",
+        password: "new-password-99",
+      })
+    );
+    expect(res.status).toBe(200);
+    expect(updateSet).toHaveBeenCalledTimes(2);
+    expect(deleteWhere).toHaveBeenCalledTimes(2);
+    expect(ensureOwnerRole).toHaveBeenCalledWith("u-legacy", "Cook@Example.COM");
+    expect(ensureOwnerRole).toHaveBeenCalledWith("u-new", "cook@example.com");
   });
 });
