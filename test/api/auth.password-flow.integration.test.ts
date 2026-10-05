@@ -336,14 +336,19 @@ describe(
   });
 
   it("logs in and resets when a mixed-case Auth.js row and lowercase duplicate both exist", async () => {
-    const { db, users } = await import("@/lib/db");
+    const { db, users, sessions } = await import("@/lib/db");
     const { POST: forgot } = await import(
       "@/app/api/auth/forgot-password/route"
     );
     const { POST: reset } = await import("@/app/api/auth/reset-password/route");
+    const { POST: register } = await import("@/app/api/auth/register/route");
     const { authorizeCredentials } = await import("@/lib/auth/credentials");
     const { hashPassword } = await import("@/lib/auth/password");
+    const { isPasswordSessionStale, passwordStampFromUser } = await import(
+      "@/lib/auth/password-session"
+    );
 
+    // Passwordless Auth.js leftover inserted first (typical order).
     await db.insert(users).values({
       id: "u-legacy-mixed",
       email: "Dup.Cook@Example.COM",
@@ -357,6 +362,18 @@ describe(
       name: "Cook",
       role: "cook",
       passwordHash: await hashPassword("first-pass-1"),
+      passwordUpdatedAt: new Date(Date.now() - 60_000),
+    });
+
+    await db.insert(sessions).values({
+      sessionToken: "legacy-adapter-session",
+      userId: "u-legacy-mixed",
+      expires: new Date(Date.now() + 86_400_000),
+    });
+    await db.insert(sessions).values({
+      sessionToken: "password-adapter-session",
+      userId: "u-dup-lower",
+      expires: new Date(Date.now() + 86_400_000),
     });
 
     await expect(
@@ -365,6 +382,25 @@ describe(
         password: "first-pass-1",
       })
     ).resolves.toMatchObject({ id: "u-dup-lower" });
+
+    const beforeReset = await authorizeCredentials({
+      email: "dup.cook@example.com",
+      password: "first-pass-1",
+    });
+    const oldPwdAt = passwordStampFromUser(beforeReset!.passwordUpdatedAt);
+
+    // Register still 409s on any case-variant — including passwordless leftovers.
+    const dupRegister = await register(
+      new Request("http://x/api/auth/register", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          email: "DUP.COOK@example.com",
+          password: "other-pass-9",
+        }),
+      })
+    );
+    expect(dupRegister.status).toBe(409);
 
     const forgotRes = await forgot(
       new Request("http://x/api/auth/forgot-password", {
@@ -391,20 +427,60 @@ describe(
     );
     expect(resetRes.status).toBe(200);
 
+    const allMatches = await db
+      .select({
+        id: users.id,
+        email: users.email,
+        passwordHash: users.passwordHash,
+        passwordUpdatedAt: users.passwordUpdatedAt,
+      })
+      .from(users);
+    const matches = allMatches.filter(
+      (r) => r.email.toLowerCase() === "dup.cook@example.com"
+    );
+    expect(matches).toHaveLength(2);
+
+    const survivor = matches.find((r) => r.id === "u-dup-lower")!;
+    const leftover = matches.find((r) => r.id === "u-legacy-mixed")!;
+    expect(survivor.passwordHash).toBeTruthy();
+    expect(leftover.passwordHash).toBeNull();
+    expect(survivor.passwordUpdatedAt).toBeTruthy();
+    expect(leftover.passwordUpdatedAt).toBeTruthy();
+    expect(
+      isPasswordSessionStale(oldPwdAt, survivor.passwordUpdatedAt)
+    ).toBe(true);
+    expect(
+      isPasswordSessionStale(oldPwdAt, leftover.passwordUpdatedAt)
+    ).toBe(true);
+
+    // Adapter sessions cleared on both ids.
+    expect(await db.select().from(sessions)).toHaveLength(0);
+
+    // Login always lands on the canonical password-bearing survivor — never the
+    // empty legacy Auth.js row.
     await expect(
       authorizeCredentials({
         email: "dup.cook@example.com",
         password: "second-pass-2",
       })
-    ).resolves.toMatchObject({
-      id: expect.stringMatching(/^u-(legacy-mixed|dup-lower)$/),
-    });
+    ).resolves.toMatchObject({ id: "u-dup-lower" });
+    await expect(
+      authorizeCredentials({
+        email: "Dup.Cook@Example.COM",
+        password: "second-pass-2",
+      })
+    ).resolves.toMatchObject({ id: "u-dup-lower" });
+
+    // Old password fails on both rows.
     await expect(
       authorizeCredentials({
         email: "dup.cook@example.com",
         password: "first-pass-1",
       })
     ).resolves.toBeNull();
+
+    // Only one password-bearing row remains for this email.
+    expect(matches.filter((r) => r.passwordHash)).toHaveLength(1);
   });
 
   it("registers ADMIN_EMAIL as viewer until reset proves the inbox", async () => {

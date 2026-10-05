@@ -67,7 +67,8 @@ export async function authorizeCredentials(
   // Before case-insensitive lookup, register could insert a lowercase duplicate
   // of a mixed-case Auth.js row. `limit(1)` is then non-deterministic and can
   // pick the passwordless legacy row, locking the user out of the account that
-  // actually has a password.
+  // actually has a password. Walk every match; only rows with a hash can win.
+  // Password reset canonicalizes so only one case-variant keeps a hash.
   for (const row of rows) {
     if (!row.passwordHash) continue;
     const ok = await verifyPassword(password, row.passwordHash);

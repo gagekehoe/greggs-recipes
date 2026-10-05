@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   hashPassword,
   normalizeEmail,
+  pickCanonicalEmailSurvivor,
   validatePassword,
   verifyPassword,
 } from "@/lib/auth/password";
@@ -25,5 +26,33 @@ describe("password helpers", () => {
     expect(hash).not.toBe("password123");
     expect(await verifyPassword("password123", hash)).toBe(true);
     expect(await verifyPassword("wrong", hash)).toBe(false);
+  });
+
+  it("picks the password-bearing row as the canonical survivor", () => {
+    expect(
+      pickCanonicalEmailSurvivor([
+        { id: "u-aaa", email: "A@x.com", passwordHash: null },
+        { id: "u-zzz", email: "a@x.com", passwordHash: "hash" },
+      ]).id
+    ).toBe("u-zzz");
+  });
+
+  it("breaks ties among password-bearing rows by smallest id", () => {
+    expect(
+      pickCanonicalEmailSurvivor([
+        { id: "u-b", email: "B@x.com", passwordHash: "h1" },
+        { id: "u-a", email: "b@x.com", passwordHash: "h2" },
+        { id: "u-c", email: "B@X.com", passwordHash: null },
+      ]).id
+    ).toBe("u-a");
+  });
+
+  it("falls back to smallest id when no row has a password", () => {
+    expect(
+      pickCanonicalEmailSurvivor([
+        { id: "u-z", email: "Z@x.com", passwordHash: null },
+        { id: "u-m", email: "z@x.com", passwordHash: null },
+      ]).id
+    ).toBe("u-m");
   });
 });

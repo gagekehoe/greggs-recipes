@@ -5,6 +5,7 @@ import {
   hashPassword,
   MIN_PASSWORD_LENGTH,
   normalizeEmail,
+  pickCanonicalEmailSurvivor,
   sqlEmailEqualsNormalized,
   validatePassword,
 } from "@/lib/auth/password";
@@ -61,11 +62,16 @@ export async function POST(request: Request) {
   }
 
   const existing = (await db
-    .select({ id: users.id, email: users.email })
+    .select({
+      id: users.id,
+      email: users.email,
+      passwordHash: users.passwordHash,
+    })
     .from(users)
     .where(sqlEmailEqualsNormalized(users.email, email))) as Array<{
     id: string;
     email: string;
+    passwordHash: string | null;
   }>;
 
   if (!existing[0]) {
@@ -75,22 +81,34 @@ export async function POST(request: Request) {
     );
   }
 
+  // Mixed-case Auth.js leftover + lowercase register share one inbox. Stamping
+  // the new hash on every match leaves two password-loginable ids and a
+  // non-deterministic session (empty legacy row → looks like recipe lockout).
+  // Canonicalize: one survivor keeps the password; siblings lose theirs.
+  const survivor = pickCanonicalEmailSurvivor(existing);
   const passwordHash = await hashPassword(parsed.data.password);
   const passwordUpdatedAt = new Date();
-  // Stamp every case-variant row. A leftover mixed-case Auth.js account plus a
-  // later lowercase register share one inbox; updating only `limit(1)` can
-  // leave the password on the other id and keep login/reset non-deterministic.
+
+  await db
+    .update(users)
+    .set({ passwordHash, emailVerified: passwordUpdatedAt, passwordUpdatedAt })
+    .where(eq(users.id, survivor.id));
+  await db.delete(sessions).where(eq(sessions.userId, survivor.id));
+  await ensureOwnerRole(survivor.id, survivor.email);
+
   for (const row of existing) {
+    if (row.id === survivor.id) continue;
     await db
       .update(users)
-      .set({ passwordHash, emailVerified: passwordUpdatedAt, passwordUpdatedAt })
+      .set({
+        passwordHash: null,
+        passwordUpdatedAt,
+        // Inbox proven via the shared reset token — mark verified on siblings
+        // too so leftover Auth.js rows are not stuck unverified forever.
+        emailVerified: passwordUpdatedAt,
+      })
       .where(eq(users.id, row.id));
-
-    // Defense in depth: drop any adapter DB sessions (JWT strategy is primary).
     await db.delete(sessions).where(eq(sessions.userId, row.id));
-
-    // Inbox proven via reset token — promote ADMIN_EMAIL to Owner if applicable.
-    await ensureOwnerRole(row.id, row.email);
   }
 
   return NextResponse.json({ ok: true });

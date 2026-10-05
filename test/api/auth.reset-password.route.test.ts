@@ -60,7 +60,9 @@ describe("POST /api/auth/reset-password", () => {
     databaseConfigured = true;
     consumePasswordResetToken.mockResolvedValue(true);
     ensureOwnerRole.mockResolvedValue(undefined);
-    selectLimit.mockResolvedValue([{ id: "u1", email: "cook@example.com" }]);
+    selectLimit.mockResolvedValue([
+      { id: "u1", email: "cook@example.com", passwordHash: "old-hash" },
+    ]);
   });
 
   it("returns 503 when the database is unavailable", async () => {
@@ -146,7 +148,7 @@ describe("POST /api/auth/reset-password", () => {
     const { POST } = await import("@/app/api/auth/reset-password/route");
     consumePasswordResetToken.mockResolvedValue(true);
     selectLimit.mockResolvedValue([
-      { id: "u1", email: "cook@example.com" },
+      { id: "u1", email: "cook@example.com", passwordHash: "old-hash" },
     ]);
 
     const res = await POST(
@@ -180,12 +182,16 @@ describe("POST /api/auth/reset-password", () => {
     expect(ensureOwnerRole).toHaveBeenCalledWith("u1", "cook@example.com");
   });
 
-  it("stamps every case-variant duplicate so login is not stuck on a leftover row", async () => {
+  it("canonicalizes case-variant duplicates onto the password-bearing survivor", async () => {
     const { POST } = await import("@/app/api/auth/reset-password/route");
     consumePasswordResetToken.mockResolvedValue(true);
     selectLimit.mockResolvedValue([
-      { id: "u-legacy", email: "Cook@Example.COM" },
-      { id: "u-new", email: "cook@example.com" },
+      { id: "u-legacy", email: "Cook@Example.COM", passwordHash: null },
+      {
+        id: "u-new",
+        email: "cook@example.com",
+        passwordHash: "$2a$12$alreadyhashedpasswordvalue",
+      },
     ]);
 
     const res = await POST(
@@ -197,8 +203,49 @@ describe("POST /api/auth/reset-password", () => {
     );
     expect(res.status).toBe(200);
     expect(updateSet).toHaveBeenCalledTimes(2);
+    expect(updateSet).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        passwordHash: expect.any(String),
+        emailVerified: expect.any(Date),
+        passwordUpdatedAt: expect.any(Date),
+      })
+    );
+    expect(updateSet.mock.calls[0][0].passwordHash).not.toBeNull();
+    expect(updateSet).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        passwordHash: null,
+        passwordUpdatedAt: expect.any(Date),
+        emailVerified: expect.any(Date),
+      })
+    );
     expect(deleteWhere).toHaveBeenCalledTimes(2);
-    expect(ensureOwnerRole).toHaveBeenCalledWith("u-legacy", "Cook@Example.COM");
+    // Only the password-bearing survivor is the live account (Owner promote).
+    expect(ensureOwnerRole).toHaveBeenCalledTimes(1);
     expect(ensureOwnerRole).toHaveBeenCalledWith("u-new", "cook@example.com");
+  });
+
+  it("picks a stable survivor by id when no row has a password yet", async () => {
+    const { POST } = await import("@/app/api/auth/reset-password/route");
+    consumePasswordResetToken.mockResolvedValue(true);
+    // Lexicographically larger id first — survivor must still be u-aaa.
+    selectLimit.mockResolvedValue([
+      { id: "u-zzz", email: "Cook@Example.COM", passwordHash: null },
+      { id: "u-aaa", email: "cook@example.com", passwordHash: null },
+    ]);
+
+    const res = await POST(
+      post({
+        email: "cook@example.com",
+        token: "good-token",
+        password: "new-password-99",
+      })
+    );
+    expect(res.status).toBe(200);
+    expect(ensureOwnerRole).toHaveBeenCalledTimes(1);
+    expect(ensureOwnerRole).toHaveBeenCalledWith("u-aaa", "cook@example.com");
+    expect(updateSet.mock.calls[0][0].passwordHash).toEqual(expect.any(String));
+    expect(updateSet.mock.calls[1][0].passwordHash).toBeNull();
   });
 });
