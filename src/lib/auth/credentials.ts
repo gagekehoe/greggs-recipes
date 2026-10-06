@@ -41,7 +41,7 @@ export async function authorizeCredentials(
     return null;
   }
 
-  const rows = await db
+  const rows = (await db
     .select({
       id: users.id,
       name: users.name,
@@ -53,41 +53,41 @@ export async function authorizeCredentials(
       emailVerified: users.emailVerified,
     })
     .from(users)
-    .where(sqlEmailEqualsNormalized(users.email, email))
-    .limit(1);
+    .where(sqlEmailEqualsNormalized(users.email, email))) as Array<{
+    id: string;
+    name: string | null;
+    email: string;
+    image: string | null;
+    role: Role;
+    passwordHash: string | null;
+    passwordUpdatedAt: Date | null;
+    emailVerified: Date | null;
+  }>;
 
-  const row = rows[0] as
-    | {
-        id: string;
-        name: string | null;
-        email: string;
-        image: string | null;
-        role: Role;
-        passwordHash: string | null;
-        passwordUpdatedAt: Date | null;
-        emailVerified: Date | null;
-      }
-    | undefined;
+  // Before case-insensitive lookup, register could insert a lowercase duplicate
+  // of a mixed-case Auth.js row. `limit(1)` is then non-deterministic and can
+  // pick the passwordless legacy row, locking the user out of the account that
+  // actually has a password. Walk every match; only rows with a hash can win.
+  // Password reset canonicalizes so only one case-variant keeps a hash.
+  for (const row of rows) {
+    if (!row.passwordHash) continue;
+    const ok = await verifyPassword(password, row.passwordHash);
+    if (!ok) continue;
 
-  if (!row?.passwordHash) {
-    // No account, or legacy magic-link account without a password yet.
-    return null;
+    const role: Role = roleWithVerifiedOwnerBootstrap(
+      row.email,
+      row.role,
+      row.emailVerified
+    );
+    return {
+      id: row.id,
+      name: row.name,
+      email: row.email,
+      image: row.image,
+      role,
+      passwordUpdatedAt: row.passwordUpdatedAt ?? null,
+    };
   }
 
-  const ok = await verifyPassword(password, row.passwordHash);
-  if (!ok) return null;
-
-  const role: Role = roleWithVerifiedOwnerBootstrap(
-    row.email,
-    row.role,
-    row.emailVerified
-  );
-  return {
-    id: row.id,
-    name: row.name,
-    email: row.email,
-    image: row.image,
-    role,
-    passwordUpdatedAt: row.passwordUpdatedAt ?? null,
-  };
+  return null;
 }
