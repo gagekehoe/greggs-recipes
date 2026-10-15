@@ -22,6 +22,24 @@ describe("sameOriginRelativeUrl", () => {
     expect(sameOriginRelativeUrl("/\tevil", origin)).toBeUndefined();
     expect(sameOriginRelativeUrl("/foo\u0001bar", origin)).toBeUndefined();
   });
+
+  it("rejects same-origin absolute URLs whose pathname is protocol-relative", () => {
+    expect(
+      sameOriginRelativeUrl("https://greggsrecipes.com//evil.example", origin)
+    ).toBeUndefined();
+    expect(
+      sameOriginRelativeUrl(
+        "https://greggsrecipes.com///evil.example/phish?x=1",
+        origin
+      )
+    ).toBeUndefined();
+    expect(
+      sameOriginRelativeUrl(
+        "https://www.greggsrecipes.com//evil.example",
+        "https://www.greggsrecipes.com"
+      )
+    ).toBeUndefined();
+  });
 });
 
 describe("sanitizeAuthCallbackUrl", () => {
@@ -59,6 +77,9 @@ describe("sanitizeAuthCallbackUrl", () => {
     expect(sanitizeAuthCallbackUrl("/\\evil.example", origin)).toBeUndefined();
     expect(sanitizeAuthCallbackUrl("/\tevil", origin)).toBeUndefined();
     expect(sanitizeAuthCallbackUrl("/\u007fx", origin)).toBeUndefined();
+    expect(
+      sanitizeAuthCallbackUrl("https://greggsrecipes.com//evil.example", origin)
+    ).toBeUndefined();
   });
 
   it("returns undefined for empty values", () => {
@@ -91,6 +112,15 @@ describe("safeAuthRedirect", () => {
     expect(safeAuthRedirect("//evil.example", base)).toBe(base);
     expect(safeAuthRedirect("/\\evil.example", base)).toBe(base);
     expect(safeAuthRedirect("/\tevil", base)).toBe(base);
+    expect(safeAuthRedirect("https://greggsrecipes.com//evil.example", base)).toBe(
+      base
+    );
+    expect(
+      safeAuthRedirect(
+        "https://www.greggsrecipes.com//evil.example",
+        "https://www.greggsrecipes.com"
+      )
+    ).toBe("https://www.greggsrecipes.com");
   });
 });
 

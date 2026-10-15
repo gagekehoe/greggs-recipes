@@ -5,12 +5,19 @@
 
 const CONTROL_OR_BACKSLASH = /[\u0000-\u001f\u007f\\]/;
 
+/** Pathname is a same-origin path, not a protocol-relative `//host`. */
+function isSingleSlashPathname(pathname: string): boolean {
+  return pathname.startsWith("/") && !pathname.startsWith("//");
+}
+
 /**
  * Resolve a candidate against `siteOrigin` and allow only same-origin results.
  * Returns `pathname + search + hash`, or undefined when unsafe / unparsable.
  *
  * Rejects backslashes (WHATWG `/\\evil.example` → off-site), control chars,
- * and any value that does not resolve to the same origin as `siteOrigin`.
+ * protocol-relative values, and same-origin URLs whose pathname is `//host`
+ * (`https://site.example//evil.example` → pathname `//evil.example`, which
+ * browsers and `new URL(path, origin)` treat as `https://evil.example/`).
  */
 export function sameOriginRelativeUrl(
   raw: string | null | undefined,
@@ -32,6 +39,7 @@ export function sameOriginRelativeUrl(
   try {
     const resolved = new URL(raw, allowed);
     if (resolved.origin !== allowed.origin) return undefined;
+    if (!isSingleSlashPathname(resolved.pathname)) return undefined;
     return `${resolved.pathname}${resolved.search}${resolved.hash}`;
   } catch {
     return undefined;
@@ -51,7 +59,10 @@ export function safeAuthRedirect(url: string, baseUrl: string): string {
   const path = sameOriginRelativeUrl(url, baseUrl);
   if (!path) return baseUrl;
   try {
-    return new URL(path, baseUrl).toString();
+    // Rebuild from origin + path. Never `new URL(path, base)` — a `//host`
+    // pathname is protocol-relative and would resolve off-site.
+    const base = new URL(baseUrl);
+    return `${base.origin}${path}`;
   } catch {
     return baseUrl;
   }
