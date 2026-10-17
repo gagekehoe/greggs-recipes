@@ -5,6 +5,7 @@ const updateSet = vi.fn();
 const deleteWhere = vi.fn();
 const consumePasswordResetToken = vi.fn();
 const ensureOwnerRole = vi.fn();
+const mergeDuplicateEmailAccounts = vi.fn();
 let databaseConfigured = true;
 
 vi.mock("@/lib/auth/password-reset", () => ({
@@ -14,6 +15,11 @@ vi.mock("@/lib/auth/password-reset", () => ({
 
 vi.mock("@/lib/auth/owner-bootstrap", () => ({
   ensureOwnerRole: (...a: unknown[]) => ensureOwnerRole(...a),
+}));
+
+vi.mock("@/lib/auth/duplicate-email-content", () => ({
+  mergeDuplicateEmailAccounts: (...a: unknown[]) =>
+    mergeDuplicateEmailAccounts(...a),
 }));
 
 vi.mock("@/lib/db", async () => {
@@ -60,8 +66,16 @@ describe("POST /api/auth/reset-password", () => {
     databaseConfigured = true;
     consumePasswordResetToken.mockResolvedValue(true);
     ensureOwnerRole.mockResolvedValue(undefined);
+    mergeDuplicateEmailAccounts.mockResolvedValue(undefined);
     selectLimit.mockResolvedValue([
-      { id: "u1", email: "cook@example.com", passwordHash: "old-hash" },
+      {
+        id: "u1",
+        email: "cook@example.com",
+        passwordHash: "old-hash",
+        role: "cook",
+        name: "Cook",
+        image: null,
+      },
     ]);
   });
 
@@ -186,11 +200,21 @@ describe("POST /api/auth/reset-password", () => {
     const { POST } = await import("@/app/api/auth/reset-password/route");
     consumePasswordResetToken.mockResolvedValue(true);
     selectLimit.mockResolvedValue([
-      { id: "u-legacy", email: "Cook@Example.COM", passwordHash: null },
+      {
+        id: "u-legacy",
+        email: "Cook@Example.COM",
+        passwordHash: null,
+        role: "cook",
+        name: "Legacy Cook",
+        image: null,
+      },
       {
         id: "u-new",
         email: "cook@example.com",
         passwordHash: "$2a$12$alreadyhashedpasswordvalue",
+        role: "viewer",
+        name: "Cook",
+        image: null,
       },
     ]);
 
@@ -224,6 +248,20 @@ describe("POST /api/auth/reset-password", () => {
     // Only the password-bearing survivor is the live account (Owner promote).
     expect(ensureOwnerRole).toHaveBeenCalledTimes(1);
     expect(ensureOwnerRole).toHaveBeenCalledWith("u-new", "cook@example.com");
+    expect(mergeDuplicateEmailAccounts).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "u-new",
+        email: "cook@example.com",
+        role: "viewer",
+      }),
+      [
+        expect.objectContaining({
+          id: "u-legacy",
+          email: "Cook@Example.COM",
+          role: "cook",
+        }),
+      ]
+    );
   });
 
   it("picks a stable survivor by id when no row has a password yet", async () => {
@@ -231,8 +269,22 @@ describe("POST /api/auth/reset-password", () => {
     consumePasswordResetToken.mockResolvedValue(true);
     // Lexicographically larger id first — survivor must still be u-aaa.
     selectLimit.mockResolvedValue([
-      { id: "u-zzz", email: "Cook@Example.COM", passwordHash: null },
-      { id: "u-aaa", email: "cook@example.com", passwordHash: null },
+      {
+        id: "u-zzz",
+        email: "Cook@Example.COM",
+        passwordHash: null,
+        role: "viewer",
+        name: null,
+        image: null,
+      },
+      {
+        id: "u-aaa",
+        email: "cook@example.com",
+        passwordHash: null,
+        role: "viewer",
+        name: null,
+        image: null,
+      },
     ]);
 
     const res = await POST(

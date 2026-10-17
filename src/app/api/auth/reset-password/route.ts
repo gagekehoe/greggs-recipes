@@ -9,9 +9,12 @@ import {
   sqlEmailEqualsNormalized,
   validatePassword,
 } from "@/lib/auth/password";
+import { mergeDuplicateEmailAccounts } from "@/lib/auth/duplicate-email-content";
 import { consumePasswordResetToken } from "@/lib/auth/password-reset";
 import { ensureOwnerRole } from "@/lib/auth/owner-bootstrap";
+import { isRole } from "@/lib/auth/roles";
 import { db, isDatabaseConfigured, sessions, users } from "@/lib/db";
+import type { Role } from "@/lib/db/schema";
 
 const schema = z.object({
   email: z.string().email(),
@@ -66,12 +69,18 @@ export async function POST(request: Request) {
       id: users.id,
       email: users.email,
       passwordHash: users.passwordHash,
+      role: users.role,
+      name: users.name,
+      image: users.image,
     })
     .from(users)
     .where(sqlEmailEqualsNormalized(users.email, email))) as Array<{
     id: string;
     email: string;
     passwordHash: string | null;
+    role: Role;
+    name: string | null;
+    image: string | null;
   }>;
 
   if (!existing[0]) {
@@ -85,7 +94,27 @@ export async function POST(request: Request) {
   // the new hash on every match leaves two password-loginable ids and a
   // non-deterministic session (empty legacy row → looks like recipe lockout).
   // Canonicalize: one survivor keeps the password; siblings lose theirs.
+  // Move recipes/reviews/comments/shares onto the survivor first — otherwise
+  // the leftover Auth.js id (often the one that published) is unreachable.
   const survivor = pickCanonicalEmailSurvivor(existing);
+  await mergeDuplicateEmailAccounts(
+    {
+      id: survivor.id,
+      email: survivor.email,
+      role: isRole(survivor.role) ? survivor.role : "viewer",
+      name: survivor.name,
+      image: survivor.image,
+    },
+    existing
+      .filter((row) => row.id !== survivor.id)
+      .map((row) => ({
+        id: row.id,
+        email: row.email,
+        role: isRole(row.role) ? row.role : "viewer",
+        name: row.name,
+        image: row.image,
+      }))
+  );
   const passwordHash = await hashPassword(parsed.data.password);
   const passwordUpdatedAt = new Date();
 
