@@ -16,6 +16,11 @@ vi.mock("@/lib/db", async () => {
     users: testDb.schema.users,
     sessions: testDb.schema.sessions,
     verificationTokens: testDb.schema.verificationTokens,
+    recipes: testDb.schema.recipes,
+    recipeReviews: testDb.schema.recipeReviews,
+    recipeComments: testDb.schema.recipeComments,
+    recipeShares: testDb.schema.recipeShares,
+    accounts: testDb.schema.accounts,
     isDatabaseConfigured: () => true,
     getDbDialect: () => "sqlite" as const,
     __testSqlite: testDb.sqlite,
@@ -41,7 +46,7 @@ describe(
       __testSqlite: { exec: (sql: string) => void };
     };
     mod.__testSqlite.exec(
-      `DELETE FROM verificationToken; DELETE FROM session; DELETE FROM user;`
+      `DELETE FROM recipe_share; DELETE FROM recipe_review_image; DELETE FROM recipe_review; DELETE FROM recipe_comment; DELETE FROM recipe; DELETE FROM account; DELETE FROM verificationToken; DELETE FROM session; DELETE FROM user;`
     );
   });
 
@@ -481,6 +486,101 @@ describe(
 
     // Only one password-bearing row remains for this email.
     expect(matches.filter((r) => r.passwordHash)).toHaveLength(1);
+  });
+
+  it("moves leftover Auth.js recipes onto the password-bearing survivor on reset", async () => {
+    const { db, users, recipes } = await import("@/lib/db");
+    const { POST: forgot } = await import(
+      "@/app/api/auth/forgot-password/route"
+    );
+    const { POST: reset } = await import("@/app/api/auth/reset-password/route");
+    const { authorizeCredentials } = await import("@/lib/auth/credentials");
+    const { hashPassword } = await import("@/lib/auth/password");
+
+    await db.insert(users).values({
+      id: "u-legacy-mixed",
+      email: "Dup.Cook@Example.COM",
+      name: "Legacy Cook",
+      role: "cook",
+      passwordHash: null,
+    });
+    await db.insert(users).values({
+      id: "u-dup-lower",
+      email: "dup.cook@example.com",
+      name: null,
+      role: "viewer",
+      passwordHash: await hashPassword("first-pass-1"),
+      passwordUpdatedAt: new Date(Date.now() - 60_000),
+    });
+
+    const now = new Date();
+    await db.insert(recipes).values({
+      id: "r-secret-stew",
+      slug: "secret-stew",
+      title: "Secret Stew",
+      summary: "Published on the mixed-case Auth.js row before the duplicate.",
+      ingredients: '["beef"]',
+      steps: '["simmer"]',
+      tags: "[]",
+      prepMinutes: 15,
+      cookMinutes: 60,
+      servings: 4,
+      imageUrl: "",
+      imageAlt: "",
+      authorId: "u-legacy-mixed",
+      authorName: "Legacy Cook",
+      isPrivate: true,
+      inspiredBy: "",
+      inspiredByUrl: "",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const forgotRes = await forgot(
+      new Request("http://x/api/auth/forgot-password", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: "dup.cook@example.com" }),
+      })
+    );
+    expect(forgotRes.status).toBe(200);
+    const rawToken = new URL(
+      (sendPasswordResetEmail.mock.calls[0][0] as { url: string }).url
+    ).searchParams.get("token")!;
+
+    const resetRes = await reset(
+      new Request("http://x/api/auth/reset-password", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          email: "dup.cook@example.com",
+          token: rawToken,
+          password: "second-pass-2",
+        }),
+      })
+    );
+    expect(resetRes.status).toBe(200);
+
+    const login = await authorizeCredentials({
+      email: "dup.cook@example.com",
+      password: "second-pass-2",
+    });
+    expect(login).toMatchObject({ id: "u-dup-lower", role: "cook" });
+
+    const stew = await db
+      .select({ authorId: recipes.authorId })
+      .from(recipes)
+      .where(eq(recipes.id, "r-secret-stew"));
+    expect(stew[0]?.authorId).toBe("u-dup-lower");
+
+    const survivor = await db
+      .select({ role: users.role, name: users.name })
+      .from(users)
+      .where(eq(users.id, "u-dup-lower"));
+    expect(survivor[0]).toMatchObject({
+      role: "cook",
+      name: "Legacy Cook",
+    });
   });
 
   it("registers ADMIN_EMAIL as viewer until reset proves the inbox", async () => {

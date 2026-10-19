@@ -42,6 +42,10 @@ export type EmailCaseMatchRow = {
  * account, not a leftover Auth.js/passwordless twin). Among that set — or
  * among all rows when none have a hash — choose the lexicographically
  * smallest `id` for a stable, deterministic survivor.
+ *
+ * Reset must then fold leftover rows into that survivor (recipes, reviews,
+ * comments, shares, and the stronger role) — otherwise login can no longer
+ * reach content still keyed on the sibling user id.
  */
 export function pickCanonicalEmailSurvivor<T extends EmailCaseMatchRow>(
   rows: readonly T[]
