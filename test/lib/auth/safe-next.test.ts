@@ -23,6 +23,15 @@ describe("safeNextPath", () => {
     expect(safeNextPath(null)).toBe("/");
     expect(safeNextPath(undefined)).toBe("/");
   });
+
+  it("rejects same-origin absolute URLs whose pathname is //host", () => {
+    expect(safeNextPath("https://www.greggsrecipes.com//evil.example")).toBe(
+      "/"
+    );
+    expect(
+      safeNextPath("https://www.greggsrecipes.com///evil.example/phish")
+    ).toBe("/");
+  });
 });
 
 describe("auth callback helpers", () => {
@@ -35,5 +44,8 @@ describe("auth callback helpers", () => {
     );
     expect(signInDoneUrl("//evil")).toBe("/signin/done?next=%2F");
     expect(signInDoneUrl("/\\evil.example")).toBe("/signin/done?next=%2F");
+    expect(welcomeCallbackUrl("https://www.greggsrecipes.com//evil.example")).toBe(
+      "/welcome?next=%2F"
+    );
   });
 });
