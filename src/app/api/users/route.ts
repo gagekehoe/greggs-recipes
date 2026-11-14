@@ -4,12 +4,14 @@ import { z } from "zod";
 import {
   canAssignRole,
   canManagePeople,
+  canWriteRecipes,
   hasKitchenStaffPowers,
   isRole,
 } from "@/lib/auth/roles";
 import { getSessionUser } from "@/lib/auth/session";
 import { db, users } from "@/lib/db";
 import type { Role } from "@/lib/db/schema";
+import { clearSharesForAuthorRecipes } from "@/lib/recipes/shares";
 
 const updateSchema = z.object({
   userId: z.string().min(1),
@@ -89,6 +91,13 @@ export async function PATCH(request: Request) {
         { error: "You can’t demote yourself from owner/admin." },
         { status: 400 }
       );
+    }
+
+    // Drop leftover grants before the role write. After demotion the author
+    // can no longer manage shares, and staff cannot see others' private
+    // recipes — a Viewer role share would otherwise stay on Browse forever.
+    if (canWriteRecipes(currentRole) && !canWriteRecipes(role)) {
+      await clearSharesForAuthorRecipes(userId);
     }
 
     const updated = await db
