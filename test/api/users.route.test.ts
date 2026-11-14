@@ -4,9 +4,15 @@ const getSessionUser = vi.fn();
 const selectAll = vi.fn();
 const selectLimit = vi.fn();
 const updateReturning = vi.fn();
+const clearSharesForAuthorRecipes = vi.fn();
 
 vi.mock("@/lib/auth/session", () => ({
   getSessionUser: (...a: unknown[]) => getSessionUser(...a),
+}));
+
+vi.mock("@/lib/recipes/shares", () => ({
+  clearSharesForAuthorRecipes: (...a: unknown[]) =>
+    clearSharesForAuthorRecipes(...a),
 }));
 
 vi.mock("@/lib/db", async () => {
@@ -108,6 +114,7 @@ describe("/api/users", () => {
       })
     );
     expect(ok.status).toBe(200);
+    expect(clearSharesForAuthorRecipes).not.toHaveBeenCalled();
 
     getSessionUser.mockResolvedValue({ id: "staff", role: "admin" });
     selectLimit.mockResolvedValue([{ id: "u2", role: "cook" }]);
@@ -119,5 +126,28 @@ describe("/api/users", () => {
       })
     );
     expect(forbiddenOwner.status).toBe(403);
+  });
+
+  it("clears authored recipe shares when a cook is demoted to viewer", async () => {
+    const { PATCH } = await import("@/app/api/users/route");
+    getSessionUser.mockResolvedValue({ id: "owner", role: "owner" });
+    selectLimit.mockResolvedValue([{ id: "cook-1", role: "cook" }]);
+    updateReturning.mockResolvedValue([
+      { id: "cook-1", email: "c@x.com", role: "viewer", name: "C" },
+    ]);
+    clearSharesForAuthorRecipes.mockResolvedValue(undefined);
+
+    const res = await PATCH(
+      new Request("http://x/api/users", {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ userId: "cook-1", role: "viewer" }),
+      })
+    );
+    expect(res.status).toBe(200);
+    expect(clearSharesForAuthorRecipes).toHaveBeenCalledWith("cook-1");
+    expect(clearSharesForAuthorRecipes.mock.invocationCallOrder[0]).toBeLessThan(
+      updateReturning.mock.invocationCallOrder[0]
+    );
   });
 });

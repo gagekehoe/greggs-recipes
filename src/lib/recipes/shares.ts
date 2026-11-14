@@ -1,9 +1,10 @@
-import { and, eq, isNotNull, or } from "drizzle-orm";
+import { and, eq, inArray, isNotNull, or } from "drizzle-orm";
 import type { RecipeViewAccess } from "@/lib/auth/roles";
 import { isRole } from "@/lib/auth/roles";
 import {
   db,
   isDatabaseConfigured,
+  recipes,
   recipeShares,
   users,
 } from "@/lib/db";
@@ -264,6 +265,32 @@ export async function removeShare(
 export async function clearSharesForRecipe(recipeId: string): Promise<void> {
   if (!isDatabaseConfigured()) return;
   await db.delete(recipeShares).where(eq(recipeShares.recipeId, recipeId));
+}
+
+/**
+ * Drop share grants on every recipe this user authored.
+ *
+ * Private recipes are author-only for edit/share. Demoting a cook to viewer
+ * leaves those grants in place with nobody able to revoke them — including a
+ * Viewer role share that keeps the dish on everyone else's Browse.
+ */
+export async function clearSharesForAuthorRecipes(
+  authorId: string
+): Promise<void> {
+  if (!isDatabaseConfigured() || !authorId) return;
+
+  const authored = (await db
+    .select({ id: recipes.id })
+    .from(recipes)
+    .where(eq(recipes.authorId, authorId))) as Array<{ id: string }>;
+  if (authored.length === 0) return;
+
+  await db.delete(recipeShares).where(
+    inArray(
+      recipeShares.recipeId,
+      authored.map((row) => row.id)
+    )
+  );
 }
 
 /** True when any role-based share rows exist (for diagnostics / tests). */
